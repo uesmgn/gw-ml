@@ -1,7 +1,7 @@
-language: python
-python:
-  - 3.6
+language: python3
+cache: pip
+sudo: false
 install:
   - pip install pycodestyle
 script:
-  - find . -name \*.py -exec pycodestyle {} +
+  - pycodestyle .
