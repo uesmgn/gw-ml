@@ -126,3 +126,4 @@ dmypy.json
 
 # User configuration
 dataset/
+detchar/models/vae.py
