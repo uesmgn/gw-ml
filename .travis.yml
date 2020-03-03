@@ -1,3 +1,7 @@
 language: python
 python:
-  - "3.6"
+  - 3.6
+intall:
+  - pip install pycodestyle
+script:
+  - find . -name \*.py -exec pycodestyle {} + 
