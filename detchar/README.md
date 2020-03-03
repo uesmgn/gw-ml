@@ -1,3 +1,3 @@
 # Detchar-ML
- Machine Learning to the Glitch Characterization.
+ Machine Learning for the Glitch Characterization.
 ---
