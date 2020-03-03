@@ -1,2 +1,3 @@
-# gw-ml
- Machine Learning tools for gravitational waves data analysis
+# GW-ML
+ Machine Learning to the Gravitational Waves Data Analysis
+---
