@@ -2,6 +2,6 @@ language: python3
 cache: pip
 sudo: false
 install:
-  - pip install pycodestyle
+  - pip install pep8 pytest pytest-pep8
 script:
-  - pycodestyle .
+  - py.test --pep8
