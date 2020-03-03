@@ -1,7 +1,7 @@
-language: python
-python:
-  - 3.6
+language: python3
+cache: pip
+sudo: false
 install:
-  - pip install pycodestyle
+  - pip install pep8 pytest pytest-pep8
 script:
-  - find . -name \*.py -exec pycodestyle {} +
+  - py.test --pep8 .
