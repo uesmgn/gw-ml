@@ -6,7 +6,6 @@ from PIL import Image
 
 class Dataset(data.Dataset):
 
-    
     def __init__(self, df, transform=None):
         self.df = df
         self.transform = transform
