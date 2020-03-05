@@ -16,7 +16,7 @@ if __name__ == '__main__':
     for label in labels:
         paths = glob(f'{dataset_path}/{label}/*_1.0.png')
         for path in paths:
-            id = re.match(r'.+(L1|H1)_([a-zA-Z0-9]+)_.+', path).group(2)
-            data[id] = {'label': label, 'path': path}
+            idx = re.match(r'.+(L1|H1)_([a-zA-Z0-9]+)_.+', path).group(2)
+            data[idx] = {'label': label, 'path': path}
     df = pd.DataFrame.from_dict(data, orient='index')
     df.to_json('dataset.json')
