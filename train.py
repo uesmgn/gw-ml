@@ -13,10 +13,10 @@ data_transform = transforms.Compose([
         transforms.ToTensor()
 ])
 dataset = Dataset(df, data_transform)
-loader = dataset.get_loader(batch_size = 4, shuffle = True)
-encoder = vae.Encoder()
+train_loader = dataset.get_loader(batch_size=4, shuffle=True)
+autoencoder = vae.VAE(input_size, 64, 16)
+optimizer = torch.optim.Adam(autoencoder.parameters(), lr=1e-4)
+autoencoder.init_model(train_loader, optimizer)
 
-for idx, (img, label) in enumerate(loader):
-    (x, indices) = encoder(img)
-    print(x.size())
-    break
+for epoch in range(10):
+    autoencoder.fit_train(epoch+1)
