@@ -40,6 +40,10 @@ class Encoder(nn.Module):
         return x, indices
 
 
+class Middle(nn.Module):
+    def __init__(self):
+        
+
 class DeconvModule(nn.Module):
 
     def __init__(self, input_channels, output_channels,
