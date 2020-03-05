@@ -23,3 +23,6 @@ class Dataset(data.Dataset):
     def get_labels(self, dtype=str):
         labels = self.df.iloc[:, 0].unique().astype(dtype)
         return sorted(labels)
+
+    def get_loader(self, batch_size=1, shuffle=False):
+        return data.DataLoader(self, batch_size=batch_size, shuffle=shuffle)
