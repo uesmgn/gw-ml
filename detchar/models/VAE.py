@@ -80,7 +80,7 @@ class VAE:
 
     # Test
     def fit_test(self, epoch, outdir='result', interval=10):
-        if not os.path.exist(outdir):
+        if not os.path.exists(outdir):
             os.mkdir(outdir)
         self.net.eval()
         with torch.no_grad():
