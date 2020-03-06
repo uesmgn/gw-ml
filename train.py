@@ -22,7 +22,8 @@ train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
 test_loader = DataLoader(test_set, batch_size=32, shuffle=False)
 vae = VAE(device, input_size, 64, 16)
 optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-3)
-vae.init_model(train_loader, optimizer)
+vae.init_model(train_loader, test_loader, optimizer)
 
 for epoch in range(10):
     vae.fit_train(epoch+1)
+    vae.fit_test(epoch+1)

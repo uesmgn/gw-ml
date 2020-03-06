@@ -20,8 +20,9 @@ class VAE:
         self.w_cat = 0.3
         self.rec_type = 'mse'
 
-    def init_model(self, train_loader, optimizer):
+    def init_model(self, train_loader, test_loader, optimizer):
         self.train_loader = train_loader
+        self.test_loader = test_loader
         self.optimizer = optimizer
 
         if self.device == "cuda":
@@ -55,14 +56,13 @@ class VAE:
         self.net.train()
         train_loss = 0
         samples_cnt = 0
+        start_t = time.time()
         for batch_idx, (x, labels) in enumerate(self.train_loader):
             print(f'\rBatch: {batch_idx+1}', end='')
             x = x.to(self.device)
             self.optimizer.zero_grad()
             out = self.net(x)
             loss_dic = self.unlabeled_loss(x, out)
-            print(labels)
-            print(loss_dic['predicted_labels'])
             total = loss_dic['total']
             total.backward()
             self.optimizer.step()
@@ -71,3 +71,22 @@ class VAE:
         elapsed_t = time.time() - start_t
         print(f"\rLoss: {train_loss / samples_cnt:f}")
         print(f"Calc time: {elapsed_t} sec/epoch")
+
+    # Test
+    def fit_test(self, epoch, outdir='result', interval=10):
+        if not os.path.exist(outdir):
+            os.mkdir(outdir)
+        self.eval()
+        with torch.no_grad():
+            for batch_idx, (x, labels) in enumerate(self.test_loader):
+                x = x.to(self.device)
+                out = self.net(x)
+                x_reconst = out['x_reconst']
+                loss_dic = self.unlabeled_loss(x, out)
+                total = loss_dic['total']
+                if batch_idx % interval == 0:
+                    torchvision.utils.save_image(
+                        torch.cat([x[:8], x_reconst[:8]]),
+                        f"{outdir}/VAE_epoch{epoch+1}_batch{batch_idx+1}.png",
+                        nrow=8
+                    )
