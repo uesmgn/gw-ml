@@ -77,6 +77,7 @@ class VAE:
         elapsed_t = time.time() - start_t
         print(f"\rLoss: {train_loss / samples_cnt:f}")
         print(f"Calc time: {elapsed_t} sec/epoch")
+        return train_loss / samples_cnt
 
     # Test
     def fit_test(self, epoch, outdir='result', interval=10):
@@ -84,6 +85,8 @@ class VAE:
             os.mkdir(outdir)
         self.net.eval()
         with torch.no_grad():
+            test_loss = 0
+            samples_cnt = 0
             for batch_idx, (x, labels) in enumerate(self.test_loader):
                 x = x.to(self.device)
                 out = self.net(x)
@@ -91,6 +94,8 @@ class VAE:
                 loss_dic = self.unlabeled_loss(x, out)
                 total = loss_dic['total']
                 predicted_labels = loss_dic['predicted_labels']
+                test_loss += total.item()
+                samples_cnt += x.size(0)
                 if batch_idx % interval == 0:
                     utils.save_image(
                         torch.cat([x[:8], x_reconst[:8]]),
@@ -98,3 +103,4 @@ class VAE:
                         nrow=8
                     )
                     print(f'True: {labels}\nPredict: {predicted_labels}')
+            return test_loss / samples_cnt

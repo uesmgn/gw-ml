@@ -9,12 +9,12 @@ class LossFunctions:
 
     def reconstruction_loss(self, x, x_, type='mse'):
       if type == 'mse':
-        loss = F.mse_loss(x, x_.detach(), reduction='sum')
+        loss = F.mse_loss(x, x_.detach(), reduction='none')
       elif type == 'bce':
-        loss = F.binary_cross_entropy(x, x_.detach(), reduction='sum')
+        loss = F.binary_cross_entropy(x, x_.detach(), reduction='none')
       else:
         raise "invalid loss function... try bce or mse..."
-      return loss
+      return loss.sum(-1).mean()
 
     def __log_normal(self, x, mu, var):
       if self.eps > 0.0:

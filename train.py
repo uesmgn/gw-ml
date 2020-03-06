@@ -16,7 +16,8 @@ parser.add_argument('-z', '--z_dim', default=64, type=int,
                     help='gaussian size (default: 64)')
 parser.add_argument('-i', '--input_size', default=480, type=int,
                     help='input size (default: 480)')
-
+parser.add_argument('-e', '--epochs', default=1000, type=int,
+                    help='input size (default: 1000)')
 ## Loss function parameters
 parser.add_argument('--w_gauss', default=1, type=float,
                     help='weight of gaussian loss (default: 1)')
@@ -50,6 +51,6 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-3)
     vae.init_model(train_loader, test_loader, optimizer)
 
-    for epoch in range(10):
-        vae.fit_train(epoch+1)
-        vae.fit_test(epoch+1)
+    for epoch in range(args.epochs):
+        train_loss = vae.fit_train(epoch+1)
+        test_loss = vae.fit_test(epoch+1)
