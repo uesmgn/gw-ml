@@ -11,7 +11,7 @@ class LossFunctions:
       if type == 'mse':
         loss = (x - x_).pow(2)
       elif type == 'bce':
-        loss = F.binary_cross_entropy(x, x_, reduction='none')
+        loss = F.binary_cross_entropy(x, x_.detach(), reduction='none')
       else:
         raise "invalid loss function... try bce or mse..."
       return loss.sum(-1).mean()
