@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-CUDA =  'cuda:1'
+CUDA = 'cuda:1'
 
 
 class ConvModule(nn.Module):
@@ -15,7 +15,7 @@ class ConvModule(nn.Module):
                               out_channel,
                               kernel_size=kernel,
                               stride=1,
-                              padding=(kernel-1)//2)
+                              padding=(kernel - 1) // 2)
         self.bn = nn.BatchNorm2d(out_channel)
         if activation == 'Sigmoid':
             self.activation = nn.Sigmoid()
@@ -27,19 +27,26 @@ class ConvModule(nn.Module):
         return x
 
 # Flatten layer
+
+
 class Flatten(nn.Module):
-  def forward(self, x):
-    return x.view(x.size(0), -1)
+    def forward(self, x):
+        return x.view(x.size(0), -1)
 
 # Reshape layer
+
+
 class Reshape(nn.Module):
-  def __init__(self, outer_shape):
-    super(Reshape, self).__init__()
-    self.outer_shape = outer_shape
-  def forward(self, x):
-    return x.view(x.size(0), *self.outer_shape)
+    def __init__(self, outer_shape):
+        super(Reshape, self).__init__()
+        self.outer_shape = outer_shape
+
+    def forward(self, x):
+        return x.view(x.size(0), *self.outer_shape)
 
 # Sample from the Gumbel-Softmax distribution and optionally discretize.
+
+
 class GumbelSoftmax(nn.Module):
 
     def __init__(self, f_dim, c_dim):

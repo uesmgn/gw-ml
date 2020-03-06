@@ -10,6 +10,7 @@ import numpy as np
 from ..networks.Networks import VAENet
 from ..losses.LossFunctions import LossFunctions
 
+
 class VAE:
     def __init__(self, args):
         input_size = args.input_size
@@ -33,9 +34,8 @@ class VAE:
 
         if self.device == "cuda":
             self.net = self.net.cuda()
-            torch.backends.cudnn.benchmark=True
+            torch.backends.cudnn.benchmark = True
         self.net.to(self.device)
-
 
     def unlabeled_loss(self, x, out):
         # obtain network variables
@@ -47,7 +47,8 @@ class VAE:
         loss_rec = self.losses.reconstruction_loss(x, x_, self.rec_type)
         loss_gauss = self.losses.gaussian_loss(z, mu, var, y_mu, y_var)
         loss_cat = -self.losses.entropy(logits, prob_cat) - np.log(0.1)
-        loss_total = self.w_rec * loss_rec + self.w_gauss * loss_gauss + self.w_cat * loss_cat
+        loss_total = self.w_rec * loss_rec + \
+            self.w_gauss * loss_gauss + self.w_cat * loss_cat
         _, predicted_labels = torch.max(logits, dim=1)
 
         loss_dic = {'total': loss_total,

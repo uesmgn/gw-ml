@@ -5,6 +5,8 @@ from torch.nn import functional as F
 from .Layers import *
 
 # Inference Network
+
+
 class Encoder(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):
         super(Encoder, self).__init__()
@@ -18,9 +20,9 @@ class Encoder(nn.Module):
             nn.Flatten()
         ])
 
-        _features_dim = 64*(x_dim//5//5)**2
+        _features_dim = 64 * (x_dim // 5 // 5)**2
         self.pyx = GumbelSoftmax(_features_dim, y_dim)
-        self.pzxy = Gaussian(_features_dim+y_dim, z_dim)
+        self.pzxy = Gaussian(_features_dim + y_dim, z_dim)
 
     # q(y|x)
     def conv(self, x, temperature):
@@ -45,14 +47,15 @@ class Encoder(nn.Module):
                   'prob_cat': prob, 'categorical': y}
         return output
 
+
 class Decoder(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):
         super(Decoder, self).__init__()
 
         self.y_mu = nn.Linear(y_dim, z_dim)
         self.y_var = nn.Linear(y_dim, z_dim)
-        self._middle_size = x_dim//5//5
-        self._features_dim = 64*self._middle_size**2
+        self._middle_size = x_dim // 5 // 5
+        self._features_dim = 64 * self._middle_size**2
 
         self.fc = nn.Sequential(
             nn.Linear(z_dim, self._features_dim),
@@ -80,7 +83,7 @@ class Decoder(nn.Module):
             if i % 2 == 0:
                 # MaxUnpool2d layer
                 z = layer(z, indices[idx],
-                          output_size=indices[idx+1].size())
+                          output_size=indices[idx + 1].size())
                 idx += 1
             else:
                 z = layer(z)
@@ -93,6 +96,7 @@ class Decoder(nn.Module):
 
         output = {'y_mean': y_mu, 'y_var': y_var, 'x_reconst': x_reconst}
         return output
+
 
 class VAENet(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):

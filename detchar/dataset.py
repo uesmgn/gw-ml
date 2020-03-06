@@ -4,6 +4,7 @@ from torch.utils import data
 from PIL import Image
 import pandas as pd
 
+
 class Dataset(data.Dataset):
 
     def __init__(self, df, transform=None):
@@ -56,6 +57,6 @@ class Dataset(data.Dataset):
         return Dataset(old_df_, self.transform), Dataset(new_df_, self.transform)
 
     def split_dataset(self, alpha=0.8):
-        N_train = int(self.__len__()*alpha)
+        N_train = int(self.__len__() * alpha)
         N_test = self.__len__() - N_train
         return data.random_split(self, [N_train, N_test])
