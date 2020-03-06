@@ -1,6 +1,5 @@
 import datetime
 import time
-
 from tqdm import tqdm
 import torch
 from torch import nn
