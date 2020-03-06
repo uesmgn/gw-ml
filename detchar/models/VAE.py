@@ -1,5 +1,6 @@
 import datetime
 import time
+import os
 from tqdm import tqdm
 import torch
 from torch import nn
@@ -84,9 +85,11 @@ class VAE:
                 x_reconst = out['x_reconst']
                 loss_dic = self.unlabeled_loss(x, out)
                 total = loss_dic['total']
+                predicted_labels = loss_dic['predicted_labels']
                 if batch_idx % interval == 0:
                     torchvision.utils.save_image(
                         torch.cat([x[:8], x_reconst[:8]]),
                         f"{outdir}/VAE_epoch{epoch+1}_batch{batch_idx+1}.png",
                         nrow=8
                     )
+                    print(f'True: {labels}\nPredict: {predicted_labels}')
