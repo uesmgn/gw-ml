@@ -4,7 +4,7 @@ from collections import defaultdict
 import re
 import pandas as pd
 
-DATASET_DIR = 'dataset'
+DATASET_DIR = 'H1L1'
 
 if __name__ == '__main__':
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,3 +20,4 @@ if __name__ == '__main__':
             data[idx] = {'label': label, 'path': path}
     df = pd.DataFrame.from_dict(data, orient='index')
     df.to_json('dataset.json')
+    print(df.shape)

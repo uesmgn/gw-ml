@@ -7,165 +7,64 @@ from torch import nn
 from torchvision import transforms
 import numpy as np
 
-class ConvModule(nn.Module):
+from ..networks.Networks import VAENet
+from ..losses.LossFunctions import LossFunctions
 
-    def __init__(self, input_channels, output_channels,
-                 kernel=3, pooling_kernel=3, return_indices=False):
+class VAE:
+    def __init__(self, device, input_size, z_dim, y_dim):
         self.device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
-        super().__init__()
-        self.conv = nn.Conv2d(input_channels,
-                              output_channels,
-                              kernel_size=kernel,
-                              stride=1,
-                              padding=(kernel-1)//2)
-        self.bn = nn.BatchNorm2d(output_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=pooling_kernel,
-                                    stride=pooling_kernel,
-                                    return_indices=return_indices)
+        self.net = VAENet(input_size, z_dim, y_dim)
+        self.losses = LossFunctions()
+        if torch.cuda.is_available():
+            self.net = self.net.cuda()
 
-    def forward(self, x):
-        x = self.relu(self.bn(self.conv(x)))
-        x, indices = self.maxpool(x)
-        return x, indices
-
-class Latent(nn.Module):
-    def __init__(self, dim_input, dim_latent):
-        self.device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
-        super().__init__()
-        self.mu = nn.Linear(dim_input, dim_latent)
-        self.var = nn.Linear(dim_input, dim_latent)
-        self.fc = nn.Linear(dim_latent, dim_input)
-
-    def _reparameterize(self, mu, logvar):
-        std = logvar.mul(0.5).exp_()
-        esp = torch.randn(*mu.size()).to(self.device)
-        z = mu + std * esp
-        return z
-
-    def forward(self, x):
-        mu, var = self.mu(x), self.var(x)
-        z = self._reparameterize(mu, var)
-        return z, mu, var
-
-class Cluster(nn.Module):
-    def __init__(self, dim_input, n_cluster):
-        self.device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
-        super().__init__()
-        self.fc = nn.Linear(dim_input, n_cluster)
-        self.softmax = nn.Softmax(dim=1)
-
-    def forward(self, x):
-        x = self.fc(x)
-        y = self.softmax(x)
-        return y
-
-class Middle(nn.Module):
-    def __init__(self, dim_input, dim_latent, n_cluster):
-        self.device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
-        super().__init__()
-        self.latent = Latent(dim_input, dim_latent)
-        self.cluster = Cluster(dim_input, n_cluster)
-        self.fc1 = nn.Linear(n_cluster, dim_latent)
-        self.fc2 = nn.Linear(dim_latent, dim_input)
-
-    def forward(self, x):
-        z, mu, var = self.latent(x)
-        y = self.cluster(x)
-        x = z + self.fc1(y)
-        x = self.fc2(x)
-        return x, y, z, mu, var
-
-
-class DeconvModule(nn.Module):
-
-    def __init__(self, input_channels, output_channels,
-                 kernel=3, pooling_kernel=3, activation='ReLu'):
-        self.device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
-        super().__init__()
-        self.maxunpool = nn.MaxUnpool2d(kernel_size=pooling_kernel,
-                                        stride=pooling_kernel)
-        self.conv = nn.Conv2d(input_channels,
-                              output_channels,
-                              kernel_size=kernel,
-                              stride=1,
-                              padding=(kernel-1)//2)
-        self.bn = nn.BatchNorm2d(output_channels)
-        if activation == 'Sigmoid':
-            self.activation = nn.Sigmoid()
-        else:
-            self.activation = nn.ReLU(inplace=True)
-
-    def forward(self, x, indices, output_size):
-        x = self.maxunpool(x, indices, output_size)
-        x = self.activation(self.bn(self.conv(x)))
-        return x
-
-
-class VAE(nn.Module):
-    def __init__(self, input_size, dim_latent, n_cluster):
-        self.device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
-        super().__init__()
-        self.conv1 = ConvModule(1, 64, 11, 3, return_indices=True)
-        self.conv2 = ConvModule(64, 192, 5, 3, return_indices=True)
-        self.conv3 = ConvModule(192, 256, 3, 3, return_indices=True)
-        self.fc = nn.Flatten()
-
-        self.middle_size = input_size//3//3//3
-        self.middle_dim = 256*self.middle_size**2
-
-        self.middle = Middle(self.middle_dim, dim_latent, n_cluster)
-
-        self.deconv1 = DeconvModule(256, 192, 3, 3)
-        self.deconv2 = DeconvModule(192, 64, 5, 3)
-        self.deconv3 = DeconvModule(64, 1, 11, 3, activation='Sigmoid')
+        self.w_rec = 0.5
+        self.w_gauss = 0.2
+        self.w_cat = 0.3
+        self.rec_type = 'mse'
 
     def init_model(self, train_loader, optimizer):
         self.train_loader = train_loader
         self.optimizer = optimizer
 
-    def forward(self, x):
-        input_size = x.size()
+    def unlabeled_loss(self, x, out):
+        # obtain network variables
+        z, x_ = out['gaussian'], out['x_reconst']
+        logits, prob_cat = out['logits'], out['prob_cat']
+        y_mu, y_var = out['y_mean'], out['y_var']
+        mu, var = out['mean'], out['var']
 
-        x, indice1 = self.conv1(x)
-        x, indice2 = self.conv2(x)
-        x, indice3 = self.conv3(x)
+        loss_rec = self.losses.reconstruction_loss(x, x_, self.rec_type)
+        loss_gauss = self.losses.gaussian_loss(z, mu, var, y_mu, y_var)
+        loss_cat = -self.losses.entropy(logits, prob_cat) - np.log(0.1)
+        loss_total = self.w_rec * loss_rec + self.w_gauss * loss_gauss + self.w_cat * loss_cat
+        _, predicted_labels = torch.max(logits, dim=1)
 
-        x = self.fc(x)
-
-        x, y, z, mu, var = self.middle(x)
-
-        x = x.view(-1, 256, self.middle_size, self.middle_size)
-
-        x = self.deconv1(x, indice3, indice2.size())
-        x = self.deconv2(x, indice2, indice1.size())
-        x = self.deconv3(x, indice1, input_size)
-
-        return x, y, z, mu, var
-
-    def loss_function(self, recon_x, x, mu, var):
-        # https://arxiv.org/abs/1312.6114 (Appendix B)
-        BCE = nn.functional.binary_cross_entropy(recon_x, x, reduction='sum')
-        KLD = -0.5 * torch.sum(1 + var - mu.pow(2) - var.exp())
-        return BCE + KLD
+        loss_dic = {'total': loss_total,
+                    'predicted_labels': predicted_labels,
+                    'reconstruction': loss_rec,
+                    'gaussian': loss_gauss,
+                    'categorical': loss_cat}
+        return loss_dic
 
     def fit_train(self, epoch):
         print(f"\nEpoch: {epoch:d} {datetime.datetime.now()}")
-
-        self.train()
+        self.net.train()
         train_loss = 0
         samples_cnt = 0
-        start_t = time.time()
-        for batch_idx, (x, label) in enumerate(self.train_loader):
+        for batch_idx, (x, labels) in enumerate(self.train_loader):
             print(f'\rBatch: {batch_idx+1}', end='')
             x = x.to(self.device)
             self.optimizer.zero_grad()
-            x_, y, z, mu, var = self(x)
-            loss = self.loss_function(x_, x, mu, var)
-            loss.backward()
+            out = self.net(x)
+            loss_dic = self.unlabeled_loss(x, out)
+            print(labels)
+            print(loss_dic['predicted_labels'])
+            total = loss_dic['total']
+            total.backward()
             self.optimizer.step()
-            train_loss += loss.item()
+            train_loss += total.item()
             samples_cnt += x.size(0)
         elapsed_t = time.time() - start_t
-        print(f"Loss: {train_loss / samples_cnt:f}")
+        print(f"\rLoss: {train_loss / samples_cnt:f}")
         print(f"Calc time: {elapsed_t} sec/epoch")
