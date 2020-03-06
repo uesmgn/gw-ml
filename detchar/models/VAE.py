@@ -4,22 +4,27 @@ import os
 from tqdm import tqdm
 import torch
 from torch import nn
-from torchvision import transforms
+from torchvision import utils, transforms
 import numpy as np
 
 from ..networks.Networks import VAENet
 from ..losses.LossFunctions import LossFunctions
 
 class VAE:
-    def __init__(self, device, input_size, z_dim, y_dim):
-        self.device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    def __init__(self, args):
+        input_size = args.input_size
+        z_dim = args.z_dim
+        y_dim = args.y_dim
+
+        self.device = args.device
         self.net = VAENet(input_size, z_dim, y_dim)
         self.losses = LossFunctions()
 
-        self.w_rec = 0.5
-        self.w_gauss = 0.2
-        self.w_cat = 0.3
-        self.rec_type = 'mse'
+        self.w_rec = args.w_rec
+        self.w_gauss = args.w_gauss
+        self.w_cat = args.w_categ
+
+        self.rec_type = args.rec_type
 
     def init_model(self, train_loader, test_loader, optimizer):
         self.train_loader = train_loader
@@ -77,7 +82,7 @@ class VAE:
     def fit_test(self, epoch, outdir='result', interval=10):
         if not os.path.exist(outdir):
             os.mkdir(outdir)
-        self.eval()
+        self.net.eval()
         with torch.no_grad():
             for batch_idx, (x, labels) in enumerate(self.test_loader):
                 x = x.to(self.device)
@@ -87,7 +92,7 @@ class VAE:
                 total = loss_dic['total']
                 predicted_labels = loss_dic['predicted_labels']
                 if batch_idx % interval == 0:
-                    torchvision.utils.save_image(
+                    utils.save_image(
                         torch.cat([x[:8], x_reconst[:8]]),
                         f"{outdir}/VAE_epoch{epoch+1}_batch{batch_idx+1}.png",
                         nrow=8
