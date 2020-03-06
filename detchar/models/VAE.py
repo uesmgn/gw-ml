@@ -14,8 +14,6 @@ class VAE:
         self.device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
         self.net = VAENet(input_size, z_dim, y_dim)
         self.losses = LossFunctions()
-        if torch.cuda.is_available():
-            self.net = self.net.cuda()
 
         self.w_rec = 0.5
         self.w_gauss = 0.2
@@ -25,6 +23,12 @@ class VAE:
     def init_model(self, train_loader, optimizer):
         self.train_loader = train_loader
         self.optimizer = optimizer
+
+        if self.device == "cuda":
+            self.net = self.net.cuda()
+            torch.backends.cudnn.benchmark=True
+        self.net.to(self.device)
+
 
     def unlabeled_loss(self, x, out):
         # obtain network variables
