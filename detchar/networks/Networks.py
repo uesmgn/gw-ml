@@ -5,27 +5,28 @@ from torch.nn import functional as F
 from .Layers import *
 
 # Inference Network
-
-
 class Encoder(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):
         super(Encoder, self).__init__()
 
         # q(y|x)
         self.__features = torch.nn.ModuleList([
-            ConvModule(1, 32, 11),
-            nn.MaxPool2d(kernel_size=5, stride=5, return_indices=True),
-            ConvModule(32, 64, 5),
-            nn.MaxPool2d(kernel_size=5, stride=5, return_indices=True),
+            ConvModule(1, 64, 11),
+            nn.MaxPool2d(kernel_size=3, stride=3, return_indices=True),
+            ConvModule(64, 192, 3),
+            nn.MaxPool2d(kernel_size=3, stride=3, return_indices=True),
+            ConvModule(192, 256, 3),
+            nn.MaxPool2d(kernel_size=3, stride=3, return_indices=True),
             nn.Flatten()
         ])
 
-        _features_dim = 64 * (x_dim // 5 // 5)**2
+        _features_dim = 256*(x_dim//3//3//3)**2
         self.pyx = GumbelSoftmax(_features_dim, y_dim)
-        self.pzxy = Gaussian(_features_dim + y_dim, z_dim)
+        self.pzxy = Gaussian(_features_dim+y_dim, z_dim)
+        # self.fc = nn.Linear(y_dim, _features_dim)
 
     # q(y|x)
-    def conv(self, x, temperature):
+    def conv(self, x):
         indices = []
         indices.append(x)
         for i, layer in enumerate(self.__features):
@@ -38,15 +39,15 @@ class Encoder(nn.Module):
         return x, indices
 
     def forward(self, x, temperature=1.0):
-        features, indices = self.conv(x, temperature)
+        features, indices = self.conv(x)
         logits, prob, y = self.pyx(features, temperature)
-        concat = torch.cat((features, y), dim=1)
-        mu, var, z = self.pzxy(concat)
+        # xy = features + self.fc(y)
+        xy = torch.cat((features, y), 1)
+        mu, var, z = self.pzxy(xy)
         output = {'mean': mu, 'var': var, 'gaussian': z,
                   'indices': indices, 'logits': logits,
                   'prob_cat': prob, 'categorical': y}
         return output
-
 
 class Decoder(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):
@@ -54,19 +55,21 @@ class Decoder(nn.Module):
 
         self.y_mu = nn.Linear(y_dim, z_dim)
         self.y_var = nn.Linear(y_dim, z_dim)
-        self._middle_size = x_dim // 5 // 5
-        self._features_dim = 64 * self._middle_size**2
+        self._middle_size = x_dim//3//3//3
+        self._features_dim = 256*self._middle_size**2
 
         self.fc = nn.Sequential(
             nn.Linear(z_dim, self._features_dim),
-            Reshape((64, self._middle_size, self._middle_size))
+            Reshape((256, self._middle_size, self._middle_size))
         )
 
         self.reconst = torch.nn.ModuleList([
-            nn.MaxUnpool2d(kernel_size=5, stride=5),
-            ConvModule(64, 32, 5),
-            nn.MaxUnpool2d(kernel_size=5, stride=5),
-            ConvModule(32, 1, 11, activation='Sigmoid')
+            nn.MaxUnpool2d(kernel_size=3, stride=3),
+            ConvModule(256, 192, 3),
+            nn.MaxUnpool2d(kernel_size=3, stride=3),
+            ConvModule(192, 64, 3),
+            nn.MaxUnpool2d(kernel_size=3, stride=3),
+            ConvModule(64, 1, 11, activation='Sigmoid')
         ])
 
     # p(z|y)
@@ -82,8 +85,7 @@ class Decoder(nn.Module):
         for i, layer in enumerate(self.reconst):
             if i % 2 == 0:
                 # MaxUnpool2d layer
-                z = layer(z, indices[idx],
-                          output_size=indices[idx + 1].size())
+                z = layer(z, indices[idx])
                 idx += 1
             else:
                 z = layer(z)
@@ -97,13 +99,16 @@ class Decoder(nn.Module):
         output = {'y_mean': y_mu, 'y_var': y_var, 'x_reconst': x_reconst}
         return output
 
-
 class VAENet(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):
         super(VAENet, self).__init__()
 
+        self.x_dim = x_dim
+        self.z_dim = z_dim
+        self.y_dim = y_dim
         self.encoder = Encoder(x_dim, z_dim, y_dim)
         self.decoder = Decoder(x_dim, z_dim, y_dim)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
 
     # weight initialization
     # for m in self.modules():
@@ -112,7 +117,7 @@ class VAENet(nn.Module):
     #     if m.bias.data is not None:
     #       init.constant_(m.bias, 0)
 
-    def forward(self, x, temperature=1.0):
+    def forward(self, x, temperature=1):
         from_encoder = self.encoder(x, temperature)
         z = from_encoder['gaussian']
         y = from_encoder['categorical']
