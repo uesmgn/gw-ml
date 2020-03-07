@@ -41,6 +41,7 @@ class GumbelSoftmax(nn.Module):
 
     def __init__(self, f_dim, c_dim):
         super(GumbelSoftmax, self).__init__()
+        # p(c|f)
         self.logits = nn.Linear(f_dim, c_dim)
         self.f_dim = f_dim
         self.c_dim = c_dim
@@ -66,14 +67,17 @@ class GumbelSoftmax(nn.Module):
         return logits, prob, y
 
 
-# Sample from a Gaussian distribution
 class Gaussian(nn.Module):
     def __init__(self, in_dim, z_dim):
         super(Gaussian, self).__init__()
+        # make ``z_dim``-D means and vars of ``z_dim``-D gaussian distribution
+        # from ``in_dim``-D features
         self.mu = nn.Linear(in_dim, z_dim)
         self.var = nn.Linear(in_dim, z_dim)
 
     def reparameterize(self, mu, var):
+        # reparameterize trick:
+        # sample ``z`` from N(``mu``, ``var``) differentiable
         std = torch.sqrt(var + 1e-10)
         noise = torch.randn_like(std)
         z = mu + noise * std
@@ -81,6 +85,7 @@ class Gaussian(nn.Module):
 
     def forward(self, x):
         mu = self.mu(x)
+        # var is non-zero
         var = F.softplus(self.var(x))
         z = self.reparameterize(mu, var)
         return mu, var, z
