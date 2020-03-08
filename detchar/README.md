@@ -8,5 +8,5 @@ Machine Learning for the Glitch Characterization.
 - Appearance frequency of each glitch types varies
 
 ### Approaches
-- VAE + Gumble-Softmax
+- VAE + Gumbel-Softmax
 - VAE + k-means
