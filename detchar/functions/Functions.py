@@ -7,18 +7,21 @@ class Functions:
 
     @classmethod
     def plot_losslog(cls, log, out):
-        xx = [x + 1 for x in log.keys()]
-        yy_train = [loss.get('train_loss') for loss in log.values()]
-        yy_test = [loss.get('test_loss') for loss in log.values()]
+        xx = [x for x in log.keys()]
+        yy_keys = list(log.values())[0].keys()
 
         plt.figure(figsize=[8, 4])
-        plt.plot(xx, yy_train, color='red')
-        plt.plot(xx, yy_test, color='blue')
-
+        yy_stack = []
+        for key in yy_keys:
+            yy = [loss.get(key) for loss in log.values()]
+            yy_stack.append(yy)
+        plt.stackplot(xx,
+                      np.vstack(yy_stack),
+                      labels=yy_keys)
+        plt.legend(loc='upper right')
         plt.xlabel('epoch')
         plt.xlim([min(xx), max(xx)])
         plt.ylabel('loss')
-        plt.ylim([min(yy_train + yy_test), max(yy_train + yy_test)])
         ax = plt.gca()
         ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
         ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
@@ -26,6 +29,18 @@ class Functions:
         plt.savefig(out)
         plt.close()
 
+    @classmethod
+    def plot_latent(cls, data, labels, out):
+        true_labels = labels
+        n = len(labels)
+        xx = np.array([d['x'] for d in data.values()])
+        yy = np.array([d['y'] for d in data.values()])
+        pred_labels = np.array([d['label'] for d in data.values()])
+        colors = np.array([true_labels.index(l) / n for l in pred_labels])
+        plt.scatter(xx, yy, c=colors, cmap='tab20')
+        plt.tight_layout()
+        plt.savefig(out)
+        plt.close()
 
     @classmethod
     def plot_confusion_matrix(cls, cm, index, columns, out,
