@@ -4,6 +4,6 @@
 
 ## Projects
 [Detchar-ML](detchar)
-Machine learning to the Glitch Characterization
+Machine learning for the Glitch Characterization
 
 
