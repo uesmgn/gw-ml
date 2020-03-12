@@ -4,12 +4,11 @@ from torch import nn
 from torch.nn import functional as F
 from .Layers import *
 
-# Inference Network
 class Encoder(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):
         super(Encoder, self).__init__()
 
-        # q(y|x)
+        # q(y,z|x)
         self.__features = torch.nn.ModuleList([
             ConvModule(1, 64, 11),
             nn.MaxPool2d(kernel_size=3, stride=3, return_indices=True),
@@ -21,11 +20,13 @@ class Encoder(nn.Module):
         ])
 
         _features_dim = 256*(x_dim//3//3//3)**2
-        self.pyx = GumbelSoftmax(_features_dim, y_dim)
-        self.pzxy = Gaussian(_features_dim+y_dim, z_dim)
-        # self.fc = nn.Linear(y_dim, _features_dim)
 
-    # q(y|x)
+        # q(y|x) -> Gumbel-softmax(x_features)
+        self.__pyx = GumbelSoftmax(_features_dim, y_dim)
+        # q(z|x) -> Gaussian(x_features)
+        self.__pzx = Gaussian(_features_dim, z_dim)
+
+    # q(y,z|x)
     def conv(self, x):
         indices = []
         indices.append(x)
@@ -38,16 +39,17 @@ class Encoder(nn.Module):
                 x = layer(x)
         return x, indices
 
-    def forward(self, x, temperature=1.0):
-        features, indices = self.conv(x)
-        logits, prob, y = self.pyx(features, temperature)
-        # xy = features + self.fc(y)
-        xy = torch.cat((features, y), 1)
-        mu, var, z = self.pzxy(xy)
-        output = {'mean': mu, 'var': var, 'gaussian': z,
+    def forward(self, x, temp=1.0):
+        # p(y,z|x)
+        x_features, indices = self.conv(x)
+        # p(y|x) y ~ Cat(y)
+        logits, prob, y = self.__pyx(x_features, temp)
+
+        mu, var, z = self.pzx(x_features)
+
+        return {'mean': mu, 'var': var, 'gaussian': z,
                   'indices': indices, 'logits': logits,
                   'prob_cat': prob, 'categorical': y}
-        return output
 
 class Decoder(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):
@@ -55,12 +57,12 @@ class Decoder(nn.Module):
 
         self.y_mu = nn.Linear(y_dim, z_dim)
         self.y_var = nn.Linear(y_dim, z_dim)
-        self._middle_size = x_dim//3//3//3
-        self._features_dim = 256*self._middle_size**2
+        middle_size = x_dim//3//3//3
+        features_dim = 256*middle_size**2
 
         self.fc = nn.Sequential(
-            nn.Linear(z_dim, self._features_dim),
-            Reshape((256, self._middle_size, self._middle_size))
+            nn.Linear(z_dim, features_dim),
+            Reshape((256, middle_size, middle_size))
         )
 
         self.reconst = torch.nn.ModuleList([
@@ -72,7 +74,6 @@ class Decoder(nn.Module):
             ConvModule(64, 1, 11, activation='Sigmoid')
         ])
 
-    # p(z|y)
     def pzy(self, y):
         y_mu = self.y_mu(y)
         y_var = F.softplus(self.y_var(y))
