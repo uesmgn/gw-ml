@@ -29,6 +29,7 @@ class VAE:
         self.net = VAENet(self.input_size,
                           self.z_dim,
                           self.y_dim)
+
         if torch.cuda.is_available():
             self.net = self.net.cuda()
             torch.backends.cudnn.benchmark = True

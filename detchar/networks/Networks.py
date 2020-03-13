@@ -4,12 +4,14 @@ from torch import nn
 from torch.nn import functional as F
 from .Layers import *
 
+
 class Encoder(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):
-        super(Encoder, self).__init__()
+        super().__init__()
 
-        # q(y,z|x)
-        self.__features = torch.nn.ModuleList([
+        features_dim = 256 * (x_dim // 3 // 3 // 3)**2
+
+        self.features = torch.nn.ModuleList([
             ConvModule(1, 64, 11),
             nn.MaxPool2d(kernel_size=3, stride=3, return_indices=True),
             ConvModule(64, 192, 3),
@@ -19,20 +21,18 @@ class Encoder(nn.Module):
             nn.Flatten()
         ])
 
-        _features_dim = 256*(x_dim//3//3//3)**2
-
-        # q(y|x) -> Gumbel-softmax(x_features)
-        self.__pyx = GumbelSoftmax(_features_dim, y_dim)
-        # q(z|x) -> Gaussian(x_features)
-        self.__pzx = Gaussian(_features_dim, z_dim)
+        # Gumbel-softmax(x_features)
+        self.gumbel = GumbelSoftmax(features_dim, y_dim)
+        # Gaussian(x_features)
+        self.gaussian = Gaussian(features_dim, z_dim)
 
     # q(y,z|x)
-    def conv(self, x):
+    def x_features(self, x):
         indices = []
         indices.append(x)
-        for i, layer in enumerate(self.__features):
+        for i, layer in enumerate(self.features):
             if i % 2 == 1:
-                # get indices from max-pooling
+                # get indice from max-pooling
                 x, indice = layer(x)
                 indices.append(indice)
             else:
@@ -40,16 +40,16 @@ class Encoder(nn.Module):
         return x, indices
 
     def forward(self, x, temp=1.0):
-        # p(y,z|x)
-        x_features, indices = self.conv(x)
+        x_features, indices = self.x_features(x)
         # p(y|x) y ~ Cat(y)
-        logits, prob, y = self.__pyx(x_features, temp)
+        logits, prob, y = self.gumbel(x_features, temp)
+        # q(z|x) z ~ N(z_mu, z_var)
+        z_mu, z_var, z = self.gaussian(x_features)
 
-        mu, var, z = self.pzx(x_features)
+        return {'z_mu': z_mu, 'z_var': z_var, 'z': z,
+                'indices': indices, 'logits': logits,
+                'prob_cat': prob, 'categorical': y}
 
-        return {'mean': mu, 'var': var, 'gaussian': z,
-                  'indices': indices, 'logits': logits,
-                  'prob_cat': prob, 'categorical': y}
 
 class Decoder(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):
@@ -57,8 +57,8 @@ class Decoder(nn.Module):
 
         self.y_mu = nn.Linear(y_dim, z_dim)
         self.y_var = nn.Linear(y_dim, z_dim)
-        middle_size = x_dim//3//3//3
-        features_dim = 256*middle_size**2
+        middle_size = x_dim // 3 // 3 // 3
+        features_dim = 256 * middle_size**2
 
         self.fc = nn.Sequential(
             nn.Linear(z_dim, features_dim),
@@ -99,6 +99,7 @@ class Decoder(nn.Module):
 
         output = {'y_mean': y_mu, 'y_var': y_var, 'x_reconst': x_reconst}
         return output
+
 
 class VAENet(nn.Module):
     def __init__(self, x_dim, z_dim, y_dim):

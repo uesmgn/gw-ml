@@ -40,8 +40,7 @@ class Reshape(nn.Module):
 class GumbelSoftmax(nn.Module):
 
     def __init__(self, f_dim, c_dim):
-        super(GumbelSoftmax, self).__init__()
-        # p(c|f)
+        super().__init__()
         self.logits = nn.Linear(f_dim, c_dim)
         self.f_dim = f_dim
         self.c_dim = c_dim
