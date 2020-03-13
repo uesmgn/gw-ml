@@ -38,10 +38,10 @@ class VAE:
     def get_loss(self, x, out):
         # obtain network variables
         z, x_reconst = out['z'], out['x_reconst']
-        z_mu, z_var = out['z_mu'], out['z_var']
+        z_mu, z_sigma = out['z_mu'], out['z_sigma']
 
         loss_rec = self.losses.reconstruction_loss(x, x_reconst)
-        kl_divergence = self.losses.gaussian_kl_divergence(z, z_mu, z_var)
+        kl_divergence = self.losses.gaussian_kl_divergence(z, z_mu, z_sigma)
         total = loss_rec - kl_divergence
 
         loss_dic = {'total': total,

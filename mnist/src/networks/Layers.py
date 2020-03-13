@@ -35,24 +35,23 @@ class Gaussian(nn.Module):
     def __init__(self, in_dim, z_dim):
         super().__init__()
         self.mu = nn.Linear(in_dim, z_dim)
-        self.var = nn.Linear(in_dim, z_dim)
+        self.sigma = nn.Linear(in_dim, z_dim)
 
-    def reparameterize(self, mu, var):
+    def reparameterize(self, mu, sigma):
         # reparameterize trick
         # std = torch.sqrt(var + 1e-10)
         # noise = torch.randn_like(std)
         # z = mu + noise * std
-        std = torch.exp(0.5 * var)
-        eps = torch.randn_like(std)
-        return mu + eps * std
+        noise = torch.randn_like(sigma)
+        return mu + noise * sigma
         return z
 
     def forward(self, x):
         mu = self.mu(x)
         # var is non-zero
-        var = F.softplus(self.var(x))
-        z = self.reparameterize(mu, var)
-        return mu, var, z
+        sigma = F.softplus(self.sigma(x)) + 1e-10
+        z = self.reparameterize(mu, sigma)
+        return mu, sigma, z
 
 
 class Encoder(nn.Module):
@@ -86,9 +85,9 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         x_features, indices = self.x_features(x)
-        z_mu, z_var, z = self.gaussian(x_features)
+        z_mu, z_sigma, z = self.gaussian(x_features)
 
-        return {'z_mu': z_mu, 'z_var': z_var,
+        return {'z_mu': z_mu, 'z_sigma': z_sigma,
                 'z': z, 'indices': indices}
 
 

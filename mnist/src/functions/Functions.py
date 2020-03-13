@@ -13,7 +13,7 @@ class Functions:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        ax.scatter(zz[:, 0], zz[:, 1], zz[:, 2], c=colors, cmap='tab20')
+        ax.scatter(zz[:, 0], zz[:, 1], zz[:, 2], c=colors, s=1.0, cmap='tab20')
         fig.tight_layout()
         fig.savefig(out)
         plt.close()
