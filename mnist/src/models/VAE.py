@@ -85,10 +85,9 @@ class VAE:
                 [f'Loss-{k}: {v:.3f}' for k, v in loss.items()])
             print(f'Train {loss_info}')
 
-        out = loss
         # additional output key-value ↓
 
-        return out
+        return loss
 
     # Test
     def test(self, epoch, verbose=1):
@@ -132,9 +131,9 @@ class VAE:
                     [f'Loss-{k}: {v:.3f}' for k, v in loss.items()])
                 print(f'Test: {loss_info}')
 
-            out = loss
             # additional output key-value ↓
-            out['reconst'] = torch.cat([x[:8], x_reconst[:8]])
-            out['latent_features'] = latent_features
+            x_reconst = out['x_reconst']
+            loss['reconst'] = torch.cat([x[:8], x_reconst[:8]])
+            loss['latent_features'] = latent_features
 
-            return out
+            return loss

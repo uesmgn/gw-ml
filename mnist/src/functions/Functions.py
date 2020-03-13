@@ -1,3 +1,4 @@
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import  numpy as np
 
@@ -12,9 +13,7 @@ class Functions:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        print(zz)
-
         ax.scatter(zz[:, 0], zz[:, 1], zz[:, 2], c=colors, cmap='tab20')
         fig.tight_layout()
         fig.savefig(out)
-        fig.close()
+        plt.close()

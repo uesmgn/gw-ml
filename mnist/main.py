@@ -5,14 +5,14 @@ import datetime
 import torch
 from torch.utils.data import DataLoader
 import pandas as pd
-from torchvision import transforms, datasets
+from torchvision import utils, transforms, datasets
 import argparse
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
 
 from src.models.VAE import VAE
-from src.functions import Functions as F
+from src.functions.Functions import Functions as F
 
 
 parser = argparse.ArgumentParser(
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     for i in range(epochs):
         epoch = i + 1
         train_out = vae.train(epoch, verbose=verbose)
-        test_out = vae.test(epoch, outdir, verbose=verbose)
+        test_out = vae.test(epoch, verbose=verbose)
 
         reconst = test_out['reconst']
         utils.save_image(
