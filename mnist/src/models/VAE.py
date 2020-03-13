@@ -39,13 +39,13 @@ class VAE:
         z, x_reconst = out['z'], out['x_reconst']
         z_mu, z_var = out['z_mu'], out['z_var']
 
-        loss = self.losses.reconstruction_loss(x, x_reconst)
+        loss_rec = self.losses.reconstruction_loss(x, x_reconst)
         kl_divergence = self.losses.gaussian_kl_divergence(z, z_mu, z_var)
-        total = loss - kl_divergence
+        total = loss_rec - kl_divergence
 
         loss_dic = {'total': total,
-                    'loss': loss,
-                    'kl_divergence': kl_divergence}
+                    'loss_rec': loss_rec,
+                    'kl': kl_divergence}
 
         return loss_dic
 
@@ -58,18 +58,21 @@ class VAE:
 
         for b, (x, labels) in enumerate(self.train_loader):
             batch = b + 1
-            print(f'\r{b}', end='')
             x = x.to(self.device)
             self.optimizer.zero_grad()
             out = self.net(x)
 
             loss_dic = self.get_loss(x, out)
             total = loss_dic['total']
+            loss_rec = loss_dic['loss_rec']
+            kl = loss_dic['kl']
 
             total.backward()
             self.optimizer.step()
 
             loss['total'] += total.item()
+            loss['loss_rec'] += loss_rec.item()
+            loss['kl'] += kl.item()
             n_samples += x.size(0)
         print('')
 
@@ -77,7 +80,6 @@ class VAE:
             loss[key] /= n_samples
 
         if verbose:
-            print(f"Calc time: {elapsed_t:.3f} sec/epoch")
             loss_info = ", ".join(
                 [f'Loss-{k}: {v:.3f}' for k, v in loss.items()])
             print(f'Train {loss_info}')

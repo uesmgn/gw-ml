@@ -109,7 +109,6 @@ if __name__ == '__main__':
     for i in range(epochs):
         epoch = i + 1
         train_out = vae.train(epoch, verbose=verbose)
-        print(train_out['total'])
 
 
     #
