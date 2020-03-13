@@ -119,10 +119,15 @@ if __name__ == '__main__':
             nrow=8
         )
         latent_features = test_out['latent_features']
-        F.plot_latent(latent_features,
-                      args.labels,
-                      f"{outdir}/latent_epoch{epoch}.png")
 
+        if args.z_dim == 2:
+            F.plot_latent2d(latent_features,
+                            args.labels,
+                            f"{outdir}/latent_epoch{epoch}.png")
+        elif args.z_dim == 3:
+            F.plot_latent3d(latent_features,
+                            args.labels,
+                            f"{outdir}/latent_epoch{epoch}.png")
     #
     # log = {}
     #
