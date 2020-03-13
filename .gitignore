@@ -128,3 +128,4 @@ dmypy.json
 dataset/
 .DS_Store
 result/
+*.png
