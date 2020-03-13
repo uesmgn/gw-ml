@@ -22,6 +22,7 @@ class VAE:
 
         if torch.cuda.is_available():
             self.net = self.net.cuda()
+            torch.cuda.empty_cache()
             torch.backends.cudnn.benchmark = True
         self.net.to(self.device)
 
@@ -49,7 +50,7 @@ class VAE:
 
         return loss_dic
 
-    def train(self, epoch, verbose=True):
+    def train(self, epoch, verbose=1):
         assert self.__initialized
         self.net.train()
 
@@ -88,3 +89,52 @@ class VAE:
         # additional output key-value ↓
 
         return out
+
+    # Test
+    def test(self, epoch, verbose=1):
+        assert self.__initialized
+        self.net.eval()
+
+        loss = defaultdict(lambda: 0)
+        n_samples = 0
+
+        latent_features = {}
+
+        with torch.no_grad():
+            for b, (x, labels) in enumerate(self.test_loader):
+                batch = b + 1
+                x = x.to(self.device)
+
+                out = self.net(x)
+
+                loss_dic = self.get_loss(x, out)
+                total = loss_dic['total']
+                loss_rec = loss_dic['loss_rec']
+                kl = loss_dic['kl']
+
+                for i, _ in enumerate(out['z'][:, 0]):
+
+                    latent_features[f'{batch}-{i+1}'] = {
+                        'z': out['z'][i, :].cpu().numpy(),
+                        'label': labels[i]
+                    }
+
+                loss['total'] += total.item()
+                loss['loss_rec'] += loss_rec.item()
+                loss['kl'] += kl.item()
+                n_samples += x.size(0)
+
+            for key in loss.keys():
+                loss[key] /= n_samples
+
+            if verbose:
+                loss_info = ", ".join(
+                    [f'Loss-{k}: {v:.3f}' for k, v in loss.items()])
+                print(f'Test: {loss_info}')
+
+            out = loss
+            # additional output key-value ↓
+            out['reconst'] = torch.cat([x[:8], x_reconst[:8]])
+            out['latent_features'] = latent_features
+
+            return out

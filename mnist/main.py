@@ -12,6 +12,7 @@ from matplotlib import ticker
 import numpy as np
 
 from src.models.VAE import VAE
+from src.functions import Functions as F
 
 
 parser = argparse.ArgumentParser(
@@ -109,7 +110,18 @@ if __name__ == '__main__':
     for i in range(epochs):
         epoch = i + 1
         train_out = vae.train(epoch, verbose=verbose)
+        test_out = vae.test(epoch, outdir, verbose=verbose)
 
+        reconst = test_out['reconst']
+        utils.save_image(
+            reconst,
+            f"{outdir}/reconst_epoch{epoch}.png",
+            nrow=8
+        )
+        latent_features = test_out['latent_features']
+        F.plot_latent(latent_features,
+                      args.labels,
+                      f"{outdir}/latent_epoch{epoch}.png")
 
     #
     # log = {}

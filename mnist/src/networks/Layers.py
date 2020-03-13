@@ -50,7 +50,7 @@ class Gaussian(nn.Module):
     def forward(self, x):
         mu = self.mu(x)
         # var is non-zero
-        var = F.softplus(elf.var(x))
+        var = F.softplus(self.var(x))
         z = self.reparameterize(mu, var)
         return mu, var, z
 
