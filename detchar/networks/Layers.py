@@ -279,17 +279,17 @@ class GumbelSoftmax(nn.Module):
                 nn.Flatten()
             )
 
-    def gumbel_softmax(self, prob, temp):
-        u = torch.rand(prob.size())
+    def gumbel_softmax(self, logits, temp):
+        u = torch.rand(logits.size())
         if prob.is_cuda:
-            u = u.to(prob.device)
+            u = u.to(logits.device)
         g  = -torch.log(-torch.log(u + self.eps) + self.eps)
-        y = torch.log(prob + self.eps) + g
+        y = torch.log(logits + self.eps) + g
         print(y)
-        return F.softmax((torch.log(prob + self.eps) + g) / temp, dim=-1)
+        return F.softmax(y / temp, dim=-1)
 
     def forward(self, x, temp=1.0):
         logits = self.logits(x)
         prob = F.softmax(logits, dim=-1)
-        y = self.gumbel_softmax(prob, temp)
+        y = self.gumbel_softmax(logits, temp)
         return logits, prob, y
