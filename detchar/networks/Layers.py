@@ -285,6 +285,7 @@ class GumbelSoftmax(nn.Module):
             u = u.to(prob.device)
         g  = -torch.log(-torch.log(u + self.eps) + self.eps)
         y = torch.log(prob + self.eps) + g
+        print(y)
         return F.softmax((torch.log(prob + self.eps) + g) / temp, dim=-1)
 
     def forward(self, x, temp=1.0):
