@@ -1,16 +1,19 @@
 import os
 import torch
+import time
 from torch.utils.data import DataLoader
 import pandas as pd
-from torchvision import transforms
+from torchvision import utils, transforms
 import argparse
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
+from sklearn.manifold import TSNE
 
 from detchar.dataset import Dataset
 from detchar.models.VAE import VAE
 from detchar.functions.Functions import Functions as F
+from detchar.networks.Networks import VAENet, VAENet_M2
 
 parser = argparse.ArgumentParser(
     description='PyTorch Implementation of VAE Clustering')
@@ -18,26 +21,27 @@ parser = argparse.ArgumentParser(
 # Architecture
 parser.add_argument('-y', '--y_dim', type=int, default=16,
                     help='number of classes (default: 16)')
-parser.add_argument('-z', '--z_dim', default=64, type=int,
-                    help='gaussian size (default: 64)')
+parser.add_argument('-z', '--z_dim', default=512, type=int,
+                    help='gaussian size (default: 512)')
 parser.add_argument('-i', '--input_size', default=486, type=int,
                     help='input size (default: 486)')
-parser.add_argument('-e', '--epochs', default=1000, type=int,
-                    help='input size (default: 1000)')
-parser.add_argument('-b', '--batch_size', default=8, type=int,
-                    help='batch size (default: 8)')
+parser.add_argument('-e', '--epochs', default=5000, type=int,
+                    help='number of epochs (default: 5000)')
+parser.add_argument('-b', '--batch_size', default=4, type=int,
+                    help='batch size (default: 4)')
 parser.add_argument('-o', '--outdir', default='result', type=str,
                     help='output directory name (default: result)')
-
+parser.add_argument('-cuda', '--cuda', default=0, type=int,
+                    help='cuda index')
 # Loss function parameters
 parser.add_argument('--w_gauss', default=1, type=float,
                     help='weight of gaussian loss (default: 1)')
-parser.add_argument('--w_categ', default=1, type=float,
+parser.add_argument('--w_cat', default=1, type=float,
                     help='weight of categorical loss (default: 1)')
 parser.add_argument('--w_rec', default=1, type=float,
                     help='weight of reconstruction loss (default: 1)')
 parser.add_argument('--rec_type', type=str, choices=['bce', 'mse'],
-                    default='bce', help='desired reconstruction loss function (default: bce)')
+                    default='mse', help='desired reconstruction loss function (default: mse)')
 
 args = parser.parse_args()
 
@@ -54,7 +58,8 @@ if __name__ == '__main__':
         transforms.Grayscale(),
         transforms.ToTensor()
     ])
-    args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    args.device = f'cuda:{args.cuda}' if torch.cuda.is_available() else 'cpu'
+    print(args.device)
     dataset = Dataset(df, data_transform)
     old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'])
     args.labels = old_set.get_labels()
@@ -65,36 +70,79 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_set,
                              batch_size=args.batch_size,
                              shuffle=False)
-
-    vae = VAE(args)
+    net = VAENet(args.input_size, args.z_dim, args.y_dim)
+    vae = VAE(args, net)
     print(vae.net)
     optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-3)
-    vae.init_model(train_loader, test_loader, optimizer)
-    log = {}
+    vae.init_model(train_loader, test_loader, optimizer, enable_scheduler=False)
+
+    losses = {'train': [],
+              'test': []}
+    epochs = []
 
     for e in range(args.epochs):
-        epoch = e+1
-        init_temp = 5.
-        min_temp = 0.5
-        decay_temp_rate = 0.16
-        # init_temp -> min_temp
-        gumbel_temp = np.maximum(init_temp*np.exp(-decay_temp_rate*e), min_temp)
+        epoch = e + 1
+        epochs.append(epoch)
 
-        train_out = vae.fit_train(epoch, gumbel_temp)
-        test_out = vae.fit_test(epoch, gumbel_temp, outdir=outdir)
-        log[epoch] = {
-            'train_loss': train_out['total'],
-            'test_loss': test_out['total']
-        }
+        start_t = time.time()
+
+        train_out = vae.train(epoch)
+        test_out = vae.test(epoch)
+
+        losses['train'].append(train_out['loss_total'])
+        losses['test'].append(test_out['loss_total'])
+
+        latents = test_out['latents']
+        labels = test_out['labels']
+        comparison = test_out['comparison']
+        cm = test_out['cm']
+
+        latents_3d = TSNE(
+            n_components=3, random_state=0).fit_transform(latents)
+        labels = np.array([args.labels.index(l) / len(args.labels)
+                           for l in labels])
+
+        F.plot_latent3d(latents_3d, labels,
+                        f'{outdir}/latents_{epoch}.png')
+
+        utils.save_image(comparison,
+                         f"{outdir}/VAE_epoch{epoch}.png",
+                         nrow=12)
+
+        cm_out = f'{outdir}/cm_{epoch}.png'
+        cm_title = f'Confusion matrix epoch-{epoch}'
+        cm_index = args.labels
+        cm_columns = list(range(args.y_dim))
+        F.plot_confusion_matrix(cm,
+                                cm_index,
+                                cm_columns,
+                                cm_out,
+                                normalize=True)
+
         if epoch % 10 == 0:
-            cm_out = f'{outdir}/cm_{epoch}.png'
-            cm_title = f'Confusion matrix epoch-{epoch}, loss_cat: {test_out["categorical"]}'
-            cm_index = args.labels
-            cm_columns = list(range(args.y_dim))
-            F.plot_confusion_matrix(test_out['cm'],
-                                    cm_index,
-                                    cm_columns,
-                                    cm_out,
-                                    normalize=True)
-            log_out = f'{outdir}/loss_{epoch}.png'
-            F.plot_losslog(log, log_out)
+            if epoch % 100 == 0:
+                F.plot_loss(epochs, losses, f"{outdir}/Loss_epoch{epoch}.png")
+            else:
+                F.plot_loss(epochs, losses,
+                            f"{outdir}/Loss_epoch{epoch}.png", type=1)
+
+        elapsed_t = time.time() - start_t
+        print(f"Calc time: {elapsed_t:.3f} sec / epoch")
+        print('----------')
+        # test_out = vae.fit_test(epoch, gumbel_temp, outdir=outdir)
+        # log[epoch] = {
+        #     'train_loss': train_out['total'],
+        #     'test_loss': test_out['total']
+        # }
+        # if epoch % 10 == 0:
+        #     cm_out = f'{outdir}/cm_{epoch}.png'
+        #     cm_title = f'Confusion matrix epoch-{epoch}, loss_cat: {test_out["categorical"]}'
+        #     cm_index = args.labels
+        #     cm_columns = list(range(args.y_dim))
+        #     F.plot_confusion_matrix(test_out['cm'],
+        #                             cm_index,
+        #                             cm_columns,
+        #                             cm_out,
+        #                             normalize=True)
+        #     log_out = f'{outdir}/loss_{epoch}.png'
+        #     F.plot_losslog(log, log_out)

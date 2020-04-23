@@ -1,133 +1,256 @@
 import torch
-import torch.nn.init as init
 from torch import nn
 from torch.nn import functional as F
 from .Layers import *
 
-
-class Encoder(nn.Module):
-    def __init__(self, x_dim, z_dim, y_dim):
+class VAENet(nn.Module):
+    def __init__(self, x_size, z_dim, y_dim):
         super().__init__()
 
-        features_dim = 256 * (x_dim // 3 // 3 // 3)**2
+        middle_channel = 192
+        middle_size = 18
+        middle_dim = middle_channel * middle_size ** 2
+        n_bottle = 16
 
-        self.features = torch.nn.ModuleList([
-            ConvModule(1, 64, 11),
-            nn.MaxPool2d(kernel_size=3, stride=3, return_indices=True),
-            ConvModule(64, 192, 3),
-            nn.MaxPool2d(kernel_size=3, stride=3, return_indices=True),
-            ConvModule(192, 256, 3),
-            nn.MaxPool2d(kernel_size=3, stride=3, return_indices=True),
+        self.encoder = nn.Sequential(
+            ConvModule(1, 32, 1, 1, activation='tanh'),
+            DownSample(32, 64, kernel_size=3, stride=3,
+                       activation='tanh', return_indices=False, type='max'),
+            DownSample(64, 128, kernel_size=3, stride=3,
+                       activation='tanh', return_indices=False, type='max'),
+            DownSample(128, 192, kernel_size=3, stride=3,
+                       activation='tanh', return_indices=False, type='max'),
             nn.Flatten()
-        ])
+        )
+        self.gumbel = GumbelSoftmax(middle_dim, y_dim)
+        self.gaussian = Gaussian(middle_dim + y_dim, z_dim)
 
-        # Gumbel-softmax(x_features)
-        self.gumbel = GumbelSoftmax(features_dim, y_dim)
-        # Gaussian(x_features)
-        self.gaussian = Gaussian(features_dim, z_dim)
+        self.y_mu = nn.Linear(y_dim, z_dim)
+        self.y_logvar = nn.Linear(y_dim, z_dim)
 
-    # q(y,z|x)
-    def x_features(self, x):
+        self.decoder = nn.Sequential(
+            nn.Linear(z_dim, middle_dim),
+            Reshape((middle_channel, middle_size, middle_size)),
+            Upsample(192, 128, kernel_size=3, stride=3,
+                     activation='tanh', accept_indices=False),
+            Upsample(128, 64, kernel_size=3, stride=3,
+                     activation='tanh', accept_indices=False),
+            Upsample(64, 32, kernel_size=3, stride=3,
+                     activation='tanh', accept_indices=False),
+            ConvtModule(32, 1, 1, 1, activation='Sigmoid')
+        )
+
+        # weight initialization
+        for m in self.modules():
+            if type(m) == nn.Linear or type(m) == nn.Conv2d or type(m) == nn.ConvTranspose2d:
+                nn.init.xavier_normal_(m.weight)
+                if m.bias.data is not None:
+                    nn.init.constant_(m.bias, 0)
+
+    def forward(self, x, reparameterize=True):
         indices = []
-        indices.append(x)
-        for i, layer in enumerate(self.features):
-            if i % 2 == 1:
-                # get indice from max-pooling
+
+        for layer in self.encoder:
+            if hasattr(layer, 'return_indices') and layer.return_indices:
                 x, indice = layer(x)
                 indices.append(indice)
             else:
                 x = layer(x)
-        return x, indices
 
-    def forward(self, x, temp=1.0):
-        x_features, indices = self.x_features(x)
-        # p(y|x) y ~ Cat(y)
-        logits, prob, y = self.gumbel(x_features, temp)
-        # q(z|x) z ~ N(z_mu, z_var)
-        z_mu, z_var, z = self.gaussian(x_features)
-
-        return {'z_mu': z_mu, 'z_var': z_var, 'z': z,
-                'indices': indices, 'logits': logits,
-                'prob_cat': prob, 'categorical': y}
-
-
-class Decoder(nn.Module):
-    def __init__(self, x_dim, z_dim, y_dim):
-        super(Decoder, self).__init__()
-
-        self.y_mu = nn.Linear(y_dim, z_dim)
-        self.y_var = nn.Linear(y_dim, z_dim)
-        middle_size = x_dim // 3 // 3 // 3
-        features_dim = 256 * middle_size**2
-
-        self.fc = nn.Sequential(
-            nn.Linear(z_dim, features_dim),
-            Reshape((256, middle_size, middle_size))
-        )
-
-        self.reconst = torch.nn.ModuleList([
-            nn.MaxUnpool2d(kernel_size=3, stride=3),
-            ConvModule(256, 192, 3),
-            nn.MaxUnpool2d(kernel_size=3, stride=3),
-            ConvModule(192, 64, 3),
-            nn.MaxUnpool2d(kernel_size=3, stride=3),
-            ConvModule(64, 1, 11, activation='Sigmoid')
-        ])
-
-    def pzy(self, y):
+        y_logits, y_prob, y = self.gumbel(x, temp=1.0)
         y_mu = self.y_mu(y)
-        y_var = F.softplus(self.y_var(y))
-        return y_mu, y_var
+        y_logvar = self.y_logvar(y)
+        z, z_mu, z_logvar = self.gaussian(torch.cat((x, y), 1), reparameterize)
 
-    # p(x|z)
-    def pxz(self, z, indices):
-        indices.reverse()
-        idx = 0
-        for i, layer in enumerate(self.reconst):
-            if i % 2 == 0:
-                # MaxUnpool2d layer
-                z = layer(z, indices[idx])
-                idx += 1
+        x_ = z
+
+        for layer in self.decoder:
+            if hasattr(layer, 'accept_indices') and layer.accept_indices:
+                x_ = layer(x_, indices.pop(-1))
             else:
-                z = layer(z)
-        return z
+                x_ = layer(x_)
 
-    def forward(self, z, y, indices):
-        y_mu, y_var = self.pzy(y)
-        x = self.fc(z)
-        x_reconst = self.pxz(x, indices)
+        return {'x_reconst': x_,
+                'z': z,
+                'z_mu': z_mu,
+                'z_logvar': z_logvar,
+                'y': y,
+                'y_logits': y_logits,
+                'y_prob': y_prob,
+                'y_mu': y_mu,
+                'y_logvar': y_logvar }
 
-        output = {'y_mean': y_mu, 'y_var': y_var, 'x_reconst': x_reconst}
-        return output
-
-
-class VAENet(nn.Module):
-    def __init__(self, x_dim, z_dim, y_dim):
-        super(VAENet, self).__init__()
-
-        self.x_dim = x_dim
-        self.z_dim = z_dim
-        self.y_dim = y_dim
-        self.encoder = Encoder(x_dim, z_dim, y_dim)
-        self.decoder = Decoder(x_dim, z_dim, y_dim)
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-
-    # weight initialization
-    # for m in self.modules():
-    #   if type(m) == nn.Linear or type(m) == nn.Conv2d or type(m) == nn.ConvTranspose2d:
-    #     torch.nn.init.xavier_normal_(m.weight)
-    #     if m.bias.data is not None:
-    #       init.constant_(m.bias, 0)
-
-    def forward(self, x, temperature=1):
-        from_encoder = self.encoder(x, temperature)
-        z = from_encoder['gaussian']
-        y = from_encoder['categorical']
-        indices = from_encoder['indices']
-        from_decoder = self.decoder(z, y, indices)
-
-        # merge output
-        output = from_encoder
-        for key, value in from_decoder.items():
-            output[key] = value
-        return output
+#
+# class VAENet_Inception(nn.Module):
+#     def __init__(self, x_size, z_dim, y_dim):
+#         super().__init__()
+#
+#         middle_channel = 384
+#         middle_size = 18
+#         middle_dim = middle_channel * middle_size ** 2
+#         n_bottle = 16
+#
+#         self.encoder = nn.Sequential(
+#             ConvModule(1, 64, 1, 1, activation='tanh'),
+#             ConvInceptionModule(
+#                 64, bottle_channel=n_bottle, activation='tanh'),
+#             DownSample(64, 128, kernel_size=3, stride=3,
+#                        activation='tanh', return_indices=False, type='avg'),
+#             ConvInceptionModule(
+#                 128, bottle_channel=n_bottle, activation='tanh', hard=False),
+#             DownSample(128, 192, kernel_size=3, stride=3,
+#                        activation='tanh', return_indices=False, type='avg'),
+#             ConvInceptionModule(
+#                 192, bottle_channel=n_bottle, activation='tanh', hard=False),
+#             DownSample(192, 384, kernel_size=3, stride=3,
+#                        activation='tanh', return_indices=False, type='avg'),
+#             ConvInceptionModule(
+#                 384, bottle_channel=n_bottle, activation='tanh', hard=False),
+#             nn.Flatten()
+#         )
+#         self.gumbel = GumbelSoftmax(middle_dim, y_dim)
+#         self.gaussian = Gaussian(middle_dim + y_dim, z_dim)
+#
+#         self.y_mu = nn.Linear(y_dim, z_dim)
+#         self.y_logvar = nn.Linear(y_dim, z_dim)
+#
+#         self.decoder = nn.Sequential(
+#             nn.Linear(z_dim, middle_dim),
+#             Reshape((middle_channel, middle_size, middle_size)),
+#             ConvtInceptionModule(
+#                 384, bottle_channel=n_bottle, activation='tanh', hard=False),
+#             Upsample(384, 192, kernel_size=3, stride=3,
+#                      activation='tanh', accept_indices=False),
+#             ConvtInceptionModule(
+#                 192, bottle_channel=n_bottle, activation='tanh', hard=False),
+#             Upsample(192, 128, kernel_size=3, stride=3,
+#                      activation='tanh', accept_indices=False),
+#             ConvtInceptionModule(
+#                 128, bottle_channel=n_bottle, activation='tanh', hard=False),
+#             Upsample(128, 64, kernel_size=3, stride=3,
+#                      activation='tanh', accept_indices=False),
+#             ConvtInceptionModule(
+#                 64, bottle_channel=n_bottle, activation='tanh'),
+#             ConvtModule(64, 1, 1, 1, activation='Sigmoid')
+#         )
+#
+#         # weight initialization
+#         for m in self.modules():
+#             if type(m) == nn.Linear or type(m) == nn.Conv2d or type(m) == nn.ConvTranspose2d:
+#                 nn.init.xavier_normal_(m.weight)
+#                 if m.bias.data is not None:
+#                     nn.init.constant_(m.bias, 0)
+#
+#     def forward(self, x, reparameterize=True):
+#         indices = []
+#
+#         for layer in self.encoder:
+#             if hasattr(layer, 'return_indices') and layer.return_indices:
+#                 x, indice = layer(x)
+#                 indices.append(indice)
+#             else:
+#                 x = layer(x)
+#
+#         y_pi, y = self.gumbel(x, temp=1.0)
+#         y_mu = self.y_mu(y)
+#         y_logvar = self.y_logvar(y)
+#         z, z_mu, z_logvar = self.gaussian(torch.cat((x, y), 1), reparameterize)
+#
+#         x_ = z
+#
+#         for layer in self.decoder:
+#             if hasattr(layer, 'accept_indices') and layer.accept_indices:
+#                 x_ = layer(x_, indices.pop(-1))
+#             else:
+#                 x_ = layer(x_)
+#
+#         return {'x_reconst': x_,
+#                 'z': z,
+#                 'z_mu': z_mu,
+#                 'z_logvar': z_logvar,
+#                 'y': y,
+#                 'y_pi': y_pi,
+#                 'y_mu': y_mu,
+#                 'y_logvar': y_var }
+#
+#
+# class VAENet_M2(nn.Module):
+#     def __init__(self, x_size, z_dim, y_dim):
+#         super().__init__()
+#
+#         middle_channel = 192
+#         middle_size = 18
+#         middle_dim = middle_channel * middle_size ** 2
+#         n_bottle = 16
+#
+#         self.encoder = nn.Sequential(
+#             ConvModule(1, 32, 1, 1, activation='tanh'),
+#             ConvInceptionModule(
+#                 32, bottle_channel=n_bottle, activation='tanh', hard=2),
+#             DownSample(32, 64, kernel_size=3, stride=3,
+#                        activation='tanh', return_indices=False, type='max'),
+#             ConvInceptionModule(
+#                 64, bottle_channel=n_bottle, activation='tanh', hard=2),
+#             DownSample(64, 128, kernel_size=3, stride=3,
+#                        activation='tanh', return_indices=False, type='max'),
+#             ConvInceptionModule(
+#                 128, bottle_channel=n_bottle, activation='tanh', hard=2),
+#             DownSample(128, 192, kernel_size=3, stride=3,
+#                        activation='tanh', return_indices=False, type='max'),
+#             ConvInceptionModule(
+#                 192, bottle_channel=n_bottle, activation='tanh', hard=2),
+#             nn.Flatten()
+#         )
+#         self.gaussian = Gaussian(middle_dim, z_dim)
+#
+#         self.decoder = nn.Sequential(
+#             nn.Linear(z_dim, middle_dim),
+#             Reshape((middle_channel, middle_size, middle_size)),
+#             ConvtInceptionModule(
+#                 192, bottle_channel=n_bottle, activation='tanh', hard=2),
+#             Upsample(192, 128, kernel_size=3, stride=3,
+#                      activation='tanh', accept_indices=False),
+#             ConvtInceptionModule(
+#                 128, bottle_channel=n_bottle, activation='tanh', hard=2),
+#             Upsample(128, 64, kernel_size=3, stride=3,
+#                      activation='tanh', accept_indices=False),
+#             ConvtInceptionModule(
+#                 64, bottle_channel=n_bottle, activation='tanh', hard=2),
+#             Upsample(64, 32, kernel_size=3, stride=3,
+#                      activation='tanh', accept_indices=False),
+#             ConvtInceptionModule(
+#                 32, bottle_channel=n_bottle, activation='tanh', hard=2),
+#             ConvtModule(32, 1, 1, 1, activation='Sigmoid')
+#         )
+#
+#         # weight initialization
+#         for m in self.modules():
+#             if type(m) == nn.Linear or type(m) == nn.Conv2d or type(m) == nn.ConvTranspose2d:
+#                 nn.init.xavier_normal_(m.weight)
+#                 if m.bias.data is not None:
+#                     nn.init.constant_(m.bias, 0)
+#
+#     def forward(self, x, reparameterize=True):
+#         indices = []
+#
+#         for layer in self.encoder:
+#             if hasattr(layer, 'return_indices') and layer.return_indices:
+#                 x, indice = layer(x)
+#                 indices.append(indice)
+#             else:
+#                 x = layer(x)
+#
+#         z, z_mu, z_logvar = self.gaussian(x, reparameterize)
+#
+#         x_ = z
+#
+#         for layer in self.decoder:
+#             if hasattr(layer, 'accept_indices') and layer.accept_indices:
+#                 x_ = layer(x_, indices.pop(-1))
+#             else:
+#                 x_ = layer(x_)
+#
+#         return {'x_reconst': x_,
+#                 'z': z,
+#                 'z_mu': z_mu,
+#                 'z_logvar': z_logvar}

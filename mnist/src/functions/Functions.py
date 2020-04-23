@@ -10,10 +10,10 @@ class Functions:
         zz_labels = np.array([d['label'] for d in data.values()])
         colors = np.array([labels.index(l) / n for l in zz_labels])
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=[8, 8])
         ax = fig.add_subplot(111)
 
-        ax.scatter(zz[:, 0], zz[:, 1], c=colors, s=1.0, cmap='tab10')
+        ax.scatter(zz[:, 0], zz[:, 1], c=colors, s=5.0, cmap='tab10')
         fig.tight_layout()
         fig.savefig(out)
         plt.close()
@@ -25,10 +25,10 @@ class Functions:
         zz_labels = np.array([d['label'] for d in data.values()])
         colors = np.array([labels.index(l) / n for l in zz_labels])
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=[8, 8])
         ax = fig.add_subplot(111, projection='3d')
 
-        ax.scatter(zz[:, 0], zz[:, 1], zz[:, 2], c=colors, s=1.0, cmap='tab10')
+        ax.scatter(zz[:, 0], zz[:, 1], zz[:, 2], c=colors, s=5.0, cmap='tab10')
         fig.tight_layout()
         fig.savefig(out)
         plt.close()

@@ -2,25 +2,25 @@ import itertools
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
 
 class Functions:
 
     @classmethod
-    def plot_losslog(cls, log, out):
-        xx = [x for x in log.keys()]
-        yy_keys = list(log.values())[0].keys()
-
+    def plot_loss(cls, xx, losses, out, type=None):
         plt.figure(figsize=[8, 4])
-        yy_stack = []
-        for key in yy_keys:
-            yy = [loss.get(key) for loss in log.values()]
-            yy_stack.append(yy)
-        plt.stackplot(xx,
-                      np.vstack(yy_stack),
-                      labels=yy_keys)
+        keys = losses.keys()
+        y_median = 0
+        for key in keys:
+            yy = losses.get(key)
+            plt.plot(xx, yy, label=key)
+            if y_median < np.median(yy):
+                y_median = np.median(yy)
         plt.legend(loc='upper right')
         plt.xlabel('epoch')
         plt.xlim([min(xx), max(xx)])
+        if type == 1:
+            plt.ylim([0, y_median])
         plt.ylabel('loss')
         ax = plt.gca()
         ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
@@ -30,16 +30,38 @@ class Functions:
         plt.close()
 
     @classmethod
-    def plot_latent(cls, data, labels, out):
-        true_labels = labels
-        n = len(labels)
-        xx = np.array([d['x'] for d in data.values()])
-        yy = np.array([d['y'] for d in data.values()])
-        pred_labels = np.array([d['label'] for d in data.values()])
-        colors = np.array([true_labels.index(l) / n for l in pred_labels])
-        plt.scatter(xx, yy, c=colors, cmap='tab20')
+    def plot_latent(cls, data, c, out):
+        xx = data[:, 0]
+        x_mean = np.mean(xx)
+        x_sigma = 3. * np.std(xx)
+        yy = data[:, 1]
+        y_mean = np.mean(yy)
+        y_sigma = 3. * np.std(yy)
+        plt.scatter(xx, yy, c=c, cmap='tab20')
+        plt.xlim(x_mean-x_sigma, x_mean+x_sigma)
+        plt.ylim(y_mean-y_sigma, y_mean+y_sigma)
         plt.tight_layout()
         plt.savefig(out)
+        plt.close()
+
+    @classmethod
+    def plot_latent3d(cls, data, c, out):
+        fig = plt.figure(figsize=[16,12])
+        ax = fig.add_subplot(111, projection='3d')
+        xx = data[:, 0]
+        x_mean = np.mean(xx)
+        x_sigma = 3. * np.std(xx)
+        yy = data[:, 1]
+        y_mean = np.mean(yy)
+        y_sigma = 3. * np.std(yy)
+        zz = data[:, 2]
+        z_mean = np.mean(zz)
+        z_sigma = 3. * np.std(zz)
+        ax.scatter(xx, yy, zz, c=c, cmap='tab20')
+        ax.set_xlim(x_mean-x_sigma, x_mean+x_sigma)
+        ax.set_ylim(y_mean-y_sigma, y_mean+y_sigma)
+        ax.set_zlim(z_mean-z_sigma, z_mean+z_sigma)
+        fig.savefig(out)
         plt.close()
 
     @classmethod
@@ -72,7 +94,7 @@ class Functions:
         height = width * len(index) / len(columns)
         margin = (max([len(str(i)) for i in index]) * 0.2,
                   max([len(str(c)) for c in columns]) * 0.2)
-        figsize = (width+margin[0], height+margin[1])
+        figsize = (width + margin[0], height + margin[1])
 
         fig, ax = plt.subplots(figsize=figsize)
         im = ax.imshow(cm, interpolation='nearest',

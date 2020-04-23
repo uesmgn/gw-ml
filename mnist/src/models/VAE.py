@@ -38,15 +38,15 @@ class VAE:
     def get_loss(self, x, out):
         # obtain network variables
         z, x_reconst = out['z'], out['x_reconst']
-        z_mu, z_sigma = out['z_mu'], out['z_sigma']
+        z_mu, z_logvar = out['z_mu'], out['z_logvar']
 
         loss_rec = self.losses.reconstruction_loss(x, x_reconst)
-        kl_divergence = self.losses.gaussian_kl_divergence(z, z_mu, z_sigma)
-        total = loss_rec - kl_divergence
+        loss_kl = self.losses.gaussian_kl_loss(z, z_mu, z_logvar)
+        total = loss_rec + loss_kl
 
         loss_dic = {'total': total,
-                    'loss_rec': loss_rec,
-                    'kl': kl_divergence}
+                    'reconstruct': loss_rec,
+                    'kl': loss_kl}
 
         return loss_dic
 
@@ -65,15 +65,15 @@ class VAE:
 
             loss_dic = self.get_loss(x, out)
             total = loss_dic['total']
-            loss_rec = loss_dic['loss_rec']
-            kl = loss_dic['kl']
+            loss_rec = loss_dic['reconstruct']
+            loss_kl = loss_dic['kl']
 
             total.backward()
             self.optimizer.step()
 
             loss['total'] += total.item()
-            loss['loss_rec'] += loss_rec.item()
-            loss['kl'] += kl.item()
+            loss['reconstruct'] += loss_rec.item()
+            loss['kl'] += loss_kl.item()
             n_samples += x.size(0)
         print('')
 
@@ -108,8 +108,8 @@ class VAE:
 
                 loss_dic = self.get_loss(x, out)
                 total = loss_dic['total']
-                loss_rec = loss_dic['loss_rec']
-                kl = loss_dic['kl']
+                loss_rec = loss_dic['reconstruct']
+                loss_kl = loss_dic['kl']
 
                 for i, _ in enumerate(out['z'][:, 0]):
 
@@ -119,8 +119,8 @@ class VAE:
                     }
 
                 loss['total'] += total.item()
-                loss['loss_rec'] += loss_rec.item()
-                loss['kl'] += kl.item()
+                loss['reconstruct'] += loss_rec.item()
+                loss['kl'] += loss_kl.item()
                 n_samples += x.size(0)
 
             for key in loss.keys():
