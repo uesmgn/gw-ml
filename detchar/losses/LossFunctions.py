@@ -14,7 +14,7 @@ class LossFunctions:
 
     def categorical_kl_loss(self, pi):
         k = pi.size(-1)
-        lossi = pi*torch.log(k*pi)
+        lossi = pi*torch.log(k*pi + self.eps)
         return lossi.sum()
 
     def reconstruction_loss(self, x, x_reconst, type='bce'):

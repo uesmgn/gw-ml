@@ -57,7 +57,7 @@ class VAENet(nn.Module):
             else:
                 x = layer(x)
 
-        y_logits, y_prob, y = self.gumbel(x, temp=1.0)
+        y_logits, y_prob, y = self.gumbel(x, temp=5.0)
         y_mu = self.y_mu(y)
         y_logvar = self.y_logvar(y)
         z, z_mu, z_logvar = self.gaussian(torch.cat((x, y), 1), reparameterize)

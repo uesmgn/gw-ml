@@ -48,7 +48,7 @@ class VAE:
 
         loss_reconst = self.losses.reconstruction_loss(x, x_reconst, self.rec_type)
         loss_gaussian = self.losses.gaussian_kl_loss(z, z_mu, z_logvar)
-        loss_categorical = 100 * self.losses.categorical_kl_loss(y_prob)
+        loss_categorical = self.losses.categorical_kl_loss(y_prob)
         loss_total = loss_reconst + loss_gaussian + loss_categorical
 
         return {'total': loss_total,

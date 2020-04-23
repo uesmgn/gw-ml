@@ -127,5 +127,5 @@ dmypy.json
 # User configuration
 dataset/
 .DS_Store
-result/
+result*
 *.png

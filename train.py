@@ -15,7 +15,8 @@ from detchar.models.VAE import VAE
 from detchar.functions.Functions import Functions as F
 from detchar.networks.Networks import VAENet
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(
+    description='PyTorch Implementation of VAE Clustering')
 
 # Architecture
 parser.add_argument('-y', '--y_dim', type=int, default=16,
