@@ -282,7 +282,7 @@ class GumbelSoftmax(nn.Module):
     def gumbel_softmax(self, prob, temp):
         u = torch.rand(prob.size())
         if prob.is_cuda:
-            u = u.cuda()
+            u = u.to(prob.device)
         g  = -torch.log(-torch.log(u + self.eps) + self.eps)
         y = torch.log(prob + self.eps) + g
         return F.softmax((torch.log(prob + self.eps) + g) / temp, dim=-1)

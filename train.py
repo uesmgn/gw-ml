@@ -13,7 +13,7 @@ from sklearn.manifold import TSNE
 from detchar.dataset import Dataset
 from detchar.models.VAE import VAE
 from detchar.functions.Functions import Functions as F
-from detchar.networks.Networks import VAENet, VAENet_M2
+from detchar.networks.Networks import VAENet
 
 parser = argparse.ArgumentParser(
     description='PyTorch Implementation of VAE Clustering')
