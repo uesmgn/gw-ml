@@ -43,13 +43,12 @@ class VAE:
         # obtain network variables
         x_reconst = out['x_reconst']
         z, z_mu, z_logvar = out['z'], out['z_mu'], out['z_logvar']
-        z_var = z_logvar.exp()
         y_prob, y = out['y_prob'], out['y']
         _, predicted_labels = torch.max(y, dim=1)
 
         loss_reconst = self.losses.reconstruction_loss(x, x_reconst, self.rec_type)
-        loss_gaussian = self.losses.gaussian_kl_loss(z, z_mu, z_var)
-        loss_categorical = self.losses.categorical_kl_loss(y_prob)
+        loss_gaussian = self.losses.gaussian_kl_loss(z, z_mu, z_logvar)
+        loss_categorical = 100 * self.losses.categorical_kl_loss(y_prob)
         loss_total = loss_reconst + loss_gaussian + loss_categorical
 
         return {'total': loss_total,
