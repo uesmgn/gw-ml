@@ -57,7 +57,7 @@ class VAE:
                 'categorical': loss_categorical,
                 'predicted_labels': predicted_labels }
 
-    def train(self, epoch):
+    def train(self, epoch, temp=1.0):
         assert self.__initialized
 
         self.net.train()
@@ -71,7 +71,7 @@ class VAE:
             x = x.to(self.device)
             self.optimizer.zero_grad()
 
-            out = self.net(x)
+            out = self.net(x, temp=temp)
 
             loss_dic = self.unlabeled_loss(x, out)
             total = loss_dic['total']
@@ -101,7 +101,7 @@ class VAE:
         return out
 
     # Test
-    def test(self, epoch):
+    def test(self, epoch, temp=1.0):
         assert self.__initialized
 
         self.net.eval()
@@ -121,7 +121,7 @@ class VAE:
             for batch_idx, (x, labels) in enumerate(self.test_loader):
                 batch = batch_idx + 1
                 x = x.to(self.device)
-                out = self.net(x, reparameterize=False)
+                out = self.net(x, temp=temp, reparameterize=False)
                 z = out['z']
                 latents = torch.cat([latents, z], 0)
                 latent_labels += labels

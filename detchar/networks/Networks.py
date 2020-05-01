@@ -47,7 +47,7 @@ class VAENet(nn.Module):
                 if m.bias.data is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def forward(self, x, reparameterize=True):
+    def forward(self, x, temp=1.0, reparameterize=True):
         indices = []
 
         for layer in self.encoder:
@@ -57,7 +57,7 @@ class VAENet(nn.Module):
             else:
                 x = layer(x)
 
-        y_logits, y_prob, y = self.gumbel(x, temp=1.0)
+        y_logits, y_prob, y = self.gumbel(x, temp=temp)
         y_mu = self.y_mu(y)
         y_logvar = self.y_logvar(y)
         z, z_mu, z_logvar = self.gaussian(torch.cat((x, y_logits), 1), reparameterize)

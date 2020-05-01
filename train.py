@@ -43,6 +43,13 @@ parser.add_argument('--w_rec', default=1, type=float,
 parser.add_argument('--rec_type', type=str, choices=['bce', 'mse'],
                     default='mse', help='desired reconstruction loss function (default: mse)')
 
+parser.add_argument('--init_temp', type=float,
+                    default=1.0, help='')
+parser.add_argument('--decay_temp_rate', type=float,
+                    default=0.013862944, help='')
+parser.add_argument('--min_temp', type=float,
+                    default=0.5, help='')
+
 args = parser.parse_args()
 
 
@@ -81,13 +88,16 @@ if __name__ == '__main__':
     epochs = []
 
     for e in range(args.epochs):
+
         epoch = e + 1
         epochs.append(epoch)
 
+        temp = max(args.init_temp * np.exp(-args.decay_temp_rate * epoch), args.min_temp)
+
         start_t = time.time()
 
-        train_out = vae.train(epoch)
-        test_out = vae.test(epoch)
+        train_out = vae.train(epoch, temp=temp)
+        test_out = vae.test(epoch, temp=temp)
 
         losses['train'].append(train_out['loss_total'])
         losses['test'].append(test_out['loss_total'])
