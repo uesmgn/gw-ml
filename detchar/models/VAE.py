@@ -44,18 +44,23 @@ class VAE:
         x_reconst = out['x_reconst']
         z, z_mu, z_logvar = out['z'], out['z_mu'], out['z_logvar']
         y_logits, y_prob, y = out['y_logits'], out['y_prob'], out['y']
+        y_mu, y_logvar = out_net['y_mean'], out_net['y_logvar']
         _, predicted_labels = torch.max(y_logits, dim=1)
 
-        loss_reconst = self.losses.reconstruction_loss(x, x_reconst, self.rec_type)
-        loss_gaussian = self.losses.gaussian_kl_loss(z, z_mu, z_logvar)
-        loss_categorical = 100 * self.losses.categorical_kl_loss(y_prob)
+        loss_reconst = self.losses.reconstruction_loss(
+            x, x_reconst, self.rec_type)
+        # loss_gaussian = self.losses.gaussian_kl_loss(z, z_mu, z_logvar)
+        loss_gaussian = self.losses.gaussian_loss(
+            z, z_mu, z_logvar.exp(), y_mu, y_logvar.exp())
+        # loss_categorical = 100 * self.losses.categorical_kl_loss(y_prob)
+        loss_categorical = -self.losses.entropy(y_logits, y_prob) - np.log(0.1)
         loss_total = loss_reconst + loss_gaussian + loss_categorical
 
         return {'total': loss_total,
                 'reconst': loss_reconst,
                 'gaussian': loss_gaussian,
                 'categorical': loss_categorical,
-                'predicted_labels': predicted_labels }
+                'predicted_labels': predicted_labels}
 
     def train(self, epoch, temp=1.0):
         assert self.__initialized
@@ -131,8 +136,9 @@ class VAE:
                     for i, label in enumerate(labels):
                         label_idx = self.labels.index(label)
                         if not flags[label_idx]:
-                            originals = torch.cat([originals, x[i:i+1]])
-                            reconsts = torch.cat([reconsts, x_reconst[i:i+1]])
+                            originals = torch.cat([originals, x[i:i + 1]])
+                            reconsts = torch.cat(
+                                [reconsts, x_reconst[i:i + 1]])
                             flags[label_idx] = 1
 
                 loss_dic = self.unlabeled_loss(x, out)
