@@ -46,12 +46,14 @@ class VAE:
         y_logits, y_prob, y = out['y_logits'], out['y_prob'], out['y']
         y_mu, y_logvar = out['y_mu'], out['y_logvar']
         _, predicted_labels = torch.max(y_logits, dim=1)
+        z_var = z_logvar.exp()
+        y_var = y_logvar.exp()
 
         loss_reconst = self.losses.reconstruction_loss(
             x, x_reconst, self.rec_type)
         # loss_gaussian = self.losses.gaussian_kl_loss(z, z_mu, z_logvar)
         loss_gaussian = self.losses.gaussian_loss(
-            z, z_mu, z_logvar.exp(), y_mu, y_logvar.exp())
+            z, z_mu, z_var, y_mu, y_var)
         # loss_categorical = 100 * self.losses.categorical_kl_loss(y_prob)
         loss_categorical = -self.losses.entropy(y_logits, y_prob) - np.log(0.1)
         loss_total = loss_reconst + loss_gaussian + loss_categorical
