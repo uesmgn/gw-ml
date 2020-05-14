@@ -109,12 +109,12 @@ if __name__ == '__main__':
             comparison = test_out['comparison']
             cm = test_out['cm']
 
-            latents_3d = TSNE(
-                n_components=3, random_state=0).fit_transform(latents)
+            latents_2d = TSNE(
+                n_components=2, random_state=0).fit_transform(latents)
             labels = np.array([args.labels.index(l) / len(args.labels)
                                for l in labels])
 
-            F.plot_latent3d(latents_3d, labels,
+            F.plot_latent(latents_2d, labels,
                             f'{outdir}/latents_{epoch}.png')
 
             utils.save_image(comparison,
