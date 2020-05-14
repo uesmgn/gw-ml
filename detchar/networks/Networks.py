@@ -13,17 +13,18 @@ class VAENet(nn.Module):
         n_bottle = 16
 
         self.encoder = nn.Sequential(
-            ConvModule(1, 32, 1, 1, activation='tanh'),
+            ConvModule(1, 32, 1, 1),
             DownSample(32, 64, kernel_size=3, stride=3,
-                       activation='tanh', return_indices=False, type='max'),
+                       return_indices=False, type='max'),
             DownSample(64, 128, kernel_size=3, stride=3,
-                       activation='tanh', return_indices=False, type='max'),
+                       return_indices=False, type='max'),
             DownSample(128, 192, kernel_size=3, stride=3,
-                       activation='tanh', return_indices=False, type='max'),
+                       return_indices=False, type='max'),
             nn.Flatten()
         )
         self.gumbel = GumbelSoftmax(middle_dim, y_dim)
-        self.gaussian = Gaussian(middle_dim + y_dim, z_dim)
+        # self.gaussian = Gaussian(middle_dim + y_dim, z_dim)
+        self.gaussian = Gaussian(middle_dim, z_dim)
 
         self.y_mu = nn.Linear(y_dim, z_dim)
         self.y_logvar = nn.Linear(y_dim, z_dim)
@@ -32,11 +33,11 @@ class VAENet(nn.Module):
             nn.Linear(z_dim, middle_dim),
             Reshape((middle_channel, middle_size, middle_size)),
             Upsample(192, 128, kernel_size=3, stride=3,
-                     activation='tanh', accept_indices=False),
+                     accept_indices=False),
             Upsample(128, 64, kernel_size=3, stride=3,
-                     activation='tanh', accept_indices=False),
+                     accept_indices=False),
             Upsample(64, 32, kernel_size=3, stride=3,
-                     activation='tanh', accept_indices=False),
+                     accept_indices=False),
             ConvtModule(32, 1, 1, 1, activation='Sigmoid')
         )
 
@@ -60,7 +61,8 @@ class VAENet(nn.Module):
         y_logits, y_prob, y = self.gumbel(x, temp=temp)
         y_mu = self.y_mu(y)
         y_logvar = self.y_logvar(y)
-        z, z_mu, z_logvar = self.gaussian(torch.cat((x, y_logits), 1), reparameterize)
+        # z, z_mu, z_logvar = self.gaussian(torch.cat((x, y_logits), 1), reparameterize)
+        z, z_mu, z_logvar = self.gaussian(x, reparameterize)
 
         x_ = z
 

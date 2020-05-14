@@ -44,7 +44,7 @@ class VAE:
         x_reconst = out['x_reconst']
         z, z_mu, z_logvar = out['z'], out['z_mu'], out['z_logvar']
         y_logits, y_prob, y = out['y_logits'], out['y_prob'], out['y']
-        y_mu, y_logvar = out_net['y_mean'], out_net['y_logvar']
+        y_mu, y_logvar = out['y_mu'], out['y_logvar']
         _, predicted_labels = torch.max(y_logits, dim=1)
 
         loss_reconst = self.losses.reconstruction_loss(
