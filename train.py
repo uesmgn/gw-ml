@@ -93,6 +93,7 @@ if __name__ == '__main__':
         epochs.append(epoch)
 
         temp = max(args.init_temp * np.exp(-args.decay_temp_rate * epoch), args.min_temp)
+        print(f"gumbel temp: {.3f:temp}, epoch: {epoch}")
 
         start_t = time.time()
 
@@ -102,32 +103,33 @@ if __name__ == '__main__':
         losses['train'].append(train_out['loss_total'])
         losses['test'].append(test_out['loss_total'])
 
-        latents = test_out['latents']
-        labels = test_out['labels']
-        comparison = test_out['comparison']
-        cm = test_out['cm']
+        if epoch % 5 == 0:
+            latents = test_out['latents']
+            labels = test_out['labels']
+            comparison = test_out['comparison']
+            cm = test_out['cm']
 
-        latents_3d = TSNE(
-            n_components=3, random_state=0).fit_transform(latents)
-        labels = np.array([args.labels.index(l) / len(args.labels)
-                           for l in labels])
+            latents_3d = TSNE(
+                n_components=3, random_state=0).fit_transform(latents)
+            labels = np.array([args.labels.index(l) / len(args.labels)
+                               for l in labels])
 
-        F.plot_latent3d(latents_3d, labels,
-                        f'{outdir}/latents_{epoch}.png')
+            F.plot_latent3d(latents_3d, labels,
+                            f'{outdir}/latents_{epoch}.png')
 
-        utils.save_image(comparison,
-                         f"{outdir}/VAE_epoch{epoch}.png",
-                         nrow=12)
+            utils.save_image(comparison,
+                             f"{outdir}/VAE_epoch{epoch}.png",
+                             nrow=12)
 
-        cm_out = f'{outdir}/cm_{epoch}.png'
-        cm_title = f'Confusion matrix epoch-{epoch}'
-        cm_index = args.labels
-        cm_columns = list(range(args.y_dim))
-        F.plot_confusion_matrix(cm,
-                                cm_index,
-                                cm_columns,
-                                cm_out,
-                                normalize=True)
+            cm_out = f'{outdir}/cm_{epoch}.png'
+            cm_title = f'Confusion matrix epoch-{epoch}'
+            cm_index = args.labels
+            cm_columns = list(range(args.y_dim))
+            F.plot_confusion_matrix(cm,
+                                    cm_index,
+                                    cm_columns,
+                                    cm_out,
+                                    normalize=True)
 
         if epoch % 10 == 0:
             if epoch % 100 == 0:
