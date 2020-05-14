@@ -121,6 +121,7 @@ class VAE:
         reconsts = torch.Tensor().to(self.device)
         flags = np.zeros(len(self.labels))
         cm = np.zeros([len(self.labels), self.y_dim])
+        predicted_labels = np.array([])
 
         with torch.no_grad():
             for batch_idx, (x, labels) in enumerate(self.test_loader):
@@ -146,9 +147,11 @@ class VAE:
                 loss_reconst = loss_dic['reconst']
                 loss_gaussian = loss_dic['gaussian']
                 loss_categorical = loss_dic['categorical']
-                predicted_labels = loss_dic['predicted_labels'].cpu().numpy()
-                for (true, pred) in zip(labels, predicted_labels):
+                preds = loss_dic['predicted_labels'].cpu().numpy()
+                for (true, pred) in zip(labels, preds):
                     cm[self.labels.index(true), pred] += 1
+
+                predicted_labels = np.concatenate([predicted_labels, preds])
 
                 loss['loss_total'] += total.item()
                 loss['loss_reconst'] += loss_reconst.item()
@@ -171,5 +174,6 @@ class VAE:
             out['labels'] = latent_labels
             out['comparison'] = comparison
             out['cm'] = cm
+            out['predicted_labels'] = predicted_labels
 
             return out

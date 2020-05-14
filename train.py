@@ -108,6 +108,7 @@ if __name__ == '__main__':
             labels = test_out['labels']
             comparison = test_out['comparison']
             cm = test_out['cm']
+            predicted_labels = test_out['predicted_labels']
 
             latents_2d = TSNE(
                 n_components=2, random_state=0).fit_transform(latents)
@@ -116,7 +117,8 @@ if __name__ == '__main__':
 
             F.plot_latent(latents_2d, labels,
                             f'{outdir}/latents_{epoch}.png')
-
+            F.plot_latent(latents_2d, predicted_labels,
+                            f'{outdir}/predicted_{epoch}.png')            
             utils.save_image(comparison,
                              f"{outdir}/VAE_epoch{epoch}.png",
                              nrow=12)
