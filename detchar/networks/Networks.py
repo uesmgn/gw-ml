@@ -23,8 +23,7 @@ class VAENet(nn.Module):
             nn.Flatten()
         )
         self.gumbel = GumbelSoftmax(middle_dim, y_dim)
-        # self.gaussian = Gaussian(middle_dim + y_dim, z_dim)
-        self.gaussian = Gaussian(middle_dim, z_dim)
+        self.gaussian = Gaussian(middle_dim + y_dim, z_dim)
 
         self.y_mu = nn.Linear(y_dim, z_dim)
         self.y_logvar = nn.Linear(y_dim, z_dim)
@@ -61,8 +60,7 @@ class VAENet(nn.Module):
         y_logits, y_prob, y = self.gumbel(x, temp=temp)
         y_mu = self.y_mu(y)
         y_logvar = self.y_logvar(y)
-        # z, z_mu, z_logvar = self.gaussian(torch.cat((x, y_logits), 1), reparameterize)
-        z, z_mu, z_logvar = self.gaussian(x, reparameterize)
+        z, z_mu, z_logvar = self.gaussian(torch.cat((x, y), 1), reparameterize)
 
         x_ = z
 
