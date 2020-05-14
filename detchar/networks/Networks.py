@@ -13,13 +13,13 @@ class VAENet(nn.Module):
         n_bottle = 16
 
         self.encoder = nn.Sequential(
-            ConvModule(1, 32, 1, 1),
+            ConvModule(1, 32, 1, 1, activation='Tanh'),
             DownSample(32, 64, kernel_size=3, stride=3,
-                       return_indices=False, type='max'),
+                       activation='Tanh', return_indices=False, type='max'),
             DownSample(64, 128, kernel_size=3, stride=3,
-                       return_indices=False, type='max'),
+                       activation='Tanh', return_indices=False, type='max'),
             DownSample(128, 192, kernel_size=3, stride=3,
-                       return_indices=False, type='max'),
+                       activation='Tanh', return_indices=False, type='max'),
             nn.Flatten()
         )
         self.gumbel = GumbelSoftmax(middle_dim, y_dim)
@@ -32,11 +32,11 @@ class VAENet(nn.Module):
             nn.Linear(z_dim, middle_dim),
             Reshape((middle_channel, middle_size, middle_size)),
             Upsample(192, 128, kernel_size=3, stride=3,
-                     accept_indices=False),
+                     activation='Tanh', accept_indices=False),
             Upsample(128, 64, kernel_size=3, stride=3,
-                     accept_indices=False),
+                     activation='Tanh', accept_indices=False),
             Upsample(64, 32, kernel_size=3, stride=3,
-                     accept_indices=False),
+                     activation='Tanh', accept_indices=False),
             ConvtModule(32, 1, 1, 1, activation='Sigmoid')
         )
 
