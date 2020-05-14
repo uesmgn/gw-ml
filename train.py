@@ -92,8 +92,8 @@ if __name__ == '__main__':
         epoch = e + 1
         epochs.append(epoch)
 
-        temp = max(args.init_temp * np.exp(-args.decay_temp_rate * epoch), args.min_temp)
-        print(f"gumbel temp: {.3f:temp}, epoch: {epoch}")
+        temp = max(args.init_temp * np.exp(-args.decay_temp_rate * e), args.min_temp)
+        print(f"gumbel temp: {temp:.3f}, epoch: {epoch}")
 
         start_t = time.time()
 
