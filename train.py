@@ -112,7 +112,7 @@ if __name__ == '__main__':
             cm = test_out['cm']
             predicted_labels = test_out['predicted_labels']
             predicted_labels_kmeans = KMeans(n_clusters=args.y_dim).fit_predict(latents)
-            cm_kmeans = np.zeros([len(args.labels), k])
+            cm_kmeans = np.zeros([len(args.labels), args.y_dim])
             for (true, pred) in zip(args.labels, predicted_labels_kmeans):
                 cm_kmeans[args.labels.index(true), pred] += 1
 

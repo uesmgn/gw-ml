@@ -14,11 +14,11 @@ class VAENet(nn.Module):
 
         self.encoder = nn.Sequential(
             ConvModule(1, 32, 1, 1, activation='Tanh'),
-            DownSample(32, 64, kernel_size=3, stride=3,
+            DownSample(32, 64, kernel_size=5, stride=3,
                        activation='Tanh', return_indices=False, type='max'),
-            DownSample(64, 128, kernel_size=3, stride=3,
+            DownSample(64, 128, kernel_size=5, stride=3,
                        activation='Tanh', return_indices=False, type='max'),
-            DownSample(128, 192, kernel_size=3, stride=3,
+            DownSample(128, 192, kernel_size=5, stride=3,
                        activation='Tanh', return_indices=False, type='max'),
             nn.Flatten()
         )
@@ -31,11 +31,11 @@ class VAENet(nn.Module):
         self.decoder = nn.Sequential(
             nn.Linear(z_dim, middle_dim),
             Reshape((middle_channel, middle_size, middle_size)),
-            Upsample(192, 128, kernel_size=3, stride=3,
+            Upsample(192, 128, kernel_size=5, stride=3,
                      activation='Tanh', accept_indices=False),
-            Upsample(128, 64, kernel_size=3, stride=3,
+            Upsample(128, 64, kernel_size=5, stride=3,
                      activation='Tanh', accept_indices=False),
-            Upsample(64, 32, kernel_size=3, stride=3,
+            Upsample(64, 32, kernel_size=5, stride=3,
                      activation='Tanh', accept_indices=False),
             ConvtModule(32, 1, 1, 1, activation='Sigmoid')
         )
