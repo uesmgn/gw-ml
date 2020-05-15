@@ -14,7 +14,8 @@ if __name__ == '__main__':
     data = defaultdict()
 
     for label in labels:
-        paths = glob(f'{dataset_path}/{label}/*_1.0.png')
+        # paths = glob(f'{dataset_path}/{label}/*_1.0.png')
+        paths = glob(f'{dataset_path}/{label}/*.png')
         for path in paths:
             idx = re.match(r'.+(L1|H1)_([a-zA-Z0-9]+)_.+', path).group(2)
             data[idx] = {'label': label, 'path': path}

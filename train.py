@@ -80,7 +80,7 @@ if __name__ == '__main__':
     net = VAENet(args.input_size, args.z_dim, args.y_dim)
     vae = VAE(args, net)
     print(vae.net)
-    optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-4)
     vae.init_model(train_loader, test_loader, optimizer, enable_scheduler=False)
 
     losses = {'train': [],
@@ -118,7 +118,7 @@ if __name__ == '__main__':
             F.plot_latent(latents_2d, labels,
                             f'{outdir}/latents_{epoch}.png')
             F.plot_latent(latents_2d, predicted_labels,
-                            f'{outdir}/predicted_{epoch}.png')            
+                            f'{outdir}/predicted_{epoch}.png')
             utils.save_image(comparison,
                              f"{outdir}/VAE_epoch{epoch}.png",
                              nrow=12)
