@@ -73,6 +73,7 @@ if __name__ == '__main__':
     args.labels = old_set.get_labels()
     loader = DataLoader(old_set,
                         batch_size=args.batch_size,
+                        shuffle=True)
     net = VAENet(args.input_size, args.z_dim, args.y_dim)
     vae = VAE(args, net)
     print(vae.net)
