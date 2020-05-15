@@ -113,7 +113,7 @@ if __name__ == '__main__':
             predicted_labels = test_out['predicted_labels']
             predicted_labels_kmeans = KMeans(n_clusters=args.y_dim).fit_predict(latents)
             cm_kmeans = np.zeros([len(args.labels), args.y_dim])
-            for (true, pred) in zip(args.labels, predicted_labels_kmeans):
+            for (true, pred) in zip(labels, predicted_labels_kmeans):
                 cm_kmeans[args.labels.index(true), pred] += 1
 
             latents_2d = TSNE(
@@ -141,7 +141,7 @@ if __name__ == '__main__':
                                     cm_columns,
                                     cm_out,
                                     normalize=True)
-            F.plot_confusion_matrix(cm_kmeanss,
+            F.plot_confusion_matrix(cm_kmeans,
                                     cm_index,
                                     cm_columns,
                                     cm_out_kmeans,
