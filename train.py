@@ -71,21 +71,15 @@ if __name__ == '__main__':
     dataset = Dataset(df, data_transform)
     old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'])
     args.labels = old_set.get_labels()
-    train_set, test_set = old_set.split_dataset(0.7)
-    train_loader = DataLoader(train_set,
-                              batch_size=args.batch_size,
-                              shuffle=True)
-    test_loader = DataLoader(test_set,
-                             batch_size=args.batch_size,
-                             shuffle=False)
+    loader = DataLoader(old_set,
+                        batch_size=args.batch_size,
     net = VAENet(args.input_size, args.z_dim, args.y_dim)
     vae = VAE(args, net)
     print(vae.net)
     optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-4)
-    vae.init_model(train_loader, test_loader, optimizer, enable_scheduler=False)
+    vae.init_model(loader, optimizer, enable_scheduler=False)
 
-    losses = {'train': [],
-              'test': []}
+    losses = []
     epochs = []
 
     for e in range(args.epochs):
@@ -98,19 +92,19 @@ if __name__ == '__main__':
 
         start_t = time.time()
 
-        train_out = vae.train(epoch, temp=temp)
-        test_out = vae.test(epoch, temp=temp)
+        vae_out = vae.fit(epoch, temp=temp)
+        # test_out = vae.test(epoch, temp=temp)
 
-        losses['train'].append(train_out['loss_total'])
-        losses['test'].append(test_out['loss_total'])
+        losses.append(vae_out['loss_total'])
 
         # if epoch % 5 == 0:
         if True:
-            latents = test_out['latents']
-            labels = test_out['labels']
-            comparison = test_out['comparison']
-            cm = test_out['cm']
-            predicted_labels = test_out['predicted_labels']
+            latents = vae_out['latents']
+            labels = vae_out['labels']
+            comparison = vae_out['comparison']
+            cm = vae_out['cm']
+            predicted_labels = vae_out['predicted_labels']
+
             predicted_labels_kmeans = KMeans(n_clusters=args.y_dim).fit_predict(latents)
             cm_kmeans = np.zeros([len(args.labels), args.y_dim])
             for (true, pred) in zip(labels, predicted_labels_kmeans):
@@ -149,9 +143,10 @@ if __name__ == '__main__':
 
         if epoch % 10 == 0:
             if epoch % 100 == 0:
-                F.plot_loss(epochs, losses, f"{outdir}/Loss_epoch{epoch}.png")
+                F.plot_loss(epochs, {'train': losses},
+                            f"{outdir}/Loss_epoch{epoch}.png")
             else:
-                F.plot_loss(epochs, losses,
+                F.plot_loss(epochs, {'train': losses},
                             f"{outdir}/Loss_epoch{epoch}.png", type=1)
 
         elapsed_t = time.time() - start_t
