@@ -104,7 +104,8 @@ if __name__ == '__main__':
         losses['train'].append(train_out['loss_total'])
         losses['test'].append(test_out['loss_total'])
 
-        if epoch % 5 == 0:
+        # if epoch % 5 == 0:
+        if True:
             latents = test_out['latents']
             labels = test_out['labels']
             comparison = test_out['comparison']
