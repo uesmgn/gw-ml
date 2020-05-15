@@ -110,7 +110,10 @@ if __name__ == '__main__':
             comparison = test_out['comparison']
             cm = test_out['cm']
             predicted_labels = test_out['predicted_labels']
-            predicted_labels_kmeans = KMeans(n_clusters=16).fit_predict(latents)
+            predicted_labels_kmeans = KMeans(n_clusters=args.y_dim).fit_predict(latents)
+            cm_kmeans = np.zeros([len(args.labels), k])
+            for (true, pred) in zip(args.labels, predicted_labels_kmeans):
+                cm_kmeans[args.labels.index(true), pred] += 1
 
             latents_2d = TSNE(
                 n_components=2, random_state=0).fit_transform(latents)
@@ -128,6 +131,7 @@ if __name__ == '__main__':
                              nrow=12)
 
             cm_out = f'{outdir}/cm_{epoch}.png'
+            cm_out_kmeans = f'{outdir}/cm_kmeans_{epoch}.png'
             cm_title = f'Confusion matrix epoch-{epoch}'
             cm_index = args.labels
             cm_columns = list(range(args.y_dim))
@@ -135,6 +139,11 @@ if __name__ == '__main__':
                                     cm_index,
                                     cm_columns,
                                     cm_out,
+                                    normalize=True)
+            F.plot_confusion_matrix(cm_kmeanss,
+                                    cm_index,
+                                    cm_columns,
+                                    cm_out_kmeans,
                                     normalize=True)
 
         if epoch % 10 == 0:
