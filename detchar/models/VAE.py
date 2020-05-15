@@ -96,7 +96,7 @@ class VAE:
             loss_reconst = loss_dic['reconst']
             loss_gaussian = loss_dic['gaussian']
             loss_categorical = loss_dic['categorical']
-            preds = loss_dic['predicted_labels'].cpu().numpy()
+            preds = loss_dic['predicted_labels'].detach().numpy()
             for (true, pred) in zip(labels, preds):
                 cm[self.labels.index(true), pred] += 1
             predicted_labels = np.concatenate([predicted_labels, preds])
@@ -129,7 +129,7 @@ class VAE:
         loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss.items()])
         print(f'Train {loss_info}')
 
-        latents = latents.cpu().numpy()
+        latents = latents.detach().numpy()
         comparison = torch.cat([originals[:12], reconsts[:12]]).cpu()
 
         out = dict(loss)
