@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
 from sklearn.manifold import TSNE
+from sklearn.cluster import KMeans
 
 from detchar.dataset import Dataset
 from detchar.models.VAE import VAE
@@ -109,6 +110,7 @@ if __name__ == '__main__':
             comparison = test_out['comparison']
             cm = test_out['cm']
             predicted_labels = test_out['predicted_labels']
+            predicted_labels_kmeans = KMeans(n_clusters=16).fit_predict(latents)
 
             latents_2d = TSNE(
                 n_components=2, random_state=0).fit_transform(latents)
@@ -119,6 +121,8 @@ if __name__ == '__main__':
                             f'{outdir}/latents_{epoch}.png')
             F.plot_latent(latents_2d, predicted_labels,
                             f'{outdir}/predicted_{epoch}.png')
+            F.plot_latent(latents_2d, predicted_labels_kmeans,
+                            f'{outdir}/kmeans_{epoch}.png')
             utils.save_image(comparison,
                              f"{outdir}/VAE_epoch{epoch}.png",
                              nrow=12)
