@@ -19,23 +19,21 @@ class VAE:
         self.rec_type = args.rec_type
         self.labels = args.labels
         self.device = args.device
-
         self.net = net
+        self.losses = LossFunctions()
 
         if torch.cuda.is_available():
             self.net.to(self.device)
             torch.backends.cudnn.benchmark = True
-        self.losses = LossFunctions()
+
         self.__initialized = False
 
     def init_model(self, loader,
-                   optimizer, enable_scheduler=True):
+                   optimizer, scheduler=None):
         self.loader = loader
         self.optimizer = optimizer
-        self.enable_scheduler = enable_scheduler
-        if self.enable_scheduler:
-            self.scheduler = torch.optim.lr_scheduler.StepLR(
-                self.optimizer, step_size=200, gamma=0.5)
+        self.scheduler = scheduler
+        self.enable_scheduler = scheduler is not None
         self.__initialized = True
 
     def unlabeled_loss(self, x, out):
@@ -44,7 +42,6 @@ class VAE:
         z, z_mu, z_logvar = out['z'], out['z_mu'], out['z_logvar']
         y_logits, y_prob, y = out['y_logits'], out['y_prob'], out['y']
         y_mu, y_logvar = out['y_mu'], out['y_logvar']
-        _, predicted_labels = torch.max(y_logits, dim=1)
         z_var = z_logvar.exp()
         y_var = y_logvar.exp()
 
@@ -60,8 +57,7 @@ class VAE:
         return {'total': loss_total,
                 'reconst': loss_reconst,
                 'gaussian': loss_gaussian,
-                'categorical': loss_categorical,
-                'predicted_labels': predicted_labels}
+                'categorical': loss_categorical}
 
     def fit(self, epoch, temp=1.0):
         assert self.__initialized
@@ -70,55 +66,40 @@ class VAE:
 
         loss = defaultdict(lambda: 0)
         n_samples = 0
-
         latents = torch.Tensor().to(self.device)
-        latent_labels = []
-        originals = torch.Tensor().to(self.device)
-        reconsts = torch.Tensor().to(self.device)
-        flags = np.zeros(len(self.labels))
+        latent_labels = torch.Tensor().to(self.device)
         cm = np.zeros([len(self.labels), self.y_dim])
-        predicted_labels = np.array([])
 
         for batch_idx, (x, labels) in enumerate(self.loader):
             batch = batch_idx + 1
-
             x = x.to(self.device)
             self.optimizer.zero_grad()
+            net_out = self.net(x, temp=temp)
 
-            out = self.net(x, temp=temp)
-            z = out['z']
-            x_reconst = out['x_reconst']
-            latents = torch.cat([latents, z], 0)
-            latent_labels += labels
+            z = net_out['z']
+            x_reconst = net_out['x_reconst']
+            y = net_out['y']
+            _, preds = torch.max(y, dim=1).detach()
+            unlabeled_loss = self.unlabeled_loss(x, net_out)
 
-            loss_dic = self.unlabeled_loss(x, out)
-            total = loss_dic['total']
-            loss_reconst = loss_dic['reconst']
-            loss_gaussian = loss_dic['gaussian']
-            loss_categorical = loss_dic['categorical']
-            preds = loss_dic['predicted_labels'].detach().numpy()
-            for (true, pred) in zip(labels, preds):
-                cm[self.labels.index(true), pred] += 1
-            predicted_labels = np.concatenate([predicted_labels, preds])
-
-            if not flags.all():
-                for i, label in enumerate(labels):
-                    label_idx = self.labels.index(label)
-                    if not flags[label_idx]:
-                        originals = torch.cat([originals, x[i:i + 1]])
-                        reconsts = torch.cat(
-                            [reconsts, x_reconst[i:i + 1]])
-                        flags[label_idx] = 1
-
+            total = unlabeled_loss['total']
+            loss_reconst = unlabeled_loss['reconst']
+            loss_gaussian = unlabeled_loss['gaussian']
+            loss_categorical = unlabeled_loss['categorical']
             total.backward()
             self.optimizer.step()
-
             loss['loss_total'] += total.item()
             loss['loss_reconst'] += loss_reconst.item()
             loss['loss_gaussian'] += loss_gaussian.item()
             loss['loss_categorical'] += loss_categorical.item()
-
             n_samples += x.size(0)
+
+            for (true, pred) in zip(labels, preds.numpy()):
+                cm[self.labels.index(true), pred] += 1
+            latents = torch.cat(
+                [latents, z], dim=0)
+            latent_labels = torch.cat(
+                [latent_labels, torch.stack([labels, preds])], dim=1)
 
         if self.enable_scheduler:
             self.scheduler.step()
@@ -127,17 +108,12 @@ class VAE:
             loss[k] /= n_samples
 
         loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss.items()])
-        print(f'Train {loss_info}')
-
-        latents = latents.detach().numpy()
-        comparison = torch.cat([originals[:12], reconsts[:12]]).cpu()
+        print(f'{loss_info}')
 
         out = dict(loss)
-        out['latents'] = latents
-        out['labels'] = latent_labels
-        out['comparison'] = comparison
+        out['latents'] = latents.detach().numpy()
+        out['latent_labels'] = latent_labels.numpy()
         out['cm'] = cm
-        out['predicted_labels'] = predicted_labels
         return out
     #
     # # Test

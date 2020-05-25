@@ -10,6 +10,7 @@ from matplotlib import ticker
 import numpy as np
 from sklearn.manifold import TSNE
 from sklearn.cluster import KMeans
+from multiprocessing import Pool
 
 from detchar.dataset import Dataset
 from detchar.models.VAE import VAE
@@ -50,9 +51,46 @@ parser.add_argument('--decay_temp_rate', type=float,
                     default=0.013862944, help='')
 parser.add_argument('--min_temp', type=float,
                     default=0.5, help='')
+parser.add_argument('--plot_itvl', type=int,
+                    default=5, help='')
 
 args = parser.parse_args()
 
+def plot_result(data):
+    latents = data['latents']
+    trues, preds = data['latents_labels']
+
+    cm_vae = F.get_cm(args.labels, args.labels_pred,
+                      trues, preds)
+
+    preds_kmeans = KMeans(n_clusters=args.y_dim).fit_predict(latents)
+    cm_kmeans = F.get_cm(args.labels, args.labels_pred,
+                         trues, preds_kmeans)
+
+    latents_2d = TSNE(
+        n_components=2, random_state=0).fit_transform(latents)
+    df = pd.DataFrame()
+    df['x'] = latents_2d[:, 0]
+    df['y'] = latents_2d[:, 1]
+    label_types = ['true', 'pred', 'kmeans']
+    for i, labels in enumerate([trues, preds, preds_kmeans]):
+        df['label'] = labels
+        type = label_types[i]
+        F.plot_latent(df,
+                      f'{outdir}/latents_{epoch}_{type}.png')
+
+    cm_types = ['vae', 'kmeans']
+    for i, cm in enumerate([cm_vae, cm_kmeans]):
+        cm_type = cm_types[i]
+        cm_out = f'{outdir}/cm_{epoch}_{cm_type}.png'
+        cm_title = f'Confusion matrix epoch-{epoch}, {cm_type}'
+        F.plot_confusion_matrix(cm,
+                                args.labels,
+                                args.labels_pred,
+                                cm_out,
+                                normalize=True)
+    F.plot_loss(data['losses'],
+                f"{outdir}/Loss_{epoch}.png")
 
 if __name__ == '__main__':
     outdir = args.outdir
@@ -71,6 +109,7 @@ if __name__ == '__main__':
     dataset = Dataset(df, data_transform)
     old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'])
     args.labels = old_set.get_labels()
+    args.labels_pred = list(range(args.y_dim))
     loader = DataLoader(old_set,
                         batch_size=args.batch_size,
                         shuffle=True)
@@ -78,7 +117,9 @@ if __name__ == '__main__':
     vae = VAE(args, net)
     print(vae.net)
     optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-4)
-    vae.init_model(loader, optimizer, enable_scheduler=False)
+    scheduler = torch.optim.lr_scheduler.StepLR(
+                    optimizer, step_size=200, gamma=0.5)
+    vae.init_model(loader, optimizer, scheduler=scheduler)
 
     losses = []
     epochs = []
@@ -92,81 +133,17 @@ if __name__ == '__main__':
         print(f"gumbel temp: {temp:.3f}, epoch: {epoch}")
 
         start_t = time.time()
-
         vae_out = vae.fit(epoch, temp=temp)
-        # test_out = vae.test(epoch, temp=temp)
 
         losses.append(vae_out['loss_total'])
 
-        # if epoch % 5 == 0:
-        if True:
-            latents = vae_out['latents']
-            labels = vae_out['labels']
-            comparison = vae_out['comparison']
-            cm = vae_out['cm']
-            predicted_labels = vae_out['predicted_labels']
+        plot_args = vae_out
+        plot_args['losses'] = losses
 
-            predicted_labels_kmeans = KMeans(n_clusters=args.y_dim).fit_predict(latents)
-            cm_kmeans = np.zeros([len(args.labels), args.y_dim])
-            for (true, pred) in zip(labels, predicted_labels_kmeans):
-                cm_kmeans[args.labels.index(true), pred] += 1
-
-            latents_2d = TSNE(
-                n_components=2, random_state=0).fit_transform(latents)
-            labels = np.array([args.labels.index(l) / len(args.labels)
-                               for l in labels])
-
-            F.plot_latent(latents_2d, labels,
-                            f'{outdir}/latents_{epoch}.png')
-            F.plot_latent(latents_2d, predicted_labels,
-                            f'{outdir}/predicted_{epoch}.png')
-            F.plot_latent(latents_2d, predicted_labels_kmeans,
-                            f'{outdir}/kmeans_{epoch}.png')
-            utils.save_image(comparison,
-                             f"{outdir}/VAE_epoch{epoch}.png",
-                             nrow=12)
-
-            cm_out = f'{outdir}/cm_{epoch}.png'
-            cm_out_kmeans = f'{outdir}/cm_kmeans_{epoch}.png'
-            cm_title = f'Confusion matrix epoch-{epoch}'
-            cm_index = args.labels
-            cm_columns = list(range(args.y_dim))
-            F.plot_confusion_matrix(cm,
-                                    cm_index,
-                                    cm_columns,
-                                    cm_out,
-                                    normalize=True)
-            F.plot_confusion_matrix(cm_kmeans,
-                                    cm_index,
-                                    cm_columns,
-                                    cm_out_kmeans,
-                                    normalize=True)
-
-        if epoch % 10 == 0:
-            if epoch % 100 == 0:
-                F.plot_loss(epochs, {'train': losses},
-                            f"{outdir}/Loss_epoch{epoch}.png")
-            else:
-                F.plot_loss(epochs, {'train': losses},
-                            f"{outdir}/Loss_epoch{epoch}.png", type=1)
+        if epoch % args.plot_itvl == 0:
+            with Pool(processes=4) as pool:
+                pool.map(plot_result, plot_args)
 
         elapsed_t = time.time() - start_t
         print(f"Calc time: {elapsed_t:.3f} sec / epoch")
         print('----------')
-        # test_out = vae.fit_test(epoch, gumbel_temp, outdir=outdir)
-        # log[epoch] = {
-        #     'train_loss': train_out['total'],
-        #     'test_loss': test_out['total']
-        # }
-        # if epoch % 10 == 0:
-        #     cm_out = f'{outdir}/cm_{epoch}.png'
-        #     cm_title = f'Confusion matrix epoch-{epoch}, loss_cat: {test_out["categorical"]}'
-        #     cm_index = args.labels
-        #     cm_columns = list(range(args.y_dim))
-        #     F.plot_confusion_matrix(test_out['cm'],
-        #                             cm_index,
-        #                             cm_columns,
-        #                             cm_out,
-        #                             normalize=True)
-        #     log_out = f'{outdir}/loss_{epoch}.png'
-        #     F.plot_losslog(log, log_out)
