@@ -95,7 +95,8 @@ class Functions:
         fig.savefig(out)
         plt.close()
 
-    def plot_result(self, epoch, labels_true, labels_pred,
+    @classmethod
+    def plot_result(cls, epoch, labels_true, labels_pred,
                     latents, trues, preds, losses, outdir):
         K = len(labels_pred)
         # caluculating
