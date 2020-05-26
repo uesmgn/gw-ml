@@ -129,3 +129,4 @@ dataset/
 .DS_Store
 result*
 *.png
+.idea

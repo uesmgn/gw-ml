@@ -8,8 +8,6 @@ import argparse
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
-from sklearn.manifold import TSNE
-from sklearn.cluster import KMeans
 from multiprocessing import Pool
 
 from detchar.dataset import Dataset

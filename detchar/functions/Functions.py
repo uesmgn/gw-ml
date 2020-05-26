@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
 from joblib import Parallel, delayed
+from sklearn.manifold import TSNE
+from sklearn.cluster import KMeans
 
 
 class Functions:
@@ -107,14 +109,14 @@ class Functions:
         latents_2d, preds_kmeans = (t[0] for t in processed)
 
         Parallel(n_jobs=-1, verbose=0)(
-            [delayed(self.plot_cm)(trues, preds, labels, labels_pred,
-                                   f'{outdir}/cm_{epoch}_vae.png'),
-             delayed(self.plot_cm)(trues, preds_kmeans, labels, labels_pred,
-                                   f'{outdir}/cm_{epoch}_kmeans.png'),
-             delayed(self.plot_latent)(latents_2d[:, 0], latents_2d[:, 1], trues,
-                                       f'{outdir}/latents_{epoch}_true.png'),
-             delayed(self.plot_latent)(latents_2d[:, 0], latents_2d[:, 1], preds,
-                                       f'{outdir}/latents_{epoch}_pred.png'),
-             delayed(self.plot_latent)(latents_2d[:, 0], latents_2d[:, 1], preds_kmeans,
-                                       f'{outdir}/latents_{epoch}_kmeans.png'),
-             delayed(self.plot_loss)(losses, f"{outdir}/loss_{epoch}.png")])
+            [delayed(cls.plot_cm)(trues, preds, labels_true, labels_pred,
+                                  f'{outdir}/cm_{epoch}_vae.png'),
+             delayed(cls.plot_cm)(trues, preds_kmeans, labels_true, labels_pred,
+                                  f'{outdir}/cm_{epoch}_kmeans.png'),
+             delayed(cls.plot_latent)(latents_2d[:, 0], latents_2d[:, 1], trues,
+                                      f'{outdir}/latents_{epoch}_true.png'),
+             delayed(cls.plot_latent)(latents_2d[:, 0], latents_2d[:, 1], preds,
+                                      f'{outdir}/latents_{epoch}_pred.png'),
+             delayed(cls.plot_latent)(latents_2d[:, 0], latents_2d[:, 1], preds_kmeans,
+                                      f'{outdir}/latents_{epoch}_kmeans.png'),
+             delayed(cls.plot_loss)(losses, f"{outdir}/loss_{epoch}.png")])
