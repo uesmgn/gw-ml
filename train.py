@@ -71,7 +71,7 @@ if __name__ == '__main__':
     dataset = Dataset(df, data_transform)
     old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'])
     args.labels = old_set.get_labels()
-    args.labels_pred = list(range(args.y_dim))
+    args.labels_pred = [str(i) for i in range(args.y_dim)]
     loader = DataLoader(old_set,
                         batch_size=args.batch_size,
                         shuffle=True)
@@ -100,19 +100,14 @@ if __name__ == '__main__':
         losses.append(vae_out['loss_total'])
 
         if epoch % args.plot_itvl == 0:
-            print(args.labels)
-            print(args.labels_pred)
-            print(vae_out['true'])
-            print(vae_out['pred'])
             F.plot_result(epoch,
                           args.labels,
                           args.labels_pred,
                           vae_out['latents'],
                           vae_out['true'],
                           vae_out['pred'],
+                          losses,
                           args.outdir)
-            F.plot_loss(losses,
-                        f"{args.outdir}/loss_{epoch}.png")
 
         elapsed_t = time.time() - start_t
         print(f"Calc time: {elapsed_t:.3f} sec / epoch")

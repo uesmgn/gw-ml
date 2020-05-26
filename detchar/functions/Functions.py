@@ -11,8 +11,7 @@ from sklearn.cluster import KMeans
 
 class Functions:
 
-    @classmethod
-    def plot_loss(cls, losses, out):
+    def plot_loss(self, losses, out):
         assert len(losses) > 2
         plt.figure(figsize=[8, 4])
         xx = list(range(len(losses)))
@@ -53,8 +52,8 @@ class Functions:
         for (true, pred) in zip(trues, preds):
             cm[index.index(true), columns.index(pred)] += 1
 
-        if normalize:
-            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        # if normalize:
+        #     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
         cmap = plt.get_cmap('Blues')
 
@@ -101,16 +100,16 @@ class Functions:
 
     @classmethod
     def plot_result(cls, epoch, labels_true, labels_pred,
-                    latents, trues, preds, outdir):
+                    latents, trues, preds, losses, outdir):
         K = len(labels_pred)
         # caluculating
         processed = Parallel(n_jobs=-1, verbose=0)(
-            [delayed(TSNE(n_components=2, random_state=0).fit_transform)(latents),
-             delayed(KMeans(n_clusters=K).fit_predict)(latents)])
+             delayed(TSNE(n_components=2, random_state=0).fit_transform)(latents),
+             delayed(KMeans(n_clusters=K).fit_predict)(latents))
         latents_2d, preds_kmeans = (t[0] for t in processed)
 
         Parallel(n_jobs=-1, verbose=0)(
-            [delayed(cls().plot_cm)(trues, preds, labels_true, labels_pred,
+             delayed(cls().plot_cm)(trues, preds, labels_true, labels_pred,
                                     f'{outdir}/cm_{epoch}_vae.png'),
              delayed(cls().plot_cm)(trues, preds_kmeans, labels_true, labels_pred,
                                     f'{outdir}/cm_{epoch}_kmeans.png'),
@@ -122,4 +121,6 @@ class Functions:
                                         f'{outdir}/latents_{epoch}_pred.png'),
              delayed(cls().plot_latent)(latents_2d[0], latents_2d[1],
                                         preds_kmeans, labels_pred,
-                                        f'{outdir}/latents_{epoch}_kmeans.png')])
+                                        f'{outdir}/latents_{epoch}_kmeans.png'),
+             delayed(cls().plot_loss)(losses,
+                                      f"{outdir}/loss_{epoch}.png"))
