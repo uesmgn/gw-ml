@@ -12,6 +12,7 @@ from sklearn.cluster import KMeans
 class Functions:
 
     def plot_loss(self, losses, out):
+        assert len(losses) >= 2
         plt.figure(figsize=[8, 4])
         xx = list(range(len(losses)))
         median = np.median(losses)
