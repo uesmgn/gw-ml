@@ -50,7 +50,7 @@ parser.add_argument('--decay_temp_rate', type=float,
 parser.add_argument('--min_temp', type=float,
                     default=0.5, help='')
 parser.add_argument('--plot_itvl', type=int,
-                    default=1, help='')
+                    default=5, help='')
 
 args = parser.parse_args()
 
@@ -100,6 +100,10 @@ if __name__ == '__main__':
         losses.append(vae_out['loss_total'])
 
         if epoch % args.plot_itvl == 0:
+            print(args.labels)
+            print(args.labels_pred)
+            print(vae_out['true'])
+            print(vae_out['pred'])
             F.plot_result(epoch,
                           args.labels,
                           args.labels_pred,
