@@ -46,14 +46,17 @@ class Functions:
         plt.savefig(out)
         plt.close()
 
-    def plot_cm(self, trues, preds, index, columns, out,
-                title='Confusion matrix', normalize=True):
+    def get_cm(self, trues, preds, index, columns):
         cm = np.zeros([len(trues), len(preds)])
         for (true, pred) in zip(trues, preds):
             cm[index.index(true), columns.index(pred)] += 1
+        return cm
 
-        # if normalize:
-        #     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    def plot_cm(self, cm, index, columns, out,
+                title='Confusion matrix', normalize=True):
+
+        if normalize:
+            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
         cmap = plt.get_cmap('Blues')
 
@@ -101,26 +104,28 @@ class Functions:
     def plot_result(self, epoch, labels_true, labels_pred,
                     latents, trues, preds, losses, outdir):
         K = len(labels_pred)
-        # caluculating
+
         processed = Parallel(n_jobs=4)(
              [delayed(TSNE(n_components=2, random_state=0).fit_transform)(latents),
               delayed(KMeans(n_clusters=K).fit_predict)(latents)])
-
         latents_2d, preds_kmeans = (t[0] for t in processed)
 
-        Parallel(n_jobs=4)(
-             [delayed(self.plot_cm)(trues, preds, labels_true, labels_pred,
-                                    f'{outdir}/cm_{epoch}_vae.png'),
-              delayed(self.plot_cm)(trues, preds_kmeans, labels_true, labels_pred,
-                                    f'{outdir}/cm_{epoch}_kmeans.png'),
-              delayed(self.plot_latent)(latents_2d[0], latents_2d[1],
-                                        trues, labels_true,
-                                        f'{outdir}/latents_{epoch}_true.png'),
-              delayed(self.plot_latent)(latents_2d[0], latents_2d[1],
-                                        preds, labels_pred,
-                                        f'{outdir}/latents_{epoch}_pred.png'),
-              delayed(self.plot_latent)(latents_2d[0], latents_2d[1],
-                                        preds_kmeans, labels_pred,
-                                        f'{outdir}/latents_{epoch}_kmeans.png'),
-              delayed(self.plot_loss)(losses,
-                                      f"{outdir}/loss_{epoch}.png")])
+        processed = Parallel(n_jobs=4)(
+             [delayed(self.get_cm)(trues, preds, labels_true, labels_pred),
+              delayed(self.get_cm)(trues, preds_kmeans, labels_true, labels_pred)])
+        cm, cm_kmeans = (t[0] for t in processed)
+
+        self.plot_cm(cm, labels_true, labels_pred,
+                     f'{outdir}/cm_{epoch}_vae.png')
+        self.plot_cm(cm_kmeans, labels_true, labels_pred,
+                     f'{outdir}/cm_{epoch}_kmeanss.png')
+        self.plot_latent(latents_2d[0], latents_2d[1],
+                         trues, labels_true,
+                         f'{outdir}/latents_{epoch}_true.png')
+        self.plot_latent(latents_2d[0], latents_2d[1],
+                         preds, labels_pred,
+                         f'{outdir}/latents_{epoch}_pred.png')
+        self.plot_latent(latents_2d[0], latents_2d[1],
+                         preds_kmeans, labels_pred,
+                         f'{outdir}/latents_{epoch}_kmeans.png')
+        self.plot_loss(losses, f"{outdir}/loss_{epoch}.png")
