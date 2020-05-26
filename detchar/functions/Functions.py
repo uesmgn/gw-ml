@@ -98,29 +98,29 @@ class Functions:
         fig.savefig(out)
         plt.close()
 
-    @classmethod
-    def plot_result(cls, epoch, labels_true, labels_pred,
+    def plot_result(self, epoch, labels_true, labels_pred,
                     latents, trues, preds, losses, outdir):
         K = len(labels_pred)
         # caluculating
         processed = Parallel(n_jobs=4)(
              [delayed(TSNE(n_components=2, random_state=0).fit_transform)(latents),
               delayed(KMeans(n_clusters=K).fit_predict)(latents)])
+
         latents_2d, preds_kmeans = (t[0] for t in processed)
 
-        processed = Parallel(n_jobs=4)(
-             [delayed(cls().plot_cm)(trues, preds, labels_true, labels_pred,
-                                     f'{outdir}/cm_{epoch}_vae.png'),
-              delayed(cls().plot_cm)(trues, preds_kmeans, labels_true, labels_pred,
-                                     f'{outdir}/cm_{epoch}_kmeans.png'),
-              delayed(cls().plot_latent)(latents_2d[0], latents_2d[1],
-                                         trues, labels_true,
-                                         f'{outdir}/latents_{epoch}_true.png'),
-              delayed(cls().plot_latent)(latents_2d[0], latents_2d[1],
-                                         preds, labels_pred,
-                                         f'{outdir}/latents_{epoch}_pred.png'),
-              delayed(cls().plot_latent)(latents_2d[0], latents_2d[1],
-                                         preds_kmeans, labels_pred,
-                                         f'{outdir}/latents_{epoch}_kmeans.png'),
-              delayed(cls().plot_loss)(losses,
-                                       f"{outdir}/loss_{epoch}.png")])
+        Parallel(n_jobs=4)(
+             [delayed(self.plot_cm)(trues, preds, labels_true, labels_pred,
+                                    f'{outdir}/cm_{epoch}_vae.png'),
+              delayed(self.plot_cm)(trues, preds_kmeans, labels_true, labels_pred,
+                                    f'{outdir}/cm_{epoch}_kmeans.png'),
+              delayed(self.plot_latent)(latents_2d[0], latents_2d[1],
+                                        trues, labels_true,
+                                        f'{outdir}/latents_{epoch}_true.png'),
+              delayed(self.plot_latent)(latents_2d[0], latents_2d[1],
+                                        preds, labels_pred,
+                                        f'{outdir}/latents_{epoch}_pred.png'),
+              delayed(self.plot_latent)(latents_2d[0], latents_2d[1],
+                                        preds_kmeans, labels_pred,
+                                        f'{outdir}/latents_{epoch}_kmeans.png'),
+              delayed(self.plot_loss)(losses,
+                                      f"{outdir}/loss_{epoch}.png")])
