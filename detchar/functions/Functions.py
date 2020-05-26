@@ -11,8 +11,9 @@ from sklearn.cluster import KMeans
 
 class Functions:
 
-    def plot_loss(self, losses, out):
-        assert len(losses) >= 2
+    @classmethod
+    def plot_loss(cls, losses, out):
+        assert len(losses) > 2
         plt.figure(figsize=[8, 4])
         xx = list(range(len(losses)))
         median = np.median(losses)
@@ -100,7 +101,7 @@ class Functions:
 
     @classmethod
     def plot_result(cls, epoch, labels_true, labels_pred,
-                    latents, trues, preds, losses, outdir):
+                    latents, trues, preds, outdir):
         K = len(labels_pred)
         # caluculating
         processed = Parallel(n_jobs=-1, verbose=0)(
@@ -121,5 +122,4 @@ class Functions:
                                       f'{outdir}/latents_{epoch}_pred.png'),
              delayed(cls().plot_latent)(latents_2d[0], latents_2d[1],
                                       preds_kmeans, labels_pred,
-                                      f'{outdir}/latents_{epoch}_kmeans.png'),
-             delayed(cls().plot_loss)(losses, f"{outdir}/loss_{epoch}.png")])
+                                      f'{outdir}/latents_{epoch}_kmeans.png')])

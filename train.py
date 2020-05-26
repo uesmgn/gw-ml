@@ -108,6 +108,8 @@ if __name__ == '__main__':
                           vae_out['pred'],
                           losses,
                           args.outdir)
+            F.plot_loss(losses,
+                        f"{args.outdir}/loss_{epoch}.png")
 
         elapsed_t = time.time() - start_t
         print(f"Calc time: {elapsed_t:.3f} sec / epoch")
