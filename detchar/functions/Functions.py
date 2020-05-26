@@ -108,17 +108,17 @@ class Functions:
         latents_2d, preds_kmeans = (t[0] for t in processed)
 
         Parallel(n_jobs=-1, verbose=0)(
-            [delayed(cls.plot_cm)(trues, preds, labels_true, labels_pred,
+            [delayed(cls().plot_cm)(trues, preds, labels_true, labels_pred,
                                   f'{outdir}/cm_{epoch}_vae.png'),
-             delayed(cls.plot_cm)(trues, preds_kmeans, labels_true, labels_pred,
+             delayed(cls().plot_cm)(trues, preds_kmeans, labels_true, labels_pred,
                                   f'{outdir}/cm_{epoch}_kmeans.png'),
-             delayed(cls.plot_latent)(latents_2d[0], latents_2d[1],
+             delayed(cls().plot_latent)(latents_2d[0], latents_2d[1],
                                       trues, labels_true,
                                       f'{outdir}/latents_{epoch}_true.png'),
-             delayed(cls.plot_latent)(latents_2d[0], latents_2d[1],
+             delayed(cls().plot_latent)(latents_2d[0], latents_2d[1],
                                       preds, labels_pred,
                                       f'{outdir}/latents_{epoch}_pred.png'),
-             delayed(cls.plot_latent)(latents_2d[0], latents_2d[1],
+             delayed(cls().plot_latent)(latents_2d[0], latents_2d[1],
                                       preds_kmeans, labels_pred,
                                       f'{outdir}/latents_{epoch}_kmeans.png'),
-             delayed(cls.plot_loss)(losses, f"{outdir}/loss_{epoch}.png")])
+             delayed(cls().plot_loss)(losses, f"{outdir}/loss_{epoch}.png")])
