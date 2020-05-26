@@ -105,7 +105,6 @@ class Functions:
         processed = Parallel(n_jobs=-1, verbose=0)(
             [delayed(TSNE(n_components=2, random_state=0).fit_transform)(latents),
              delayed(KMeans(n_clusters=K).fit_predict)(latents)])
-        processed.sort(key=lambda x: x[1])
         latents_2d, preds_kmeans = (t[0] for t in processed)
 
         Parallel(n_jobs=-1, verbose=0)(
