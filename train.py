@@ -12,7 +12,7 @@ from multiprocessing import Pool
 
 from detchar.dataset import Dataset
 from detchar.models.VAE import VAE
-from detchar.functions.Functions import Functions as F
+from detchar.functions.Functions import Functions
 from detchar.networks.Networks import VAENet
 
 parser = argparse.ArgumentParser(
@@ -85,6 +85,7 @@ if __name__ == '__main__':
 
     losses = []
     epochs = []
+    F = Functions()
 
     for e in range(args.epochs):
 
