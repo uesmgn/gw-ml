@@ -52,45 +52,9 @@ parser.add_argument('--decay_temp_rate', type=float,
 parser.add_argument('--min_temp', type=float,
                     default=0.5, help='')
 parser.add_argument('--plot_itvl', type=int,
-                    default=5, help='')
+                    default=1, help='')
 
 args = parser.parse_args()
-
-def plot_result(data):
-    latents = data['latents']
-    trues, preds = data['latents_labels']
-
-    cm_vae = F.get_cm(args.labels, args.labels_pred,
-                      trues, preds)
-
-    preds_kmeans = KMeans(n_clusters=args.y_dim).fit_predict(latents)
-    cm_kmeans = F.get_cm(args.labels, args.labels_pred,
-                         trues, preds_kmeans)
-
-    latents_2d = TSNE(
-        n_components=2, random_state=0).fit_transform(latents)
-    df = pd.DataFrame()
-    df['x'] = latents_2d[:, 0]
-    df['y'] = latents_2d[:, 1]
-    label_types = ['true', 'pred', 'kmeans']
-    for i, labels in enumerate([trues, preds, preds_kmeans]):
-        df['label'] = labels
-        type = label_types[i]
-        F.plot_latent(df,
-                      f'{outdir}/latents_{epoch}_{type}.png')
-
-    cm_types = ['vae', 'kmeans']
-    for i, cm in enumerate([cm_vae, cm_kmeans]):
-        cm_type = cm_types[i]
-        cm_out = f'{outdir}/cm_{epoch}_{cm_type}.png'
-        cm_title = f'Confusion matrix epoch-{epoch}, {cm_type}'
-        F.plot_confusion_matrix(cm,
-                                args.labels,
-                                args.labels_pred,
-                                cm_out,
-                                normalize=True)
-    F.plot_loss(data['losses'],
-                f"{outdir}/Loss_{epoch}.png")
 
 if __name__ == '__main__':
     outdir = args.outdir
@@ -137,12 +101,15 @@ if __name__ == '__main__':
 
         losses.append(vae_out['loss_total'])
 
-        plot_args = vae_out
-        plot_args['losses'] = losses
-
         if epoch % args.plot_itvl == 0:
-            with Pool(processes=4) as pool:
-                pool.map(plot_result, plot_args)
+            F.plot_result(epoch,
+                          args.labels,
+                          args.labels_pred,
+                          vae_out.latents,
+                          vae_out.true,
+                          vae_out.pred,
+                          losses,
+                          args.outdir)
 
         elapsed_t = time.time() - start_t
         print(f"Calc time: {elapsed_t:.3f} sec / epoch")

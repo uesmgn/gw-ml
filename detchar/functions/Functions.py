@@ -2,19 +2,14 @@ import itertools
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
+import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
+from joblib import Parallel, delayed
+
 
 class Functions:
 
-    @classmethod
-    def get_cm(cls, labels, labels_pred, trues, preds):
-        cm = np.zeros([len(trues), len(preds)])
-        for (true, pred) in zip(trues, preds):
-            cm[labels.index(true), labels_pred.index(pred)] += 1
-        return cm
-
-    @classmethod
-    def plot_loss(cls, losses, out):
+    def plot_loss(self, losses, out):
         plt.figure(figsize=[8, 4])
         xx = list(range(len(losses)))
         median = np.median(losses)
@@ -29,47 +24,30 @@ class Functions:
         plt.savefig(out)
         plt.close()
 
-    @classmethod
-    def plot_latent(cls, df, out):
-        xx = df['x'].to_numpy()
+    def plot_latent(self, xx, yy, preds, labels, out):
+        df = pd.DataFrame([xx, yy, preds],
+                          index=['x', 'y', 'label'])
         x_mean = np.mean(xx)
         x_sigma = 3. * np.std(xx)
-        yy = df['y'].to_numpy()
         y_mean = np.mean(yy)
         y_sigma = 3. * np.std(yy)
-        labels = df['label'].unique()
         for i, label in enumerate(labels):
-            idf = df[df['label']==label]
+            idf = df[df['label'] == label]
             x = idf['x'].to_numpy()
             y = idf['y'].to_numpy()
             plt.scatter(x, y, c=i,
                         label=label, cmap='tab20')
-        plt.xlim(x_mean-x_sigma, x_mean+x_sigma)
-        plt.ylim(y_mean-y_sigma, y_mean+y_sigma)
+        plt.xlim(x_mean - x_sigma, x_mean + x_sigma)
+        plt.ylim(y_mean - y_sigma, y_mean + y_sigma)
         plt.tight_layout()
         plt.savefig(out)
         plt.close()
 
-    @classmethod
-    def plot_confusion_matrix(cls, cm, index, columns, out,
-                              title='Confusion matrix', normalize=False):
-        """
-        Make plot of confusion matrix ``cm``.
-        Parameters
-        ----------
-        cm: array-like
-            confusion matrix
-        index: array-like
-            labels
-        columns: array-like
-            columns
-        out: str
-            output file path of plot
-        title: str, default 'Confusion matrix'
-            plotting title
-        normalize: bool, default False
-            normalize output matrix or not
-        """
+    def plot_cm(self, trues, preds, index, columns, out,
+                title='Confusion matrix', normalize=True):
+        cm = np.zeros([len(trues), len(preds)])
+        for (true, pred) in zip(trues, preds):
+            cm[labels.index(true), labels_pred.index(pred)] += 1
 
         if normalize:
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -116,3 +94,26 @@ class Functions:
         fig.tight_layout()
         fig.savefig(out)
         plt.close()
+
+    def plot_result(self, epoch, labels_true, labels_pred,
+                    latents, trues, preds, losses, outdir):
+        K = len(labels_pred)
+        # caluculating
+        processed = Parallel(n_jobs=-1, verbose=0)(
+            [delayed(TSNE(n_components=2, random_state=0).fit_transform)(latents),
+             delayed(KMeans(n_clusters=K).fit_predict)(latents)])
+        processed.sort(key=lambda x: x[1])
+        latents_2d, preds_kmeans = (t[0] for t in processed)
+
+        Parallel(n_jobs=-1, verbose=0)(
+            [delayed(self.plot_cm)(trues, preds, labels, labels_pred,
+                                   f'{outdir}/cm_{epoch}_vae.png'),
+             delayed(self.plot_cm)(trues, preds_kmeans, labels, labels_pred,
+                                   f'{outdir}/cm_{epoch}_kmeans.png'),
+             delayed(self.plot_latent)(latents_2d[:, 0], latents_2d[:, 1], trues,
+                                       f'{outdir}/latents_{epoch}_true.png'),
+             delayed(self.plot_latent)(latents_2d[:, 0], latents_2d[:, 1], preds,
+                                       f'{outdir}/latents_{epoch}_pred.png'),
+             delayed(self.plot_latent)(latents_2d[:, 0], latents_2d[:, 1], preds_kmeans,
+                                       f'{outdir}/latents_{epoch}_kmeans.png'),
+             delayed(self.plot_loss)(losses, f"{outdir}/loss_{epoch}.png")])

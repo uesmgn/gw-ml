@@ -67,7 +67,7 @@ class VAE:
         loss = defaultdict(lambda: 0)
         n_samples = 0
         latents = torch.Tensor().to(self.device)
-        latent_labels = torch.Tensor().to(self.device)
+        latent_labels = []
         cm = np.zeros([len(self.labels), self.y_dim])
 
         for batch_idx, (x, labels) in enumerate(self.loader):
@@ -80,6 +80,7 @@ class VAE:
             x_reconst = net_out['x_reconst']
             y = net_out['y']
             _, preds = torch.max(y, dim=1)
+            preds = preds.cpu().numpy()
             unlabeled_loss = self.unlabeled_loss(x, net_out)
 
             total = unlabeled_loss['total']
@@ -94,12 +95,14 @@ class VAE:
             loss['loss_categorical'] += loss_categorical.item()
             n_samples += x.size(0)
 
-            for (true, pred) in zip(labels, preds.numpy()):
+            for (true, pred) in zip(labels, preds):
                 cm[self.labels.index(true), pred] += 1
             latents = torch.cat(
                 [latents, z], dim=0)
-            latent_labels = torch.cat(
-                [latent_labels, torch.stack([labels, preds])], dim=1)
+
+            [(true, pred) for true, pred in zip(list(labels), preds)]
+
+            latent_labels += [(true, pred) for true, pred in zip(list(labels), preds)]
 
         if self.enable_scheduler:
             self.scheduler.step()
@@ -107,12 +110,11 @@ class VAE:
         for k in loss.keys():
             loss[k] /= n_samples
 
-        loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss.items()])
-        print(f'{loss_info}')
+        print(", ".join([f'{k}: {v:.3f}' for k, v in loss.items()]))
 
         out = dict(loss)
-        out['latents'] = latents.detach().numpy()
-        out['latent_labels'] = latent_labels.numpy()
+        out['latents'] = latents.cpu().detach().numpy()
+        out['true'], out['pred'] = latent_labels
         out['cm'] = cm
         return out
     #
