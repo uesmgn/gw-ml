@@ -105,9 +105,9 @@ if __name__ == '__main__':
             F.plot_result(epoch,
                           args.labels,
                           args.labels_pred,
-                          vae_out.latents,
-                          vae_out.true,
-                          vae_out.pred,
+                          vae_out['latents'],
+                          vae_out['true'],
+                          vae_out['pred'],
                           losses,
                           args.outdir)
 
