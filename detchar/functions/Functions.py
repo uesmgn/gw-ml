@@ -49,7 +49,7 @@ class Functions:
                 title='Confusion matrix', normalize=True):
         cm = np.zeros([len(trues), len(preds)])
         for (true, pred) in zip(trues, preds):
-            cm[labels.index(true), labels_pred.index(pred)] += 1
+            cm[index.index(true), columns.index(pred)] += 1
 
         if normalize:
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
