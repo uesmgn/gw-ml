@@ -100,9 +100,7 @@ class VAE:
             latents = torch.cat(
                 [latents, z], dim=0)
 
-            [(true, pred) for true, pred in zip(list(labels), preds)]
-
-            latent_labels += [(true, pred) for true, pred in zip(list(labels), preds)]
+            latent_labels += [[true, pred] for true, pred in zip(list(labels), preds)]
 
         if self.enable_scheduler:
             self.scheduler.step()
@@ -114,7 +112,7 @@ class VAE:
 
         out = dict(loss)
         out['latents'] = latents.cpu().detach().numpy()
-        out['true'], out['pred'] = latent_labels
+        out['true'], out['pred'] = np.array(latent_labels).T
         out['cm'] = cm
         return out
     #
