@@ -103,12 +103,12 @@ class Functions:
                     latents, trues, preds, losses, outdir):
         K = len(labels_pred)
         # caluculating
-        processed = Parallel(n_jobs=-1, backend="threading")(
+        processed = Parallel(n_jobs=4)(
              [delayed(TSNE(n_components=2, random_state=0).fit_transform)(latents),
               delayed(KMeans(n_clusters=K).fit_predict)(latents)])
         latents_2d, preds_kmeans = (t[0] for t in processed)
 
-        processed = Parallel(n_jobs=-1, backend="threading")(
+        processed = Parallel(n_jobs=4)(
              [delayed(cls().plot_cm)(trues, preds, labels_true, labels_pred,
                                      f'{outdir}/cm_{epoch}_vae.png'),
               delayed(cls().plot_cm)(trues, preds_kmeans, labels_true, labels_pred,
