@@ -56,7 +56,8 @@ class DownSample(nn.Module):
         self.conv = ConvModule(in_channel,
                                out_channel,
                                kernel_size=1,
-                               stride=1)
+                               stride=1,
+                               activation=activation)
 
     def forward(self, x):
         x = self.conv(self.maxpool(x))
@@ -70,7 +71,8 @@ class Upsample(nn.Module):
         self.convt = ConvtModule(in_channel,
                                  out_channel,
                                  kernel_size=kernel_size,
-                                 stride=stride)
+                                 stride=stride,
+                                 activation=activation)
 
     def forward(self, x):
         x = self.convt(x)

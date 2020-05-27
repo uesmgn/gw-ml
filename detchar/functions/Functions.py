@@ -5,6 +5,7 @@ import  numpy as np
 import itertools
 import matplotlib.pyplot as plt
 from matplotlib import ticker
+import matplotlib.colors as mcolors
 
 
 class Functions:
@@ -29,20 +30,21 @@ class Functions:
         return arr
 
     def plot_loss(self, losses, out):
-        assert len(losses) > 2
-        plt.figure(figsize=[8, 4])
-        xx = list(range(len(losses)))
-        median = np.median(losses)
-        plt.xlabel('epoch')
-        plt.ylabel('loss')
-        plt.xlim([min(xx), max(xx)])
-        plt.ylim([min(losses), median])
-        ax = plt.gca()
-        ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
-        ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
-        plt.tight_layout()
-        plt.savefig(out)
-        plt.close()
+        if len(losses) > 2:
+            plt.figure(figsize=[8, 4])
+            xx = list(range(len(losses)))
+            median = np.median(losses)
+            plt.xlabel('epoch')
+            plt.ylabel('loss')
+            plt.xlim([min(xx), max(xx)])
+            plt.ylim([min(losses), median])
+            plt.plot(xx, losses)
+            ax = plt.gca()
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
+            ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
+            plt.tight_layout()
+            plt.savefig(out)
+            plt.close()
 
     def plot_latent(self, xx, yy, preds, out):
         labels = list(set(preds))
@@ -51,14 +53,19 @@ class Functions:
         x_sigma = 3. * np.std(xx)
         y_mean = np.mean(yy)
         y_sigma = 3. * np.std(yy)
+        cmap = plt.get_cmap("tab20")
         for i, label in enumerate(labels):
             idf = df[df['label'] == label]
             x = idf['x'].to_numpy()
             y = idf['y'].to_numpy()
-            plt.scatter(x, y, c=np.ones(len(x))*i,
-                        label=label, cmap='tab20')
+            color = mcolors.rgb2hex(cmap(i))
+            plt.scatter(x, y,
+                        c=color,
+                        s=0.5,
+                        label=label)
         plt.xlim(x_mean - x_sigma, x_mean + x_sigma)
         plt.ylim(y_mean - y_sigma, y_mean + y_sigma)
+        plt.legend(loc='upper right')
         plt.tight_layout()
         plt.savefig(out)
         plt.close()
