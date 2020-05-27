@@ -109,7 +109,7 @@ class VAE:
 
         out = dict(loss)
         out['latents'] = latents.cpu().detach().numpy()
-        out['true'], out['pred'] = np.array(latent_labels).T
+        out['true'], out['pred'] = np.array(latent_labels).T.astype(str)
         return out
     #
     # # Test

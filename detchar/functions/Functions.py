@@ -21,7 +21,7 @@ class Functions:
         return cm
 
     def fit_kmeans(self, n_clusters, data):
-        arr = KMeans(n_clusters=n_clusters).fit_predict(data)
+        arr = KMeans(n_clusters=n_clusters).fit_predict(data).astype(str)
         return arr
 
     def fit_tsne(self, n_components, data):
