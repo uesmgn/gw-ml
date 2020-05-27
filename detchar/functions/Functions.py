@@ -80,3 +80,31 @@ class Functions:
                        origin='lower')
         ax.set_xlim(None, None)
         ax.set_ylim(None, None)
+
+        # We want to show all ticks...
+        ax.set_xticks(np.arange(len(columns)))
+        ax.set_yticks(np.arange(len(index)))
+        # ... and label them with the respective list entries
+        ax.set_xticklabels(columns)
+        ax.set_yticklabels(index)
+
+        # Rotate the tick labels and set their alignment.
+        plt.setp(ax.get_yticklabels(), rotation=45, ha="right",
+                 rotation_mode="anchor")
+
+        thresh = cm.max() / 1.5
+        # Loop over data dimensions and create text annotations.
+        for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+            num = "{:0.2f}".format(cm[i, j]) if normalize else int(cm[i, j])
+            color = "white" if cm[i, j] > thresh else "black"
+            ax.text(j, i, num,
+                    fontsize=10, color=color,
+                    ha='center', va='center')
+
+        if title:
+            ax.set_title(title)
+        ax.set_xlabel('Predicted')
+        ax.set_ylabel('True')
+        fig.tight_layout()
+        fig.savefig(out)
+        plt.close()
