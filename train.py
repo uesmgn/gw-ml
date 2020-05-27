@@ -11,7 +11,7 @@ import  pandas as pd
 
 from detchar.dataset import Dataset
 from detchar.models.VAE import VAE
-from detchar.functions.cluster import Cluster
+from detchar.functions import Functions as F
 from detchar.functions.plotter import Plotter as plt
 from detchar.networks.Networks import VAENet
 
@@ -85,8 +85,8 @@ if __name__ == '__main__':
 
     losses = []
     epochs = []
-    F = Cluster(args.labels,
-                args.labels_pred)
+    tlabels = args.labels
+    plabels = args.labels_pred
 
     for e in range(args.epochs):
 
@@ -119,19 +119,16 @@ if __name__ == '__main__':
             with mp.Pool(4) as pool:
                 cm = pool.apply_async(F.get_cm, (trues, preds)).get()
                 cm_kmeans = pool.apply_async(F.get_cm, (trues, preds_kmeans)).get()
-            
-            plt.plot_cm(cm, f'{outdir}/cm_{epoch}_vae.png')
-            plt.plot_cm(cm_kmeans, f'{outdir}/cm_{epoch}_kmeanss.png')
-            plt.plot_latent(latents_2d[0], latents_2d[1],
-                             trues, labels_true,
-                             f'{outdir}/latents_{epoch}_true.png')
-            plt.plot_latent(latents_2d[0], latents_2d[1],
-                             preds, labels_pred,
-                             f'{outdir}/latents_{epoch}_pred.png')
-            plt.plot_latent(latents_2d[0], latents_2d[1],
-                             preds_kmeans, labels_pred,
-                             f'{outdir}/latents_{epoch}_kmeans.png')
-            plt.plot_loss(losses, f"{outdir}/loss_{epoch}.png")
+
+            F.plot_cm(cm, tlabels, plabels, f'{outdir}/cm_{epoch}_vae.png')
+            F.plot_cm(cm_kmeans, tlabels, plabels, f'{outdir}/cm_{epoch}_kmeanss.png')
+            F.plot_latent(latents_2d[0], latents_2d[1],
+                          trues, f'{outdir}/latents_{epoch}_true.png')
+            F.plot_latent(latents_2d[0], latents_2d[1],
+                          preds, f'{outdir}/latents_{epoch}_pred.png')
+            F.plot_latent(latents_2d[0], latents_2d[1],
+                          preds_kmeans, f'{outdir}/latents_{epoch}_kmeans.png')
+            F.plot_loss(losses, f"{outdir}/loss_{epoch}.png")
 
         elapsed_t = time.time() - start_t
         print(f"Calc time: {elapsed_t:.3f} sec / epoch")
