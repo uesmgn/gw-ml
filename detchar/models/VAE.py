@@ -16,8 +16,9 @@ class VAE:
         self.net = net
         self.losses = LossFunctions()
 
+        self.net.to(self.device)
         if torch.cuda.is_available():
-            self.net.to(self.device)
+            net = torch.nn.DataParallel(net)
             torch.backends.cudnn.benchmark = True
 
         self.__initialized = False
@@ -106,4 +107,3 @@ class VAE:
         out['latents'] = latents.cpu().detach().numpy()
         out['true'], out['pred'] = np.array(latent_labels).T.astype(str)
         return out
-    

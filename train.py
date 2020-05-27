@@ -1,6 +1,7 @@
 import os
 import torch
 import time
+from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import argparse
@@ -29,8 +30,6 @@ parser.add_argument('-b', '--batch_size', default=4, type=int,
                     help='batch size (default: 4)')
 parser.add_argument('-o', '--outdir', default='result', type=str,
                     help='output directory name (default: result)')
-parser.add_argument('-cuda', '--cuda', default=0, type=int,
-                    help='cuda index')
 # Loss function parameters
 parser.add_argument('--w_gauss', default=1, type=float,
                     help='weight of gaussian loss (default: 1)')
@@ -64,7 +63,8 @@ if __name__ == '__main__':
         transforms.Grayscale(),
         transforms.ToTensor()
     ])
-    args.device = f'cuda:{args.cuda}' if torch.cuda.is_available() else 'cpu'
+    device_ids = range(torch.cuda.device_vount())
+    args.device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
     print(args.device)
     dataset = Dataset(df, data_transform)
     old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'])
@@ -73,8 +73,8 @@ if __name__ == '__main__':
     loader = DataLoader(old_set,
                         batch_size=args.batch_size,
                         shuffle=False)
-    net = VAENet(args.input_size, args.z_dim, args.y_dim, activation='Tanh')
-    vae = VAE(args, net)
+    model = VAENet(args.input_size, args.z_dim, args.y_dim, activation='Tanh')
+    vae = VAE(args, model)
     print(vae.net)
     optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-4)
     scheduler = torch.optim.lr_scheduler.StepLR(
