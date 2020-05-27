@@ -7,11 +7,11 @@ from torchvision import utils, transforms
 import argparse
 import numpy as np
 import multiprocessing as mp
-import  pandas as pd
+import pandas as pd
 
 from detchar.dataset import Dataset
 from detchar.models.VAE import VAE
-from detchar.functions import Functions
+from detchar.functions.Functions import Functions
 from detchar.networks.Networks import VAENet
 
 parser = argparse.ArgumentParser(
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     print(vae.net)
     optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-4)
     scheduler = torch.optim.lr_scheduler.StepLR(
-                    optimizer, step_size=200, gamma=0.5)
+        optimizer, step_size=200, gamma=0.5)
     vae.init_model(loader, optimizer, scheduler=scheduler)
 
     losses = []
@@ -93,7 +93,8 @@ if __name__ == '__main__':
         epoch = e + 1
         epochs.append(epoch)
 
-        temp = max(args.init_temp * np.exp(-args.decay_temp_rate * e), args.min_temp)
+        temp = max(args.init_temp *
+                   np.exp(-args.decay_temp_rate * e), args.min_temp)
         print(f"gumbel temp: {temp:.3f}, epoch: {epoch}")
 
         start_t = time.time()
@@ -114,14 +115,18 @@ if __name__ == '__main__':
 
             with mp.Pool(4) as pool:
                 latents_2d = pool.apply_async(F.fit_tsne, (2, latents)).get()
-                preds_kmeans = pool.apply_async(F.fit_kmeans, (K, latents)).get()
+                preds_kmeans = pool.apply_async(
+                    F.fit_kmeans, (K, latents)).get()
 
             with mp.Pool(4) as pool:
-                cm = pool.apply_async(F.get_cm, (trues, preds)).get()
-                cm_kmeans = pool.apply_async(F.get_cm, (trues, preds_kmeans)).get()
+                cm = pool.apply_async(F.confution_matrix,
+                                      (trues, preds)).get()
+                cm_kmeans = pool.apply_async(F.confution_matrix,
+                                             (trues, preds_kmeans)).get()
 
             F.plot_cm(cm, tlabels, plabels, f'{outdir}/cm_{epoch}_vae.png')
-            F.plot_cm(cm_kmeans, tlabels, plabels, f'{outdir}/cm_{epoch}_kmeanss.png')
+            F.plot_cm(cm_kmeans, tlabels, plabels,
+                      f'{outdir}/cm_{epoch}_kmeanss.png')
             F.plot_latent(latents_2d[0], latents_2d[1],
                           trues, f'{outdir}/latents_{epoch}_true.png')
             F.plot_latent(latents_2d[0], latents_2d[1],
