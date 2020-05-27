@@ -68,7 +68,6 @@ class VAE:
         n_samples = 0
         latents = torch.Tensor().to(self.device)
         latent_labels = []
-        cm = np.zeros([len(self.labels), self.y_dim])
 
         for batch_idx, (x, labels) in enumerate(self.loader):
             batch = batch_idx + 1
@@ -95,8 +94,6 @@ class VAE:
             loss['loss_categorical'] += loss_categorical.item()
             n_samples += x.size(0)
 
-            for (true, pred) in zip(labels, preds):
-                cm[self.labels.index(true), pred] += 1
             latents = torch.cat(
                 [latents, z], dim=0)
 
@@ -113,7 +110,6 @@ class VAE:
         out = dict(loss)
         out['latents'] = latents.cpu().detach().numpy()
         out['true'], out['pred'] = np.array(latent_labels).T
-        out['cm'] = cm
         return out
     #
     # # Test

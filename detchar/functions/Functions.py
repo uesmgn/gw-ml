@@ -13,7 +13,7 @@ class Functions:
                          xlabels, ylabels, normalize=True):
         cm = np.zeros([len(xlabels), len(ylabels)])
         for (x, y) in zip(xx, yy):
-            cm[xlabels.index(x), ylabels.index(y)] += 1.
+            cm[np.where(xlabels==x), np.where(ylabels==y)] += 1.
         if normalize:
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         return cm
