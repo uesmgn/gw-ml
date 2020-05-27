@@ -29,13 +29,14 @@ class Functions:
         return arr
 
     def plot_loss(self, losses, out):
+        assert len(losses) > 2
         plt.figure(figsize=[8, 4])
         xx = list(range(len(losses)))
         median = np.median(losses)
         plt.xlabel('epoch')
         plt.ylabel('loss')
         plt.xlim([min(xx), max(xx)])
-        plt.ylim([min(yy), median])
+        plt.ylim([min(losses), median])
         ax = plt.gca()
         ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
         ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
@@ -45,7 +46,7 @@ class Functions:
 
     def plot_latent(self, xx, yy, preds, out):
         labels = list(set(preds))
-        df = pd.DataFrame([xx, yy, preds], columns=['x', 'y', 'label'])
+        df = pd.DataFrame([xx, yy, preds], index=['x', 'y', 'label']).T
         x_mean = np.mean(xx)
         x_sigma = 3. * np.std(xx)
         y_mean = np.mean(yy)
@@ -54,7 +55,7 @@ class Functions:
             idf = df[df['label'] == label]
             x = idf['x'].to_numpy()
             y = idf['y'].to_numpy()
-            plt.scatter(x, y, c=i,
+            plt.scatter(x, y, c=np.ones(len(x))*i,
                         label=label, cmap='tab20')
         plt.xlim(x_mean - x_sigma, x_mean + x_sigma)
         plt.ylim(y_mean - y_sigma, y_mean + y_sigma)
@@ -95,7 +96,7 @@ class Functions:
         thresh = cm.max() / 1.5
         # Loop over data dimensions and create text annotations.
         for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-            num = "{:0.2f}".format(cm[i, j]) if normalize else int(cm[i, j])
+            num = "{:0.2f}".format(cm[i, j])
             color = "white" if cm[i, j] > thresh else "black"
             ax.text(j, i, num,
                     fontsize=10, color=color,
