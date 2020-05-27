@@ -11,7 +11,7 @@ import  pandas as pd
 
 from detchar.dataset import Dataset
 from detchar.models.VAE import VAE
-from detchar.functions import Functions as F
+from detchar.functions import Functions
 from detchar.networks.Networks import VAENet
 
 parser = argparse.ArgumentParser(
@@ -86,6 +86,7 @@ if __name__ == '__main__':
     epochs = []
     tlabels = args.labels
     plabels = args.labels_pred
+    F = Functions()
 
     for e in range(args.epochs):
 

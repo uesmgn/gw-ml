@@ -9,7 +9,6 @@ from matplotlib import ticker
 
 class Functions:
 
-    @classmethod
     def confution_matrix(self, xx, yy,
                          xlabels, ylabels, normalize=True):
         cm = np.zeros([len(xlabels), len(ylabels)])
@@ -19,18 +18,15 @@ class Functions:
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         return cm
 
-    @classmethod
-    def fit_kmeans(n_clusters, data):
+    def fit_kmeans(self, n_clusters, data):
         arr = KMeans(n_clusters=n_clusters).fit_predict(data)
         return arr
 
-    @classmethod
-    def fit_tsne(n_components, data):
+    def fit_tsne(self, n_components, data):
         arr = TSNE(n_components=n_components).fit_transform(data)
         return arr
 
-    @classmethod
-    def plot_loss(cls, losses, out):
+    def plot_loss(self, losses, out):
         plt.figure(figsize=[8, 4])
         xx = list(range(len(losses)))
         median = np.median(losses)
@@ -45,8 +41,7 @@ class Functions:
         plt.savefig(out)
         plt.close()
 
-    @classmethod
-    def plot_latent(cls, xx, yy, preds, out):
+    def plot_latent(self, xx, yy, preds, out):
         labels = list(set(preds))
         df = pd.DataFrame([xx, yy, preds], index=['x', 'y', 'label'])
         x_mean = np.mean(xx)
@@ -65,8 +60,7 @@ class Functions:
         plt.savefig(out)
         plt.close()
 
-    @classmethod
-    def plot_cm(cls, cm, index, columns,
+    def plot_cm(self, cm, index, columns,
                 out, title=None):
 
         cmap = plt.get_cmap('Blues')
