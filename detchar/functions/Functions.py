@@ -29,7 +29,7 @@ class Functions:
         arr = TSNE(n_components=n_components).fit_transform(data)
         return arr
 
-    def plot_loss(self, losses, out):
+    def plot_loss(self, losses, out, type='max'):
         if len(losses) > 2:
             plt.figure(figsize=[8, 4])
             xx = list(range(len(losses)))
@@ -37,7 +37,10 @@ class Functions:
             plt.xlabel('epoch')
             plt.ylabel('loss')
             plt.xlim([min(xx), max(xx)])
-            plt.ylim([min(losses), median])
+            if type is 'max':
+                plt.ylim([min(losses), max(losses)])
+            elif type is 'median':
+                plt.ylim([min(losses), median])
             plt.plot(xx, losses)
             ax = plt.gca()
             ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
