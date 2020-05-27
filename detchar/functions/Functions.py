@@ -61,11 +61,12 @@ class Functions:
             color = mcolors.rgb2hex(cmap(i))
             plt.scatter(x, y,
                         c=color,
-                        s=0.5,
+                        s=1.0,
                         label=label)
         plt.xlim(x_mean - x_sigma, x_mean + x_sigma)
         plt.ylim(y_mean - y_sigma, y_mean + y_sigma)
-        plt.legend(loc='upper right')
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper right',
+                   borderaxespad=0, fontsize=10)
         plt.tight_layout()
         plt.savefig(out)
         plt.close()
