@@ -69,8 +69,8 @@ if __name__ == '__main__':
     print(args.device)
     dataset = Dataset(df, data_transform)
     old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'])
-    args.labels = np.array(old_set.get_labels())
-    args.labels_pred = np.array(range(args.y_dim))
+    args.labels = np.array(old_set.get_labels()).astype(str)
+    args.labels_pred = np.array(range(args.y_dim)).astype(str)
     loader = DataLoader(old_set,
                         batch_size=args.batch_size,
                         shuffle=True)
