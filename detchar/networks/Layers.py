@@ -98,8 +98,8 @@ class Gaussian(nn.Module):
             nn.Linear(in_dim, middle_dim),
             nn.Tanh()
         )
-        self.mu = nn.Linear(in_dim, z_dim)
-        self.logvar = nn.Linear(in_dim, z_dim)
+        self.mu = nn.Linear(middle_dim, z_dim)
+        self.logvar = nn.Linear(middle_dim, z_dim)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
