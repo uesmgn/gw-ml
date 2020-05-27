@@ -69,8 +69,8 @@ if __name__ == '__main__':
     print(args.device)
     dataset = Dataset(df, data_transform)
     old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'])
-    args.labels = old_set.get_labels()
-    args.labels_pred = [str(i) for i in range(args.y_dim)]
+    args.labels = np.array(old_set.get_labels())
+    args.labels_pred = np.array(range(args.y_dim))
     loader = DataLoader(old_set,
                         batch_size=args.batch_size,
                         shuffle=True)
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
         if epoch % args.plot_itvl == 0:
 
-            K = len(args.labels_pred)
+            K = len(plabels)
             latents = vae_out['latents']
             latents_2d = []
             trues = vae_out['true']
