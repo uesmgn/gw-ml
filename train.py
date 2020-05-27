@@ -12,7 +12,6 @@ import  pandas as pd
 from detchar.dataset import Dataset
 from detchar.models.VAE import VAE
 from detchar.functions import Functions as F
-from detchar.functions.plotter import Plotter as plt
 from detchar.networks.Networks import VAENet
 
 parser = argparse.ArgumentParser(
@@ -105,10 +104,10 @@ if __name__ == '__main__':
 
             K = len(args.labels_pred)
             latents = vae_out['latents']
-            latents_2d = np.array()
+            latents_2d = []
             trues = vae_out['true']
             preds = vae_out['pred']
-            preds_kmeans = np.array()
+            preds_kmeans = []
             cm = pd.DataFrame()
             cm_kmeans = pd.DataFrame()
 
