@@ -23,12 +23,13 @@ class LossFunctions:
             np.log(2.0 * np.pi) + torch.log(var) + torch.pow(x - mu, 2) / var, dim=-1)
 
     def gaussian_loss(self, z, z_mu, z_var, z_mu_prior, z_var_prior):
-      loss = self.log_normal(z, z_mu, z_var) - self.log_normal(z, z_mu_prior, z_var_prior)
-      return loss.mean()
+        loss = self.log_normal(z, z_mu, z_var) - \
+            self.log_normal(z, z_mu_prior, z_var_prior)
+        return loss.mean()
 
     def entropy(self, logits, targets):
-      log_q = F.log_softmax(logits, dim=-1)
-      return -torch.mean(torch.sum(targets * log_q, dim=-1))
+        log_q = F.log_softmax(logits, dim=-1)
+        return -torch.mean(torch.sum(targets * log_q, dim=-1))
 
     def gaussian_kl_loss(self, z, z_mu, z_logvar):
         lossi = -1 - z_logvar + z_mu.pow(2) + z_logvar.exp()
@@ -36,5 +37,5 @@ class LossFunctions:
 
     def categorical_kl_loss(self, pi):
         k = pi.size(-1)
-        lossi = pi*torch.log(k*pi + self.eps)
+        lossi = pi * torch.log(k * pi + self.eps)
         return lossi.sum()

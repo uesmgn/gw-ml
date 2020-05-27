@@ -3,22 +3,22 @@ from torch import nn
 from torch.nn import functional as F
 from .Layers import *
 
+
 class VAENet(nn.Module):
-    def __init__(self, x_size, z_dim, y_dim, activation='Tanh'):
+    def __init__(self, x_size, z_dim, y_dim,
+                 layers=(32, 64, 128, 192), middle_size=18, activation='Tanh'):
         super().__init__()
 
-        middle_channel = 192
-        middle_size = 18
+        middle_channel = layers[3]
         middle_dim = middle_channel * middle_size ** 2
-        n_bottle = 16
 
         self.encoder = nn.Sequential(
-            ConvModule(1, 32, 1, 1, activation=activation),
-            DownSample(32, 64, kernel_size=3, stride=3,
+            ConvModule(1, layers[0], 1, 1, activation=activation),
+            DownSample(layers[0], layers[1], kernel_size=3, stride=3,
                        activation=activation),
-            DownSample(64, 128, kernel_size=3, stride=3,
+            DownSample(layers[1], layers[2], kernel_size=3, stride=3,
                        activation=activation),
-            DownSample(128, 192, kernel_size=3, stride=3,
+            DownSample(layers[2], layers[3], kernel_size=3, stride=3,
                        activation=activation),
             nn.Flatten()
         )
@@ -31,13 +31,13 @@ class VAENet(nn.Module):
         self.decoder = nn.Sequential(
             nn.Linear(z_dim, middle_dim),
             Reshape((middle_channel, middle_size, middle_size)),
-            Upsample(192, 128, kernel_size=3, stride=3,
+            Upsample(layers[3], layers[2], kernel_size=3, stride=3,
                      activation=activation),
-            Upsample(128, 64, kernel_size=3, stride=3,
+            Upsample(layers[2], layers[1], kernel_size=3, stride=3,
                      activation=activation),
-            Upsample(64, 32, kernel_size=3, stride=3,
+            Upsample(layers[1], layers[0], kernel_size=3, stride=3,
                      activation=activation),
-            ConvtModule(32, 1, 1, 1, activation='Sigmoid')
+            ConvtModule(layers[0], 1, 1, 1, activation='Sigmoid')
         )
 
         # weight initialization
@@ -63,4 +63,4 @@ class VAENet(nn.Module):
                 'y_logits': y_logits,
                 'y_prob': y_prob,
                 'y_mu': y_mu,
-                'y_logvar': y_logvar }
+                'y_logvar': y_logvar}

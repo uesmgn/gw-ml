@@ -2,8 +2,7 @@ import os
 import torch
 import time
 from torch.utils.data import DataLoader
-import pandas as pd
-from torchvision import utils, transforms
+from torchvision import transforms
 import argparse
 import numpy as np
 import multiprocessing as mp
@@ -120,18 +119,18 @@ if __name__ == '__main__':
 
             with mp.Pool(4) as pool:
                 cm = pool.apply_async(F.confution_matrix,
-                        (trues, preds, tlabels, plabels)).get()
+                                      (trues, preds, tlabels, plabels)).get()
                 cm_kmeans = pool.apply_async(F.confution_matrix,
-                                (trues, preds_kmeans, tlabels, plabels)).get()
+                                             (trues, preds_kmeans, tlabels, plabels)).get()
 
             F.plot_cm(cm, tlabels, plabels, f'{outdir}/cm_{epoch}_vae.png')
             F.plot_cm(cm_kmeans, tlabels, plabels,
                       f'{outdir}/cm_{epoch}_kmeans.png')
-            F.plot_latent(latents_2d[:,0], latents_2d[:,1],
+            F.plot_latent(latents_2d[:, 0], latents_2d[:, 1],
                           trues, f'{outdir}/latents_{epoch}_true.png')
-            F.plot_latent(latents_2d[:,0], latents_2d[:,1],
+            F.plot_latent(latents_2d[:, 0], latents_2d[:, 1],
                           preds, f'{outdir}/latents_{epoch}_pred.png')
-            F.plot_latent(latents_2d[:,0], latents_2d[:,1],
+            F.plot_latent(latents_2d[:, 0], latents_2d[:, 1],
                           preds_kmeans, f'{outdir}/latents_{epoch}_kmeans.png')
             F.plot_loss(losses, f"{outdir}/loss_{epoch}.png")
 

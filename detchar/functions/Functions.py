@@ -1,7 +1,7 @@
 from sklearn.manifold import TSNE
 from sklearn.cluster import KMeans
 import pandas as pd
-import  numpy as np
+import numpy as np
 import itertools
 import matplotlib.pyplot as plt
 from matplotlib import ticker
