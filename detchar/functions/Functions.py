@@ -12,8 +12,10 @@ class Functions:
     def confution_matrix(self, xx, yy,
                          xlabels, ylabels, normalize=True):
         cm = np.zeros([len(xlabels), len(ylabels)])
+        xlabels = list(xlabels)
+        ylabels = list(ylabels)
         for (x, y) in zip(xx, yy):
-            cm[np.where(xlabels==x), np.where(ylabels==y)] += 1.
+            cm[xlabels.index(x), ylabels.index(y)] += 1.
         if normalize:
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         return cm
@@ -43,7 +45,7 @@ class Functions:
 
     def plot_latent(self, xx, yy, preds, out):
         labels = list(set(preds))
-        df = pd.DataFrame([xx, yy, preds], index=['x', 'y', 'label'])
+        df = pd.DataFrame([xx, yy, preds], columns=['x', 'y', 'label'])
         x_mean = np.mean(xx)
         x_sigma = 3. * np.std(xx)
         y_mean = np.mean(yy)

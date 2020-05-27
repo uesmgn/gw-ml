@@ -127,13 +127,13 @@ if __name__ == '__main__':
             F.plot_cm(cm, tlabels, plabels, f'{outdir}/cm_{epoch}_vae.png')
             F.plot_cm(cm_kmeans, tlabels, plabels,
                       f'{outdir}/cm_{epoch}_kmeanss.png')
-            F.plot_latent(latents_2d[0], latents_2d[1],
-                          trues, f'{outdir}/latents_{epoch}_true.png')
-            F.plot_latent(latents_2d[0], latents_2d[1],
-                          preds, f'{outdir}/latents_{epoch}_pred.png')
-            F.plot_latent(latents_2d[0], latents_2d[1],
-                          preds_kmeans, f'{outdir}/latents_{epoch}_kmeans.png')
-            F.plot_loss(losses, f"{outdir}/loss_{epoch}.png")
+            # F.plot_latent(latents_2d[0], latents_2d[1],
+            #               trues, f'{outdir}/latents_{epoch}_true.png')
+            # F.plot_latent(latents_2d[0], latents_2d[1],
+            #               preds, f'{outdir}/latents_{epoch}_pred.png')
+            # F.plot_latent(latents_2d[0], latents_2d[1],
+            #               preds_kmeans, f'{outdir}/latents_{epoch}_kmeans.png')
+            # F.plot_loss(losses, f"{outdir}/loss_{epoch}.png")
 
         elapsed_t = time.time() - start_t
         print(f"Calc time: {elapsed_t:.3f} sec / epoch")
