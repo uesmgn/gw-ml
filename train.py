@@ -120,9 +120,9 @@ if __name__ == '__main__':
 
             with mp.Pool(4) as pool:
                 cm = pool.apply_async(F.confution_matrix,
-                                      (trues, preds)).get()
+                        (trues, preds, tlabels, plabels)).get()
                 cm_kmeans = pool.apply_async(F.confution_matrix,
-                                             (trues, preds_kmeans)).get()
+                                (trues, preds_kmeans, tlabels, plabels)).get()
 
             F.plot_cm(cm, tlabels, plabels, f'{outdir}/cm_{epoch}_vae.png')
             F.plot_cm(cm_kmeans, tlabels, plabels,
