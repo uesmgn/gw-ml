@@ -6,7 +6,7 @@ from .Layers import *
 
 class VAENet(nn.Module):
     def __init__(self, x_size, z_dim, y_dim,
-                 layers=(32, 64, 128, 192), middle_size=18, activation='Tanh'):
+                 layers=(32, 64, 128, 192), middle_size=18, activation='ReLu'):
         super().__init__()
 
         middle_channel = layers[3]

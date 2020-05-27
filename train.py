@@ -72,8 +72,8 @@ if __name__ == '__main__':
     args.labels_pred = np.array(range(args.y_dim)).astype(str)
     loader = DataLoader(old_set,
                         batch_size=args.batch_size,
-                        shuffle=True)
-    net = VAENet(args.input_size, args.z_dim, args.y_dim)
+                        shuffle=False)
+    net = VAENet(args.input_size, args.z_dim, args.y_dim, activation='Tanh')
     vae = VAE(args, net)
     print(vae.net)
     optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-4)
