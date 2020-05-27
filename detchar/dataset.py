@@ -23,7 +23,7 @@ class Dataset(data.Dataset):
         labels = self.df.iloc[:, 0].unique().astype(dtype)
         return sorted(labels)
 
-    def split_by_labels(self, new_labels, n_cat=200):
+    def split_by_labels(self, new_labels, n_cat=None):
         df = self.df
         columns = self.df.columns
 
@@ -33,20 +33,22 @@ class Dataset(data.Dataset):
         old_labels = [k for k, v in old_dict.items() if v >= n_cat]
 
         old_df_ = pd.DataFrame(columns=columns)
-        for c in old_labels:
-            old_df_ = old_df_.append(
-                old_df[old_df['label'] == c].sample(n=n_cat, random_state=123)
-            )
+        if n_cat:
+            for c in old_labels:
+                old_df_ = old_df_.append(
+                    old_df[old_df['label'] == c].sample(n=n_cat, random_state=123)
+                )
         print(f"# of old classes: {len(old_labels)}")
         print(f"{old_labels}")
         print(f"# of old data: {len(old_df_)}")
 
         new_df = df[df['label'].isin(new_labels)]
-        new_df_ = pd.DataFrame(columns=columns)
-        for c in new_labels:
-            new_df_ = new_df_.append(
-                new_df[new_df['label'] == c].sample(n=n_cat, random_state=123)
-            )
+        if n_cat:
+            new_df_ = pd.DataFrame(columns=columns)
+            for c in new_labels:
+                new_df_ = new_df_.append(
+                    new_df[new_df['label'] == c].sample(n=n_cat, random_state=123)
+                )
 
         print(f"# of new classes: {len(new_labels)}")
         print(f"{new_labels}")
