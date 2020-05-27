@@ -30,6 +30,8 @@ parser.add_argument('-b', '--batch_size', default=4, type=int,
                     help='batch size (default: 4)')
 parser.add_argument('-o', '--outdir', default='result', type=str,
                     help='output directory name (default: result)')
+parser.add_argument('-n', '--num_workers', default=2, type=int,
+                    help='num_workers of DataLoader (default: 2)')
 # Loss function parameters
 parser.add_argument('--w_gauss', default=1, type=float,
                     help='weight of gaussian loss (default: 1)')
@@ -72,6 +74,7 @@ if __name__ == '__main__':
     args.labels_pred = np.array(range(args.y_dim)).astype(str)
     loader = DataLoader(old_set,
                         batch_size=args.batch_size,
+                        num_workers=args.num_workers,
                         shuffle=False)
     model = VAENet(args.input_size, args.z_dim, args.y_dim, activation='Tanh')
     vae = VAE(args, model)
