@@ -13,13 +13,13 @@ class VAE:
         self.rec_type = args.rec_type
         self.labels = args.labels
         self.device = args.device
-        self.net = net
         self.losses = LossFunctions()
 
-        self.net.to(self.device)
+        net.to(self.device)
         if torch.cuda.is_available():
             net = torch.nn.DataParallel(net)
             torch.backends.cudnn.benchmark = True
+        self.net = net
 
         self.__initialized = False
 

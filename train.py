@@ -63,7 +63,7 @@ if __name__ == '__main__':
         transforms.Grayscale(),
         transforms.ToTensor()
     ])
-    device_ids = range(torch.cuda.device_vount())
+    device_ids = range(torch.cuda.device_count())
     args.device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
     print(args.device)
     dataset = Dataset(df, data_transform)
