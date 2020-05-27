@@ -32,7 +32,7 @@ class Functions:
     def plot_loss(self, losses, out, type='max'):
         if len(losses) > 2:
             plt.figure(figsize=[8, 4])
-            xx = list(range(len(losses)))
+            xx = np.array(range(len(losses))) + 1
             median = np.median(losses)
             plt.xlabel('epoch')
             plt.ylabel('loss')
@@ -64,12 +64,12 @@ class Functions:
             color = mcolors.rgb2hex(cmap(i))
             plt.scatter(x, y,
                         c=color,
-                        s=1.0,
+                        s=8.0,
                         label=label)
         plt.xlim(x_mean - x_sigma, x_mean + x_sigma)
         plt.ylim(y_mean - y_sigma, y_mean + y_sigma)
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper right',
-                   borderaxespad=0, fontsize=10)
+        plt.legend(bbox_to_anchor=(1.25, 1), loc='upper right',
+                   borderaxespad=0, fontsize=8)
         plt.tight_layout()
         plt.savefig(out)
         plt.close()
