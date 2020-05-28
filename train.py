@@ -79,7 +79,7 @@ if __name__ == '__main__':
     model = VAENet(args.input_size, args.z_dim, args.y_dim, activation='ReLu')
     vae = VAE(args, model)
     print(vae.net)
-    optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=200, gamma=0.5)
     vae.init_model(loader, optimizer, scheduler=scheduler)
