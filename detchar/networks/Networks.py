@@ -28,7 +28,7 @@ class VAENet(nn.Module):
         self.gumbel = GumbelSoftmax(middle_dim, y_dim)
         self.gaussian = Gaussian(middle_dim + y_dim, z_dim,
                                  middle_dim=gaussian_middle,
-                                 activation=activation)
+                                 activation='Tanh')
 
         self.y_mu = nn.Linear(y_dim, z_dim)
         self.y_logvar = nn.Linear(y_dim, z_dim)
