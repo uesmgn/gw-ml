@@ -69,14 +69,14 @@ if __name__ == '__main__':
     args.device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
     print(args.device)
     dataset = Dataset(df, data_transform)
-    old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'])
+    old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'], n_cat=200)
     args.labels = np.array(old_set.get_labels()).astype(str)
     args.labels_pred = np.array(range(args.y_dim)).astype(str)
     loader = DataLoader(old_set,
                         batch_size=args.batch_size,
                         num_workers=args.num_workers,
                         shuffle=False)
-    model = VAENet(args.input_size, args.z_dim, args.y_dim, activation='Tanh')
+    model = VAENet(args.input_size, args.z_dim, args.y_dim, activation='ReLu')
     vae = VAE(args, model)
     print(vae.net)
     optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-4)
