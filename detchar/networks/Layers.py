@@ -8,6 +8,8 @@ def get_activation(activation='Relu'):
         return nn.Sigmoid()
     elif activation in ('Tanh', 'tanh'):
         return nn.Tanh()
+    elif activation in ('ELU', 'elu'):
+        return nn.ELU()
     else:
         return nn.ReLU(inplace=True)
 
@@ -91,16 +93,10 @@ class Reshape(nn.Module):
 
 
 class Gaussian(nn.Module):
-    def __init__(self, in_dim, z_dim, middle_dim=None,
-                 activation='ReLu'):
+    def __init__(self, in_dim, z_dim):
         super().__init__()
-        middle_dim = middle_dim or z_dim
-        self.h = nn.Sequential(
-            nn.Linear(in_dim, middle_dim),
-            get_activation(activation=activation)
-        )
-        self.mu = nn.Linear(middle_dim, z_dim)
-        self.logvar = nn.Linear(middle_dim, z_dim)
+        self.mu = nn.Linear(in_dim, z_dim)
+        self.logvar = nn.Linear(in_dim, z_dim)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -109,9 +105,8 @@ class Gaussian(nn.Module):
         return x
 
     def forward(self, x):
-        h = self.h(x)
-        z_mu = self.mu(h)
-        z_logvar = self.logvar(h)
+        z_mu = self.mu(x)
+        z_logvar = self.logvar(x)
         z = self.reparameterize(z_mu, z_logvar)
         return z, z_mu, z_logvar
 

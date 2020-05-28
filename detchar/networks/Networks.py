@@ -6,8 +6,9 @@ from .Layers import *
 
 class VAENet(nn.Module):
     def __init__(self, x_size, z_dim, y_dim,
-                 layers=(32, 64, 128, 192), middle_size=18,
-                 gaussian_middle=None, activation='ReLu'):
+                 layers=(32, 64, 128, 192),
+                 middle_size=18,
+                 activation='Tanh'):
         super().__init__()
 
         middle_channel = layers[3]
@@ -24,9 +25,7 @@ class VAENet(nn.Module):
             nn.Flatten()
         )
         self.gumbel = GumbelSoftmax(middle_dim, y_dim)
-        self.gaussian = Gaussian(middle_dim + y_dim, z_dim,
-                                 gaussian_middle=1024,
-                                 activation=activation)
+        self.gaussian = Gaussian(middle_dim + y_dim, z_dim)
 
         self.y_mu = nn.Linear(y_dim, z_dim)
         self.y_logvar = nn.Linear(y_dim, z_dim)
@@ -55,7 +54,7 @@ class VAENet(nn.Module):
         y_logits, y_prob, y = self.gumbel(x, temp=temp)
         y_mu = self.y_mu(y)
         y_logvar = self.y_logvar(y)
-        z, z_mu, z_logvar = self.gaussian(torch.cat((x, y_prob), 1))
+        z, z_mu, z_logvar = self.gaussian(torch.cat((x, y), 1))
         # z, z_mu, z_logvar = self.gaussian(torch.cat((x, y), 1))
         x = self.decoder(z)
 
