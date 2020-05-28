@@ -76,7 +76,8 @@ if __name__ == '__main__':
                         batch_size=args.batch_size,
                         num_workers=args.num_workers,
                         shuffle=False)
-    model = VAENet(args.input_size, args.z_dim, args.y_dim, activation='ELU')
+    model = VAENet(args.input_size, args.z_dim, args.y_dim,
+                   gaussian_middle=1024, activation='ELU')
     vae = VAE(args, model)
     print(vae.net)
     optimizer = torch.optim.Adam(vae.net.parameters(), lr=1e-3)
