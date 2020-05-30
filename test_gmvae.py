@@ -4,6 +4,7 @@ from torchvision import transforms
 import pandas as pd
 import numpy as np
 import argparse
+import time
 
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
@@ -17,6 +18,8 @@ parser.add_argument('-y', '--y_dim', type=int, default=10,
                     help='number of classes (default: 10)')
 parser.add_argument('-z', '--z_dim', default=512, type=int,
                     help='gaussian size (default: 512)')
+parser.add_argument('-w', '--w_dim', default=20, type=int,
+                    help='w dim (default: 20)')
 parser.add_argument('-e', '--n_epoch', default=1000, type=int,
                     help='number of epochs (default: 1000)')
 parser.add_argument('-b', '--batch_size', default=32, type=int,
@@ -48,7 +51,7 @@ if __name__ == '__main__':
     labels = np.array(dataset.get_labels()).astype(str)
     labels_pred = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape, y_dim, z_dim, w_dim)
-    model.to(self.device)
+    model.to(device)
     # GPU Parallelize
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model)
@@ -62,7 +65,7 @@ if __name__ == '__main__':
     n_samples = 0
     loss_total = 0
     for epoch_idx in range(n_epoch):
-        print(epoch_idx)
+        time_start = time.time()
         for batch_idx, (x, labels) in enumerate(loader):
             x = x.to(device)
             optimizer.zero_grad()
@@ -74,4 +77,6 @@ if __name__ == '__main__':
             optimizer.step()
             n_samples += x.size(0)
         loss_total /= n_samples
+        time_elapse = time.time() - time_start
         print(f'loss = {loss_total:.3f} at epoch {epoch_idx+1}')
+        print(f"calc time = {time_elapse:.3f} sec")
