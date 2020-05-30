@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from .utils import nn as cn
 from . import utils as ut
-from . import loss
 
 
 class Encoder(nn.Module):
@@ -75,7 +74,8 @@ class Encoder(nn.Module):
         w_x_mean, w_x_logvar = torch.split(_w_x, self.w_dim, 1)
         w_x = ut.reparameterize(w_x_mean, w_x_logvar)
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
-        return {'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_logvar': z_x_logvar,
+        return {'x': x,
+                'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_logvar': z_x_logvar,
                 'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_logvar': w_x_logvar,
                 'y_wz': y_wz }
 
@@ -148,17 +148,6 @@ class GMVAE(nn.Module):
         self.encoder = Encoder(x_shape, y_dim, z_dim, w_dim, nargs)
         self.decoder = Decoder(x_shape, y_dim, z_dim, w_dim, nargs)
         self.params = None
-
-    def loss(self, x):
-        x_z = self.params['x_z']
-        w_x_mean, w_x_logvar = self.params['w_x_mean'], self.params['w_x_logvar']
-        rec_loss = loss.reconstruction_loss(x, x_z)
-        w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
-        total = rec_loss - w_prior_kl
-        return total, {
-            'reconstruction': rec_loss,
-            'w_prior_kl': w_prior_kl
-        }
 
     def forward(self, x):
         encoder_out = self.encoder(x)

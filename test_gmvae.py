@@ -11,6 +11,7 @@ from collections import defaultdict
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
 import gmvae.utils.plotlib as pl
+from gmvae import loss
 
 parser = argparse.ArgumentParser(
     description='PyTorch Implementation of GMVAE Clustering')
@@ -31,6 +32,18 @@ parser.add_argument('-n', '--num_workers', default=4, type=int,
 parser.add_argument('-s', '--sigma', default=0.01, type=float,
                     help='sigma to use reconstruction loss (default: 0.01)')
 args = parser.parse_args()
+
+def get_loss(params):
+    x = params['x']
+    x_z = params['x_z']
+    w_x_mean, w_x_logvar = params['w_x_mean'], params['w_x_logvar']
+    rec_loss = loss.reconstruction_loss(x, x_z)
+    w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
+    total = rec_loss - w_prior_kl
+    return total, {
+        'reconstruction': rec_loss,
+        'w_prior_kl': w_prior_kl
+    }
 
 if __name__ == '__main__':
     # test params
@@ -84,7 +97,7 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             output = model(x)
-            total, loss_dict = model.loss(x)
+            total, loss_dict = get_loss(output)
             total.backward()
             optimizer.step()
             loss_total += total.item()
