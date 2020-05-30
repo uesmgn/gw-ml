@@ -9,15 +9,15 @@ def reconstruction_loss(x, x_, sigma=0.001):
     return loss.mean()
 
 
-def __log_normal(self, x, mean, logvar):
+def __log_normal(x, mean, logvar):
     return -0.5 * torch.sum(
         logvar + torch.pow(x - mean, 2) / torch.exp(logvar), -1)
 
 
 def conditional_kl(z_x, z_x_mean, z_x_logvar,
                    z_wy, z_wy_mean, z_wy_logvar):
-    logp = self.__log_normal(z_x, z_x_mean, z_x_logvar)
-    logq = self.__log_normal(z_wy, z_wy_mean, z_wy_logvar)
+    logp = __log_normal(z_x, z_x_mean, z_x_logvar)
+    logq = __log_normal(z_wy, z_wy_mean, z_wy_logvar)
     return (logp - logq).mean()
 
 

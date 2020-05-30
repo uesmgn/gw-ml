@@ -53,8 +53,13 @@ def get_loss(params):
     return total, {
         'reconstruction': rec_loss,
         'w_prior_kl': w_prior_kl,
-        'y_prior_kl': y_prior_kl
+        'y_prior_kl': y_prior_kl,
+        'conditional_kl': conditional_kl
     }
+
+def update_loss(loss_dict_total, loss_dict):
+    for k, v in loss_dict.items():
+        loss_dict_total[k] += v.item()
 
 if __name__ == '__main__':
     # test params
@@ -71,7 +76,7 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     num_workers = args.num_workers
 
-    plot_interval = args.plot_interval
+    plot_itvl = args.plot_itvl
     outdir = 'result_gmvae'
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -98,11 +103,11 @@ if __name__ == '__main__':
                         num_workers=num_workers,
                         shuffle=False)
     losses = []
-    total_dict = defaultdict(lambda: 0)
     for epoch_idx in range(n_epoch):
         epoch = epoch_idx + 1
         time_start = time.time()
         loss_total = 0
+        loss_dict_total = defaultdict(lambda: 0)
         z_x = torch.Tensor().to(device)
         w_x = torch.Tensor().to(device)
         labels = []
@@ -117,17 +122,20 @@ if __name__ == '__main__':
             total.backward()
             optimizer.step()
             loss_total += total.item()
+            update_loss(loss_dict_total, loss_dict)
         losses.append(loss_total)
         time_elapse = time.time() - time_start
         print(f'loss = {loss_total:.3f} at epoch {epoch_idx+1}')
+        loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
+        print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
 
-        if epoch % plot_interval == 0:
+        if epoch % plot_itvl == 0:
             z_x = z_x.detach().cpu().numpy()
-            print(z_x.shape)
+            w_x = w_x.detach().cpu().numpy()
             pca = PCA(n_components=2)
             z_x_2d = pca.fit_transform(z_x)
-            print(z_x_2d.shape)
-            pl.plot_latent(z_x[:,0], z_x[:,1], labels, f'{outdir}/z_x_{epoch}.png')
-            pl.plot_latent(w_x[:,0], w_x[:,1], labels, f'{outdir}/w_x_{epoch}.png')
+            w_x_2d = pca.fit_transform(w_x)
+            pl.plot_latent(z_x_2d[:,0], z_x_2d[:,1], labels, f'{outdir}/z_x_{epoch}.png')
+            pl.plot_latent(w_x_2d[:,0], w_x_2d[:,1], labels, f'{outdir}/w_x_{epoch}.png')
             pl.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
