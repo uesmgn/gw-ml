@@ -9,6 +9,7 @@ import time
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
 from gmvae.loss import *
+import gmvae.utils.plotlib as pl
 
 parser = argparse.ArgumentParser(
     description='PyTorch Implementation of GMVAE Clustering')
@@ -41,6 +42,8 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     num_workers = args.num_workers
 
+    plot_interval = 10
+
     df = pd.read_json('dataset.json')
     data_transform = transforms.Compose([
         transforms.CenterCrop((x_shape[1], x_shape[2])),
@@ -63,9 +66,11 @@ if __name__ == '__main__':
                         num_workers=num_workers,
                         shuffle=False)
     n_samples = 0
-    loss_total = 0
+    losses = []
     for epoch_idx in range(n_epoch):
+        epoch = epoch_idx + 1
         time_start = time.time()
+        loss_total = 0
         for batch_idx, (x, labels) in enumerate(loader):
             x = x.to(device)
             optimizer.zero_grad()
@@ -77,6 +82,10 @@ if __name__ == '__main__':
             optimizer.step()
             n_samples += x.size(0)
         loss_total /= n_samples
+        losses.append(loss_total)
         time_elapse = time.time() - time_start
         print(f'loss = {loss_total:.3f} at epoch {epoch_idx+1}')
         print(f"calc time = {time_elapse:.3f} sec")
+
+        if epoch % plot_interval == 0:
+            pl.plot_loss(losses, f'{outdir}/loss_{epoch}.png')

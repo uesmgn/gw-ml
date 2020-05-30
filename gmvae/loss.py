@@ -4,7 +4,7 @@ import numpy as np
 
 
 def reconstruction_loss(x, x_, sigma=0.001):
-    loss = -0.5 / sigma * F.mse_loss(x_, x, reduction='sum')
+    loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='sum')
     return loss
 
 
