@@ -4,9 +4,9 @@ from torchvision import transforms
 import pandas as pd
 import numpy as np
 
-from dataset import Dataset
-from network import GMVAE
-from loss import *
+from gmvae.dataset import Dataset
+from gmvae.network import GMVAE
+from gmvae.loss import *
 
 if __name__ == '__main__':
     # test params
@@ -15,12 +15,13 @@ if __name__ == '__main__':
     z_dim = 512
     w_dim = 20
 
+    device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
     n_epoch = 100
     batch_size = 16
     num_workers = 4
 
-    df = pd.read_json('../dataset.json')
+    df = pd.read_json('dataset.json')
     data_transform = transforms.Compose([
         transforms.CenterCrop((x_shape[1], x_shape[2])),
         transforms.Grayscale(),
@@ -30,6 +31,7 @@ if __name__ == '__main__':
     labels = np.array(dataset.get_labels()).astype(str)
     labels_pred = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape, y_dim, z_dim, w_dim)
+    model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     loader = DataLoader(dataset,
                         batch_size=batch_size,
