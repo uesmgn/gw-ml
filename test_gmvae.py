@@ -7,6 +7,7 @@ import argparse
 import time
 import os
 from collections import defaultdict
+from sklearn.decomposition import PCA
 
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
@@ -31,6 +32,8 @@ parser.add_argument('-n', '--num_workers', default=4, type=int,
                     help='num_workers of DataLoader (default: 4)')
 parser.add_argument('-s', '--sigma', default=0.01, type=float,
                     help='sigma to use reconstruction loss (default: 0.01)')
+parser.add_argument('-p', '--plot_itvl', default=5, type=int,
+                    help='plot interval (default: 5)')
 args = parser.parse_args()
 
 def get_loss(params):
@@ -68,7 +71,7 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     num_workers = args.num_workers
 
-    plot_interval = 10
+    plot_interval = args.plot_interval
     outdir = 'result_gmvae'
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -100,10 +103,16 @@ if __name__ == '__main__':
         epoch = epoch_idx + 1
         time_start = time.time()
         loss_total = 0
-        for batch_idx, (x, labels) in enumerate(loader):
+        z_x = torch.Tensor().to(device)
+        w_x = torch.Tensor().to(device)
+        labels = []
+        for batch_idx, (x, l) in enumerate(loader):
             x = x.to(device)
             optimizer.zero_grad()
             output = model(x)
+            z_x = torch.cat((z_x, output['z_x']), 0)
+            w_x = torch.cat((w_x, output['w_x']), 0)
+            labels += l
             total, loss_dict = get_loss(output)
             total.backward()
             optimizer.step()
@@ -114,4 +123,11 @@ if __name__ == '__main__':
         print(f"calc time = {time_elapse:.3f} sec")
 
         if epoch % plot_interval == 0:
+            z_x = z_x.detach().cpu().numpy()
+            print(z_x.shape)
+            pca = PCA(n_components=2)
+            z_x_2d = pca.fit_transform(z_x)
+            print(z_x_2d.shape)
+            pl.plot_latent(z_x[:,0], z_x[:,1], labels, f'{outdir}/z_x_{epoch}.png')
+            pl.plot_latent(w_x[:,0], w_x[:,1], labels, f'{outdir}/w_x_{epoch}.png')
             pl.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
