@@ -72,8 +72,8 @@ class VAE:
 
             z = net_out['z']
             x_reconst = net_out['x_reconst']
-            y = net_out['y']
-            _, preds = torch.max(y, dim=1)
+            y_logits = net_out['y_logits']
+            _, preds = torch.max(y_logits, dim=1)
             preds = preds.cpu().numpy()
             unlabeled_loss = self.unlabeled_loss(x, net_out)
 
