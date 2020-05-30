@@ -97,7 +97,7 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             output = model(x)
-            total, loss_dict = get_loss(output)
+            total, _ = get_loss(output)
             total.backward()
             optimizer.step()
             loss_total += total.item()
