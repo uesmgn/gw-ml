@@ -111,13 +111,16 @@ if __name__ == '__main__':
         z_x = torch.Tensor().to(device)
         w_x = torch.Tensor().to(device)
         labels = []
+        labels_pred = []
         for batch_idx, (x, l) in enumerate(loader):
             x = x.to(device)
             optimizer.zero_grad()
             output = model(x)
             z_x = torch.cat((z_x, output['z_x']), 0)
             w_x = torch.cat((w_x, output['w_x']), 0)
+            _, p = torch.max(output['y_wz'], dim=1)
             labels += l
+            labels_pred += list(p)
             total, loss_dict = get_loss(output)
             total.backward()
             optimizer.step()
@@ -137,5 +140,7 @@ if __name__ == '__main__':
             z_x_2d = pca.fit_transform(z_x)
             w_x_2d = pca.fit_transform(w_x)
             pl.plot_latent(z_x_2d[:,0], z_x_2d[:,1], labels, f'{outdir}/z_x_{epoch}.png')
+            pl.plot_latent(z_x_2d[:,0], z_x_2d[:,1], labels_pred, f'{outdir}/z_x_{epoch}_pred.png')
             pl.plot_latent(w_x_2d[:,0], w_x_2d[:,1], labels, f'{outdir}/w_x_{epoch}.png')
+            pl.plot_latent(w_x_2d[:,0], w_x_2d[:,1], labels_pred, f'{outdir}/w_x_{epoch}_pred.png')
             pl.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
