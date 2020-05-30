@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from utils import nn as cn
-import utils as ut
+from . import utils as ut
 
 
 class Encoder(nn.Module):

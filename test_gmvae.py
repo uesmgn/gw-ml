@@ -31,7 +31,12 @@ if __name__ == '__main__':
     labels = np.array(dataset.get_labels()).astype(str)
     labels_pred = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape, y_dim, z_dim, w_dim)
-    model = model.to(device)
+    model.to(self.device)
+    # GPU Parallelize
+    if torch.cuda.is_available():
+        model = torch.nn.DataParallel(model)
+        torch.backends.cudnn.benchmark = True
+
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     loader = DataLoader(dataset,
                         batch_size=batch_size,
@@ -40,6 +45,7 @@ if __name__ == '__main__':
     n_samples = 0
     loss_total = 0
     for epoch_idx in range(n_epoch):
+        print(epoch_idx)
         for batch_idx, (x, labels) in enumerate(loader):
             x = x.to(device)
             optimizer.zero_grad()
