@@ -5,8 +5,8 @@ import numpy as np
 
 def reconstruction_loss(x, x_, sigma=0.01):
     loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='sum')
-    return loss
-
+    print('resonst: '. loss.size())
+    return loss.mean()
 
 def __log_normal(self, x, mean, log_var):
     return -0.5 * torch.sum(
@@ -32,8 +32,9 @@ def conditional_kl(z_x, z_x_mean, z_x_logvar,
 
 
 def w_prior_kl(w_mean, w_logvar):
-    kl = 0.5 * torch.sum(torch.exp(w_logvar) - 1 - w_logvar + torch.pow(w_mean, 2))
-    return kl
+    kl = 0.5 * torch.exp(w_logvar) - 1 - w_logvar + torch.pow(w_mean, 2)
+    print('kl: ', kl.size())
+    return torch.mean(kl)
 
 
 def y_prior_kl(y_wz, k):
