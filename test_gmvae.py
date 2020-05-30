@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import time
+import os
 
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
@@ -27,6 +28,8 @@ parser.add_argument('-b', '--batch_size', default=32, type=int,
                     help='batch size (default: 32)')
 parser.add_argument('-n', '--num_workers', default=4, type=int,
                     help='num_workers of DataLoader (default: 4)')
+parser.add_argument('-s', '--sigma', default=0.01, type=float,
+                    help='sigma to use reconstruction loss (default: 0.01)')
 args = parser.parse_args()
 
 if __name__ == '__main__':
@@ -36,6 +39,8 @@ if __name__ == '__main__':
     z_dim = args.z_dim
     w_dim = args.w_dim
 
+    sigma = args.sigma
+
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
     n_epoch = args.n_epoch
@@ -43,6 +48,9 @@ if __name__ == '__main__':
     num_workers = args.num_workers
 
     plot_interval = 10
+    outdir = 'result_gmvae'
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
 
     df = pd.read_json('dataset.json')
     data_transform = transforms.Compose([
@@ -76,7 +84,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             output = model(x)
             x_z = output['x_z']
-            loss = reconstruction_loss(x, x_z)
+            loss = reconstruction_loss(x, x_z, sigma)
             loss_total += loss.item()
             loss.backward()
             optimizer.step()

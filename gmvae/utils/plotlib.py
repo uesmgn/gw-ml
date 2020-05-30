@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 import numpy as np
 
 def plot_loss(losses, out):
