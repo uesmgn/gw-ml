@@ -4,7 +4,7 @@ import  numpy as np
 
 
 def reconstruction_loss(x, x_, sigma=0.001):
-    loss = -0.5 / sigma * F.mse_loss(x_, x, reduction='none')
+    loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='none')
     loss = loss.sum(-1).sum(-1)
     return loss.mean()
 
@@ -28,5 +28,5 @@ def w_prior_kl(w_mean, w_logvar):
 
 def y_prior_kl(y_wz):
     k = y_wz.shape[1]
-    kl = -np.log(k) - 1 / k * torch.sum(y_wz, -1)
-    return kl.mean()
+    kl = -np.log(k) - torch.sum(y_wz, -1) / k
+    return -kl.mean()

@@ -49,7 +49,7 @@ def get_loss(params):
     y_prior_kl = loss.y_prior_kl(y_wz)
     conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_logvar,
                                          z_x, z_wy_mean, z_wy_logvar )
-    total = -(rec_loss - conditional_kl - w_prior_kl - y_prior_kl)
+    total = rec_loss + conditional_kl + w_prior_kl + y_prior_kl
     return total, {
         'reconstruction': rec_loss,
         'w_prior_kl': w_prior_kl,
