@@ -1,42 +1,27 @@
-import torch
-import torch.nn.functional as F
-import numpy as np
 
-
-def reconstruction_loss(x, x_, sigma=0.01):
-    loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='sum')
-    print('resonst: '. loss.size())
+def reconstruction_loss(x, x_, sigma=0.001):
+    loss = -0.5 / sigma * F.mse_loss(x_, x, reduction='none').sum(-1).sum(-1)
     return loss.mean()
+
 
 def __log_normal(self, x, mean, log_var):
     return -0.5 * torch.sum(
-        log_var + torch.pow(x - mean, 2) / torch.exp(log_var))
+        log_var + torch.pow(x - mean, 2) / torch.exp(log_var), -1)
 
 
 def conditional_kl(z_x, z_x_mean, z_x_logvar,
-                   z_wys, z_wy_means, z_wy_logvars, z_wy_pi):
-    # z_x: (batch_size, z_dim)
-    # z_x_mean: (batch_size, z_dim)
-    # z_x_logvar: (batch_size, z_dim)
-    # z_wys: (batch_size, z_dim, K)
-    # z_wy_means: (batch_size, z_dim, K)
-    # z_wy_logvars: (batch_size, z_dim, K)
-    # z_wy_pi: (batch_size, K)
+                   z_wy, z_wy_mean, z_wy_logvar):
     logp = __log_normal(z_x, z_x_mean, z_x_logvar)
-    log_det_sigma = z_wy_pi * torch.sum(z_wy_logvars, 2)  # (batch_size, K)
-    aux = z_wy_pi * \
-        torch.sum(torch.pow(z_wys - z_wy_means, 2) /
-                  torch.exp(z_wy_logvars), 2) # (batch_size, K)
-    logq = -0.5 * torch.sum(log_det_sigma + aux)
-    return logq - logp
+    logq = __log_normal(z_wy, z_wy_mean, z_wy_logvar)
+    return (logq - logp).mean()
 
 
 def w_prior_kl(w_mean, w_logvar):
-    kl = 0.5 * torch.exp(w_logvar) - 1 - w_logvar + torch.pow(w_mean, 2)
-    print('kl: ', kl.size())
-    return torch.mean(kl)
+    kl = 0.5 * (torch.exp(w_logvar) - 1 - w_logvar + torch.pow(w_mean, 2)).sum(-1)
+    return kl.mean()
 
 
-def y_prior_kl(y_wz, k):
-    kl = -np.log(k) - 1 / k * torch.sum(p_y_wz)
-    return kl
+def y_prior_kl(y_wz):
+    k = y_wz.shape[1]
+    kl = -np.log(k) - 1 / k * torch.sum(y_wz, -1)
+    return kl.mean()

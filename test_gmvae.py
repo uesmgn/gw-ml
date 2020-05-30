@@ -37,12 +37,20 @@ def get_loss(params):
     x = params['x']
     x_z = params['x_z']
     w_x_mean, w_x_logvar = params['w_x_mean'], params['w_x_logvar']
+    y_wz = params['y_wz']
+    z_x = params['z_x']
+    z_x_mean, z_x_logvar = params['z_x_mean'], params['z_x_logvar'],
+    z_wy_mean, z_wy_logvar = params['z_wy_mean'], params['z_wy_logvar']
     rec_loss = loss.reconstruction_loss(x, x_z)
     w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
-    total = rec_loss - w_prior_kl
+    y_prior_kl = loss.y_prior_kl(y_wz)
+    conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_logvar,
+                                         z_x, z_wy_mean, z_wy_logvar )
+    total = -(rec_loss - conditional_kl - w_prior_kl - y_prior_kl)
     return total, {
         'reconstruction': rec_loss,
-        'w_prior_kl': w_prior_kl
+        'w_prior_kl': w_prior_kl,
+        'y_prior_kl': y_prior_kl
     }
 
 if __name__ == '__main__':
@@ -86,7 +94,6 @@ if __name__ == '__main__':
                         batch_size=batch_size,
                         num_workers=num_workers,
                         shuffle=False)
-    n_samples = 0
     losses = []
     total_dict = defaultdict(lambda: 0)
     for epoch_idx in range(n_epoch):
@@ -97,12 +104,10 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             output = model(x)
-            total, _ = get_loss(output)
+            total, loss_dict = get_loss(output)
             total.backward()
             optimizer.step()
             loss_total += total.item()
-            n_samples += x.size(0)
-        loss_total /= n_samples
         losses.append(loss_total)
         time_elapse = time.time() - time_start
         print(f'loss = {loss_total:.3f} at epoch {epoch_idx+1}')
