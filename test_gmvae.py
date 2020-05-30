@@ -8,6 +8,7 @@ import time
 import os
 from collections import defaultdict
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
@@ -137,10 +138,13 @@ if __name__ == '__main__':
             z_x = z_x.detach().cpu().numpy()
             w_x = w_x.detach().cpu().numpy()
             pca = PCA(n_components=2)
-            z_x_2d = pca.fit_transform(z_x)
-            w_x_2d = pca.fit_transform(w_x)
-            pl.plot_latent(z_x_2d[:,0], z_x_2d[:,1], labels, f'{outdir}/z_x_{epoch}.png')
-            pl.plot_latent(z_x_2d[:,0], z_x_2d[:,1], labels_pred, f'{outdir}/z_x_{epoch}_pred.png')
-            pl.plot_latent(w_x_2d[:,0], w_x_2d[:,1], labels, f'{outdir}/w_x_{epoch}.png')
-            pl.plot_latent(w_x_2d[:,0], w_x_2d[:,1], labels_pred, f'{outdir}/w_x_{epoch}_pred.png')
+            tsne = TSNE(n_components=2)
+            z_x_pca = pca.fit_transform(z_x)
+            w_x_pca = pca.fit_transform(w_x)
+            z_x_tsne = tsne.fit_transform(z_x)
+            w_x_tsne = tsne.fit_transform(w_x)
+            pl.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}.png')
+            pl.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}.png')
+            pl.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}.png')
+            pl.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}.png')
             pl.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
