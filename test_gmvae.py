@@ -6,6 +6,7 @@ import numpy as np
 import argparse
 import time
 import os
+from collections import defaultdict
 
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
@@ -74,6 +75,7 @@ if __name__ == '__main__':
                         shuffle=False)
     n_samples = 0
     losses = []
+    total_dict = defaultdict(lambda: 0)
     for epoch_idx in range(n_epoch):
         epoch = epoch_idx + 1
         time_start = time.time()
@@ -83,9 +85,9 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             output = model(x)
             total, loss_dict = model.loss(x)
-            loss_total += total.item()
             total.backward()
             optimizer.step()
+            loss_total += total.item()
             n_samples += x.size(0)
         loss_total /= n_samples
         losses.append(loss_total)
