@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from utils import nn as cn
+from .utils import nn as cn
 from . import utils as ut
 
 

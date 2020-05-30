@@ -3,23 +3,40 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import pandas as pd
 import numpy as np
+import argparse
 
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
 from gmvae.loss import *
 
+parser = argparse.ArgumentParser(
+    description='PyTorch Implementation of GMVAE Clustering')
+
+# NN Architecture
+parser.add_argument('-y', '--y_dim', type=int, default=10,
+                    help='number of classes (default: 10)')
+parser.add_argument('-z', '--z_dim', default=512, type=int,
+                    help='gaussian size (default: 512)')
+parser.add_argument('-e', '--n_epoch', default=1000, type=int,
+                    help='number of epochs (default: 1000)')
+parser.add_argument('-b', '--batch_size', default=32, type=int,
+                    help='batch size (default: 32)')
+parser.add_argument('-n', '--num_workers', default=4, type=int,
+                    help='num_workers of DataLoader (default: 4)')
+args = parser.parse_args()
+
 if __name__ == '__main__':
     # test params
     x_shape = (1, 486, 486)
-    y_dim = 10
-    z_dim = 512
-    w_dim = 20
+    y_dim = args.y_dim
+    z_dim = args.z_dim
+    w_dim = args.w_dim
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
-    n_epoch = 100
-    batch_size = 16
-    num_workers = 4
+    n_epoch = args.n_epoch
+    batch_size = args.batch_size
+    num_workers = args.num_workers
 
     df = pd.read_json('dataset.json')
     data_transform = transforms.Compose([
