@@ -3,12 +3,12 @@ import torch.nn.functional as F
 import numpy as np
 
 
-def reconstruction_loss(x, x_, sigma=0.001):
+def reconstruction_loss(x, x_, sigma=0.01):
     loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='sum')
     return loss
 
 
-def log_normal(self, x, mean, log_var):
+def __log_normal(self, x, mean, log_var):
     return -0.5 * torch.sum(
         log_var + torch.pow(x - mean, 2) / torch.exp(log_var))
 
@@ -22,7 +22,7 @@ def conditional_kl(z_x, z_x_mean, z_x_logvar,
     # z_wy_means: (batch_size, z_dim, K)
     # z_wy_logvars: (batch_size, z_dim, K)
     # z_wy_pi: (batch_size, K)
-    logp = log_normal(z_x, z_x_mean, z_x_logvar)
+    logp = __log_normal(z_x, z_x_mean, z_x_logvar)
     log_det_sigma = z_wy_pi * torch.sum(z_wy_logvars, 2)  # (batch_size, K)
     aux = z_wy_pi * \
         torch.sum(torch.pow(z_wys - z_wy_means, 2) /

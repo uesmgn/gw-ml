@@ -9,7 +9,6 @@ import os
 
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
-from gmvae.loss import *
 import gmvae.utils.plotlib as pl
 
 parser = argparse.ArgumentParser(
@@ -83,10 +82,9 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             output = model(x)
-            x_z = output['x_z']
-            loss = reconstruction_loss(x, x_z, sigma)
-            loss_total += loss.item()
-            loss.backward()
+            total, loss_dict = model.loss(x)
+            loss_total += total.item()
+            total.backward()
             optimizer.step()
             n_samples += x.size(0)
         loss_total /= n_samples

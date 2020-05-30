@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from .utils import nn as cn
 from . import utils as ut
+from . import loss
 
 
 class Encoder(nn.Module):
@@ -30,12 +31,15 @@ class Encoder(nn.Module):
             nn.Conv2d(in_ch, conv_ch[0],
                       kernel_size=kernel,
                       stride=kernel, padding=0),
+            nn.ReLU(),
             nn.Conv2d(conv_ch[0], conv_ch[1],
                       kernel_size=kernel,
                       stride=kernel, padding=0),
+            nn.ReLU(),
             nn.Conv2d(conv_ch[1], conv_ch[2],
                       kernel_size=kernel,
                       stride=kernel, padding=0),
+            nn.ReLU(),
             nn.Flatten(),
             nn.Linear(middle_dim, z_dim * 2)  # (batch_size, z_dim * 2)
         )
@@ -44,12 +48,15 @@ class Encoder(nn.Module):
             nn.Conv2d(in_ch, conv_ch[0],
                       kernel_size=kernel,
                       stride=kernel, padding=0),
+            nn.ReLU(),
             nn.Conv2d(conv_ch[0], conv_ch[1],
                       kernel_size=kernel,
                       stride=kernel, padding=0),
+            nn.ReLU(),
             nn.Conv2d(conv_ch[1], conv_ch[2],
                       kernel_size=kernel,
                       stride=kernel, padding=0),
+            nn.ReLU(),
             nn.Flatten(),
             nn.Linear(middle_dim, w_dim * 2)  # (batch_size, w_dim * 2)
         )
@@ -111,9 +118,11 @@ class Decoder(nn.Module):
             nn.ConvTranspose2d(conv_ch[-1], conv_ch[-2],
                                kernel_size=kernel,
                                stride=kernel, padding=0),
+            nn.ReLU(),
             nn.ConvTranspose2d(conv_ch[-2], conv_ch[-3],
                                kernel_size=kernel,
                                stride=kernel, padding=0),
+            nn.ReLU(),
             nn.ConvTranspose2d(conv_ch[-3], in_ch,
                                kernel_size=kernel,
                                stride=kernel, padding=0),
@@ -138,10 +147,23 @@ class GMVAE(nn.Module):
 
         self.encoder = Encoder(x_shape, y_dim, z_dim, w_dim, nargs)
         self.decoder = Decoder(x_shape, y_dim, z_dim, w_dim, nargs)
+        self.params = None
+
+    def loss(self, x):
+        x_z = self.params['x_z']
+        w_x_mean, w_x_logvar = self.params['w_x_mean'], self.params['w_x_logvar']
+        rec_loss = loss.reconstruction_loss(x, x_z)
+        w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
+        total = rec_loss - w_prior_kl
+        return total, {
+            'reconstruction': rec_loss,
+            'w_prior_kl': w_prior_kl
+        }
 
     def forward(self, x):
         encoder_out = self.encoder(x)
         z_x, w_x = encoder_out['z_x'], encoder_out['w_x']
         decoder_out = self.decoder(z_x, w_x)
         encoder_out.update(decoder_out)
+        self.params = encoder_out
         return encoder_out
