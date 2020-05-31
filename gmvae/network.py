@@ -102,14 +102,10 @@ class Decoder(nn.Module):
         dense_dim = nargs.get('dense_dim') or 1024
         kernel = nargs.get('kernel') or 3
 
-        self.z_wy_mean_graph = nn.Sequential(
+        self.z_wy_graph = nn.Sequential(
             nn.Linear(w_dim, dense_dim),
-            nn.Linear(dense_dim, z_dim)
-        )
-
-        self.z_wy_logvar_graph = nn.Sequential(
-            nn.Linear(w_dim, dense_dim),
-            nn.Linear(dense_dim, z_dim)
+            nn.Linear(dense_dim, z_dim * 2 * self.y_dim),
+            cn.Reshape((z_dim * 2, self.y_dim))
         )
 
         self.x_z_graph = nn.Sequential(
@@ -130,10 +126,11 @@ class Decoder(nn.Module):
         )
 
     def forward(self, z, w):
-        z_wy_mean = self.z_wy_mean_graph(w)
-        z_wy_logvar = self.z_wy_logvar_graph(w)
+        _z_wy = self.z_wy_graph(w)
+        z_wy_means, z_wy_logvars = torch.split(_z_wy, self.z_dim, 1)
         x_z = self.x_z_graph(z)
-        return {'z_wy_mean': z_wy_mean, 'z_wy_logvar': z_wy_logvar,
+        return {'z_wy_means': z_wy_means, # (batch_size, z_dim, K)
+                'z_wy_logvars': z_wy_logvars, # (batch_size, z_dim, K)
                 'x_z': x_z }
 
 class GMVAE(nn.Module):

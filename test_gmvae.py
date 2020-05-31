@@ -42,14 +42,15 @@ def get_loss(params):
     x_z = params['x_z']
     w_x_mean, w_x_logvar = params['w_x_mean'], params['w_x_logvar']
     y_wz = params['y_wz']
-    z_x = params['z_x']
+    K = y_wz.shape[1]
+    z_x = params['z_x'] # (batch_size, z_dim)
     z_x_mean, z_x_logvar = params['z_x_mean'], params['z_x_logvar'],
-    z_wy_mean, z_wy_logvar = params['z_wy_mean'], params['z_wy_logvar']
+    z_wy_means, z_wy_logvars = params['z_wy_means'], params['z_wy_logvars']
     rec_loss = loss.reconstruction_loss(x, x_z)
     w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
     y_prior_kl = loss.y_prior_kl(y_wz)
     conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_logvar,
-                                         z_x, z_wy_mean, z_wy_logvar )
+                                         z_wy_means, z_wy_logvars )
     total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
     return total, {
         'reconstruction': rec_loss,
