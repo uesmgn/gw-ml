@@ -73,7 +73,7 @@ if __name__ == '__main__':
     nargs = dict()
     nargs['conv_channels'] = json.loads(ini['net']['conv_channels'])
     nargs['conv_kernels'] = json.loads(ini['net']['conv_kernels'])
-    nargs['conv_strides'] = json.loads(ini['net']['conv_strides'])
+    nargs['pool_kernels'] = json.loads(ini['net']['pool_kernels'])
     nargs['middle_size'] = ini['net']['middle_size']
     nargs['dense_dim'] = ini['net']['dense_dim']
     nargs['activation'] = ini['net']['activation']
@@ -129,7 +129,7 @@ if __name__ == '__main__':
         epoch = epoch_idx + 1
         # train...
         model.train()
-        print(f'### training at epoch {epoch}...')
+        print(f'----- # training at epoch {epoch}... # -----')
         time_start = time.time()
         loss_total = 0
         loss_dict_total = defaultdict(lambda: 0)
@@ -145,7 +145,7 @@ if __name__ == '__main__':
         losses.append(loss_total)
         time_elapse = time.time() - time_start
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
-        loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
+        loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
         print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
 
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         if epoch % eval_itvl == 0:
             with torch.no_grad():
                 model.eval()
-                print(f'### evaluating at epoch {epoch}...')
+                print(f'----- # evaluating at epoch {epoch}... # -----')
                 time_start = time.time()
                 loss_total = 0
                 loss_dict_total = defaultdict(lambda: 0)
@@ -174,12 +174,12 @@ if __name__ == '__main__':
                     update_loss(loss_dict_total, loss_dict)
                 time_elapse = time.time() - time_start
                 print(f'test loss = {loss_total:.3f} at epoch {epoch_idx+1}')
-                loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
+                loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
                 print(loss_info)
                 print(f"calc time = {time_elapse:.3f} sec")
 
                 # decompose...
-                print(f'### decomposing and plotting...')
+                print(f'----- # decomposing and plotting... # -----')
                 time_start = time.time()
                 pca = PCA(n_components=2)
                 tsne = TSNE(n_components=2)
