@@ -129,7 +129,7 @@ if __name__ == '__main__':
         epoch = epoch_idx + 1
         # train...
         model.train()
-        print(f'----- # training at epoch {epoch}... # -----')
+        print(f'----- training at epoch {epoch}... -----')
         time_start = time.time()
         loss_total = 0
         loss_dict_total = defaultdict(lambda: 0)
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         if epoch % eval_itvl == 0:
             with torch.no_grad():
                 model.eval()
-                print(f'----- # evaluating at epoch {epoch}... # -----')
+                print(f'----- evaluating at epoch {epoch}... -----')
                 time_start = time.time()
                 loss_total = 0
                 loss_dict_total = defaultdict(lambda: 0)
@@ -179,7 +179,7 @@ if __name__ == '__main__':
                 print(f"calc time = {time_elapse:.3f} sec")
 
                 # decompose...
-                print(f'----- # decomposing and plotting... # -----')
+                print(f'----- decomposing and plotting... -----')
                 time_start = time.time()
                 pca = PCA(n_components=2)
                 tsne = TSNE(n_components=2)
