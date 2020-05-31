@@ -29,13 +29,13 @@ class ConvTransposeModule(nn.Module):
     def __init__(self,
                  in_ch,
                  out_ch,
-                 conv_kernel=3,
+                 convt_kernel=3,
                  activation='ReLU'):
         super().__init__()
         self.features = nn.Sequential(
             nn.ConvTranspose2d(in_ch, out_ch,
-                               kernel_size=conv_kernel,
-                               stride=conv_kernel,
+                               kernel_size=convt_kernel,
+                               stride=convt_kernel,
                                padding=0),
             nn.BatchNorm2d(out_ch),
             ut.activation(activation)
@@ -158,13 +158,13 @@ class Decoder(nn.Module):
             nn.Linear(z_dim, middle_dim),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
             ConvTransposeModule(conv_ch[-1], conv_ch[-2],
-                                conv_kernel=pools[-1],
+                                convt_kernel=pools[-1],
                                 activation=activation),
             ConvTransposeModule(conv_ch[-2], conv_ch[-3],
-                                conv_kernel=pools[-2],
+                                convt_kernel=pools[-2],
                                 activation=activation),
             ConvTransposeModule(conv_ch[-3], in_ch,
-                                conv_kernel=pools[-3],
+                                convt_kernel=pools[-3],
                                 activation=activation),
             nn.Sigmoid()
         )
