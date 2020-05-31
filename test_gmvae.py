@@ -85,6 +85,7 @@ if __name__ == '__main__':
     y_dim = args.y_dim
     z_dim = args.z_dim
     w_dim = args.w_dim
+    
     sigma = args.sigma
 
     device_ids = range(torch.cuda.device_count())

@@ -13,5 +13,9 @@ def activation(type='ReLU'):
         return torch.nn.Sigmoid()
     elif type in ('ELU', 'elu'):
         return torch.nn.ELU()
+    elif type in ('LeakyReLU', 'lrelu'):
+        return torch.nn.LeakyReLU(0.1)
+    elif type in ('PReLU', 'prelu'):
+        return torch.nn.PReLU()
     else:
         return torch.nn.ReLU()
