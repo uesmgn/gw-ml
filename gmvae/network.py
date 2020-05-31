@@ -51,16 +51,19 @@ class DenseModule(nn.Module):
                  in_dim,
                  out_dim,
                  middle_dim=1024,
-                 activation='ReLU'):
+                 activation=None):
         super().__init__()
         self.features = nn.Sequential(
             nn.Linear(in_dim, middle_dim),
-            nn.Linear(middle_dim, out_dim),
-            ut.activation(activation)
+            nn.Linear(middle_dim, out_dim)
         )
+        if activation is not None:
+            self.activation = ut.activation(activation)
 
     def forward(self, x):
         x = self.features(x)
+        if self.activation is not None:
+            x = self.activation(x)
         return x
 
 
@@ -102,8 +105,7 @@ class Encoder(nn.Module):
                        pool_kernel=pools[2],
                        activation=activation),
             nn.Flatten(),
-            nn.Linear(middle_dim, z_dim * 2),  # (batch_size, z_dim * 2)
-            nn.Tanh()
+            nn.Linear(middle_dim, z_dim * 2)  # (batch_size, z_dim * 2)
         )
 
         self.w_x_graph = nn.Sequential(
@@ -120,8 +122,7 @@ class Encoder(nn.Module):
                        pool_kernel=pools[2],
                        activation=activation),
             nn.Flatten(),
-            nn.Linear(middle_dim, w_dim * 2),  # (batch_size, w_dim * 2)
-            nn.Tanh()
+            nn.Linear(middle_dim, w_dim * 2)  # (batch_size, w_dim * 2)
         )
 
         self.y_wz_graph = DenseModule(w_dim + z_dim,
@@ -167,8 +168,7 @@ class Decoder(nn.Module):
 
         self.z_wy_graph = nn.Sequential(
             DenseModule(w_dim,
-                        z_dim * 2 * self.y_dim,
-                        activation='Tanh'),
+                        z_dim * 2 * self.y_dim),
             cn.Reshape((z_dim * 2, self.y_dim))
         )
 
