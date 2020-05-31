@@ -46,16 +46,16 @@ def get_loss(params):
     z_x_mean, z_x_logvar = params['z_x_mean'], params['z_x_logvar'],
     z_wy_means, z_wy_logvars = params['z_wy_means'], params['z_wy_logvars']
     rec_loss = loss.reconstruction_loss(x, x_z)
-    w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
-    y_prior_kl = loss.y_prior_kl(y_wz)
     conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_logvar,
                                          z_wy_means, z_wy_logvars)
-    total = rec_loss + conditional_kl + w_prior_kl + y_prior_kl
+    w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
+    y_prior_kl = loss.y_prior_kl(y_wz)
+    total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
     return total, {
         'reconstruction': rec_loss,
+        'conditional_kl': conditional_kl,
         'w_prior_kl': w_prior_kl,
-        'y_prior_kl': y_prior_kl,
-        'conditional_kl': conditional_kl
+        'y_prior_kl': y_prior_kl
     }
 
 def update_loss(loss_dict_total, loss_dict):
@@ -123,7 +123,7 @@ if __name__ == '__main__':
             labels += l
             labels_pred += list(p.cpu().numpy())
             total, loss_dict = get_loss(output)
-            print(total)
+            print(f'total: {total}')
             print(", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()]))
             total.backward()
             optimizer.step()
