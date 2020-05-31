@@ -12,6 +12,6 @@ def activation(type='ReLU'):
     elif type in ('Sigmoid', 'sigmoid'):
         return torch.nn.Sigmoid()
     elif type in ('ELU', 'elu'):
-        return torch.nn.ELU()
+        return torch.nn.ELU(inplace=True)
     else:
-        return torch.nn.ReLU()
+        return torch.nn.ReLU(inplace=True)
