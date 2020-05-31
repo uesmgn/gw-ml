@@ -10,7 +10,7 @@ class Encoder(nn.Module):
                  y_dim,
                  z_dim,
                  w_dim,
-                 activation=nn.Relu,
+                 activation='ReLU',
                  nargs=None):
         super().__init__()
         in_ch = x_shape[0]
@@ -19,7 +19,6 @@ class Encoder(nn.Module):
         self.y_dim = y_dim
         self.z_dim = z_dim
         self.w_dim = w_dim
-        self.activation = activation
 
         nargs = nargs or dict()
         conv_ch = nargs.get('conv_channels') or [2, 4, 6]
@@ -28,6 +27,7 @@ class Encoder(nn.Module):
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
+        activation = nargs.get('activation') or activation
 
         self.z_x_graph = nn.Sequential(
             nn.Conv2d(in_ch, conv_ch[0],
@@ -35,19 +35,19 @@ class Encoder(nn.Module):
                       stride=strides[0],
                       padding=(kernels[0] - strides[0]) // 2),
             nn.BatchNorm2d(conv_ch[0]),
-            self.activation(),
+            ut.activation(activation),
             nn.Conv2d(conv_ch[0], conv_ch[1],
                       kernel_size=kernels[1],
                       stride=strides[1],
                       padding=(kernels[1] - strides[1]) // 2),
             nn.BatchNorm2d(conv_ch[1]),
-            self.activation(),
+            ut.activation(activation),
             nn.Conv2d(conv_ch[1], conv_ch[2],
                       kernel_size=kernels[2],
                       stride=strides[2],
                       padding=(kernels[2] - strides[2]) // 2),
             nn.BatchNorm2d(conv_ch[2]),
-            self.activation(),
+            ut.activation(activation),
             nn.Flatten(),
             nn.Linear(middle_dim, z_dim * 2)  # (batch_size, z_dim * 2)
         )
@@ -58,19 +58,19 @@ class Encoder(nn.Module):
                       stride=strides[0],
                       padding=(kernels[0] - strides[0]) // 2),
             nn.BatchNorm2d(conv_ch[0]),
-            self.activation(),
+            ut.activation(activation),
             nn.Conv2d(conv_ch[0], conv_ch[1],
                       kernel_size=kernels[1],
                       stride=strides[1],
                       padding=(kernels[1] - strides[1]) // 2),
             nn.BatchNorm2d(conv_ch[1]),
-            self.activation(),
+            ut.activation(activation),
             nn.Conv2d(conv_ch[1], conv_ch[2],
                       kernel_size=kernels[2],
                       stride=strides[2],
                       padding=(kernels[2] - strides[2]) // 2),
             nn.BatchNorm2d(conv_ch[2]),
-            self.activation(),
+            ut.activation(activation),
             nn.Flatten(),
             nn.Linear(middle_dim, w_dim * 2)  # (batch_size, w_dim * 2)
         )
@@ -101,7 +101,7 @@ class Decoder(nn.Module):
                  y_dim,
                  z_dim,
                  w_dim,
-                 activation=nn.Relu
+                 activation='ReLU',
                  nargs=None):
         super().__init__()
         in_ch = x_shape[0]
@@ -110,7 +110,6 @@ class Decoder(nn.Module):
         self.y_dim = y_dim
         self.z_dim = z_dim
         self.w_dim = w_dim
-        self.activation = activation
 
         nargs = nargs or dict()
         conv_ch = nargs.get('conv_channels') or (2, 4, 6)
@@ -119,6 +118,7 @@ class Decoder(nn.Module):
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
+        activation = nargs.get('activation') or activation
 
         self.z_wy_graph = nn.Sequential(
             nn.Linear(w_dim, dense_dim),
@@ -134,13 +134,13 @@ class Decoder(nn.Module):
                                stride=strides[-1],
                                padding=(kernels[-1] - strides[-1]) // 2),
             nn.BatchNorm2d(conv_ch[-2]),
-            self.activation(),
+            ut.activation(activation),
             nn.ConvTranspose2d(conv_ch[-2], conv_ch[-3],
                                kernel_size=kernels[-2],
                                stride=strides[-2],
                                padding=(kernels[-2] - strides[-2]) // 2),
             nn.BatchNorm2d(conv_ch[-3]),
-            self.activation(),
+            ut.activation(activation),
             nn.ConvTranspose2d(conv_ch[-3], in_ch,
                                kernel_size=kernels[-3],
                                stride=strides[-3],

@@ -14,7 +14,7 @@ from sklearn.manifold import TSNE
 
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
-import gmvae.utils.plotlib as pl
+import gmvae.utils as ut
 from gmvae import loss
 
 parser = argparse.ArgumentParser(
@@ -74,6 +74,7 @@ if __name__ == '__main__':
     nargs['conv_strides'] = json.loads(ini['net']['conv_strides'])
     nargs['middle_size'] = ini['net']['middle_size']
     nargs['dense_dim'] = ini['net']['dense_dim']
+    nargs['activation'] = ini['net']['activation']
 
     # test params
     x_shape = (1, 486, 486)
@@ -159,8 +160,8 @@ if __name__ == '__main__':
             w_x_tsne = tsne.fit_transform(w_x)
             # pl.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}.png')
             # pl.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}.png')
-            pl.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}_t.png')
-            pl.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
-            pl.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}_t.png')
-            pl.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
-            pl.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
+            ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}_t.png')
+            ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
+            ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}_t.png')
+            ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
+            ut.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
