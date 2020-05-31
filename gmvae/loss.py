@@ -15,10 +15,10 @@ def conditional_kl_loss(z_x, z_x_mean, z_x_logvar,
                         z_wy_means, z_wy_logvars, y_wz):
     eps = 1e-6
     logq = -0.5 * (z_x_logvar
-                   + torch.pow(z_x - z_x_mean, 2) / (torch.exp(z_x_logvar) + eps)).sum(1)
+                   + torch.pow(z_x - z_x_mean, 2) / torch.exp(z_x_logvar)).sum(1)
     K = z_wy_means.shape[-1]
     z_wy = z_x.repeat(1, K).view(z_x.shape[0], K, -1).transpose(1, 2)
-    aux = torch.pow(z_wy - z_wy_means, 2) / (torch.exp(z_wy_logvars) + eps)
+    aux = torch.pow(z_wy - z_wy_means, 2) / torch.exp(z_wy_logvars)
     logp = -0.5 * (y_wz * z_wy_logvars.sum(1) + y_wz * aux.sum(1)).sum(1)
     kl = logq - logp
     return kl
@@ -34,5 +34,5 @@ def y_prior_kl_loss(y_wz):
     eps = 1e-6
     k = y_wz.shape[1]
     # kl = -torch.mean(y_wz, -1) - np.log(k)
-    kl = (y_wz * torch.log(k * y_wz + eps)).sum(1)
+    kl = (y_wz * (torch.log(y_wz + eps) + np.log(k))).sum(1)
     return kl
