@@ -92,12 +92,12 @@ class DenseModule(nn.Module):
         if n_middle_layers > 0:
             self.features.add_module(f'h0',
                                      nn.Linear(in_dim, middle_dim))
-            self.features.add_module(f'dropout',
-                                     nn.Dropout())
         else:
             self.features.add_module(f'h0',
                                      nn.Linear(in_dim, out_dim))
         for i in range(n_middle_layers):
+            self.features.add_module(f'dropout',
+                                     nn.Dropout())
             if act_trans is not None:
                 self.features.add_module(act_trans,
                                          ut.activation(act_trans))
@@ -108,8 +108,6 @@ class DenseModule(nn.Module):
             else:
                 self.features.add_module(f'h{i+1}',
                                          nn.Linear(middle_dim, middle_dim))
-                self.features.add_module(f'dropout',
-                                         nn.Dropout())
 
         if act_out:
             self.features.add_module(act_out,
