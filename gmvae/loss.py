@@ -24,7 +24,7 @@ def conditional_kl(z_x, z_x_mean, z_x_logvar,
 
 def w_prior_kl(w_mean, w_logvar):
     kl = 0.5 * (torch.exp(w_logvar) - 1 - w_logvar + torch.pow(w_mean, 2)).sum(-1)
-    return kl.mean()
+    return -kl.mean()
 
 
 def y_prior_kl(y_wz):

@@ -123,8 +123,6 @@ if __name__ == '__main__':
             labels += l
             labels_pred += list(p.cpu().numpy())
             total, loss_dict = get_loss(output)
-            print(f'total: {total}')
-            print(", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()]))
             total.backward()
             optimizer.step()
             loss_total += total.item()
