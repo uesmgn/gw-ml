@@ -3,6 +3,46 @@ import torch.nn as nn
 from .utils import nn as cn
 from . import utils as ut
 
+class ConvModule(nn.Module):
+    def __init__(self,
+                 in_ch,
+                 out_ch,
+                 conv_kernel=3,
+                 pool_kernel=3,
+                 activation='ReLU'):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch,
+                      kernel_size=conv_kernel,
+                      padding=(conv_kernel - 1) // 2),
+            ut.activation(activation),
+            nn.MaxPool2d(kernel_size=pool_kernel,
+                         stride=pool_kernel)
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+
+class ConvTransposeModule(nn.Module):
+    def __init__(self,
+                 in_ch,
+                 out_ch,
+                 conv_kernel=3,
+                 activation='ReLU'):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.ConvTranspose2d(in_ch, out_ch,
+                               kernel_size=conv_kernel,
+                               stride=conv_kernel,
+                               padding=0),
+            ut.activation(activation)
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
 
 class Encoder(nn.Module):
     def __init__(self,
@@ -24,61 +64,41 @@ class Encoder(nn.Module):
         conv_ch = nargs.get('conv_channels') or [16, 32, 64]
         kernels = nargs.get('conv_kernels') or [3, 3, 3]
         pools = nargs.get('pool_kernels') or [3, 3, 3]
-        strides = nargs.get('pool_strides') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
         activation = nargs.get('activation') or activation
 
         self.z_x_graph = nn.Sequential(
-            nn.Conv2d(in_ch, conv_ch[0],
-                      kernel_size=kernels[0],
-                      padding=(kernels[0] - 1) // 2),
-            nn.BatchNorm2d(conv_ch[0]),
-            ut.activation(activation),
-            nn.MaxPool2d(kernel_size=pools[0], stride=pools[0]),
-
-            nn.Conv2d(conv_ch[0], conv_ch[1],
-                      kernel_size=kernels[1],
-                      padding=(kernels[1] - 1) // 2),
-            nn.BatchNorm2d(conv_ch[1]),
-            ut.activation(activation),
-            nn.MaxPool2d(kernel_size=pools[1], stride=pools[1]),
-
-            nn.Conv2d(conv_ch[1], conv_ch[2],
-                      kernel_size=kernels[2],
-                      padding=(kernels[2] - 1) // 2),
-            nn.BatchNorm2d(conv_ch[2]),
-            ut.activation(activation),
-            nn.MaxPool2d(kernel_size=pools[2], stride=pools[2]),
-
+            ConvModule(in_ch, conv_ch[0],
+                       conv_kernel=kernels[0],
+                       pool_kernel=pools[0],
+                       activation=activation),
+            ConvModule(conv_ch[0], conv_ch[1],
+                       conv_kernel=kernels[1],
+                       pool_kernel=pools[1],
+                       activation=activation),
+            ConvModule(conv_ch[1], conv_ch[2],
+                       conv_kernel=kernels[2],
+                       pool_kernel=pools[2],
+                       activation=activation),
             nn.Flatten(),
             nn.Linear(middle_dim, z_dim * 2)  # (batch_size, z_dim * 2)
         )
 
         self.w_x_graph = nn.Sequential(
-            nn.Conv2d(in_ch, conv_ch[0],
-                      kernel_size=kernels[0],
-                      padding=(kernels[0] - 1) // 2),
-            nn.BatchNorm2d(conv_ch[0]),
-            ut.activation(activation),
-            nn.MaxPool2d(kernel_size=pools[0], stride=pools[0]),
-
-            nn.Conv2d(conv_ch[0], conv_ch[1],
-                      kernel_size=kernels[1],
-                      padding=(kernels[1] - 1) // 2),
-            nn.BatchNorm2d(conv_ch[1]),
-            ut.activation(activation),
-            nn.MaxPool2d(kernel_size=pools[1], stride=pools[1]),
-
-            nn.Conv2d(conv_ch[1], conv_ch[2],
-                      kernel_size=kernels[2],
-                      stride=1,
-                      padding=(kernels[2] - 1) // 2),
-            nn.BatchNorm2d(conv_ch[2]),
-            ut.activation(activation),
-            nn.MaxPool2d(kernel_size=pools[2], stride=pools[2]),
-
+            ConvModule(in_ch, conv_ch[0],
+                       conv_kernel=kernels[0],
+                       pool_kernel=pools[0],
+                       activation=activation),
+            ConvModule(conv_ch[0], conv_ch[1],
+                       conv_kernel=kernels[1],
+                       pool_kernel=pools[1],
+                       activation=activation),
+            ConvModule(conv_ch[1], conv_ch[2],
+                       conv_kernel=kernels[2],
+                       pool_kernel=pools[2],
+                       activation=activation),
             nn.Flatten(),
             nn.Linear(middle_dim, w_dim * 2)  # (batch_size, w_dim * 2)
         )
@@ -122,7 +142,6 @@ class Decoder(nn.Module):
         nargs = nargs or dict()
         conv_ch = nargs.get('conv_channels') or [16, 32, 64]
         kernels = nargs.get('conv_kernels') or [3, 3, 3]
-        strides = nargs.get('pool_strides') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
@@ -137,22 +156,15 @@ class Decoder(nn.Module):
         self.x_z_graph = nn.Sequential(
             nn.Linear(z_dim, middle_dim),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
-            nn.ConvTranspose2d(conv_ch[-1], conv_ch[-2],
-                               kernel_size=kernels[-1],
-                               stride=strides[-1],
-                               padding=(kernels[-1] - strides[-1]) // 2),
-            nn.BatchNorm2d(conv_ch[-2]),
-            ut.activation(activation),
-            nn.ConvTranspose2d(conv_ch[-2], conv_ch[-3],
-                               kernel_size=kernels[-2],
-                               stride=strides[-2],
-                               padding=(kernels[-2] - strides[-2]) // 2),
-            nn.BatchNorm2d(conv_ch[-3]),
-            ut.activation(activation),
-            nn.ConvTranspose2d(conv_ch[-3], in_ch,
-                               kernel_size=kernels[-3],
-                               stride=strides[-3],
-                               padding=(kernels[-3] - strides[-3]) // 2),
+            ConvTransposeModule(conv_ch[-1], conv_ch[-2],
+                                conv_kernel=kernels[-1],
+                                activation=activation),
+            ConvTransposeModule(conv_ch[-2], conv_ch[-3],
+                                conv_kernel=kernels[-2],
+                                activation=activation),
+            ConvTransposeModule(conv_ch[-3], in_ch,
+                                conv_kernel=kernels[-3],
+                                activation=activation),
             nn.Sigmoid()
         )
 
