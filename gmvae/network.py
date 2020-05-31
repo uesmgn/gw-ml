@@ -45,6 +45,25 @@ class ConvTransposeModule(nn.Module):
         x = self.features(x)
         return x
 
+
+class DenseModule(nn.Module):
+    def __init__(self,
+                 in_dim,
+                 out_dim,
+                 middle_dim=1024,
+                 activation='ReLU'):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Linear(in_dim, middle_dim),
+            nn.Linear(middle_dim, out_dim),
+            ut.activation(activation)
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+
 class Encoder(nn.Module):
     def __init__(self,
                  x_shape,
@@ -83,7 +102,8 @@ class Encoder(nn.Module):
                        pool_kernel=pools[2],
                        activation=activation),
             nn.Flatten(),
-            nn.Linear(middle_dim, z_dim * 2)  # (batch_size, z_dim * 2)
+            nn.Linear(middle_dim, z_dim * 2),  # (batch_size, z_dim * 2)
+            nn.Tanh()
         )
 
         self.w_x_graph = nn.Sequential(
@@ -100,14 +120,13 @@ class Encoder(nn.Module):
                        pool_kernel=pools[2],
                        activation=activation),
             nn.Flatten(),
-            nn.Linear(middle_dim, w_dim * 2)  # (batch_size, w_dim * 2)
+            nn.Linear(middle_dim, w_dim * 2),  # (batch_size, w_dim * 2)
+            nn.Tanh()
         )
 
-        self.y_wz_graph = nn.Sequential(
-            nn.Linear(w_dim + z_dim, dense_dim),
-            nn.Linear(dense_dim, y_dim),
-            nn.Softmax(dim=1)
-        )
+        self.y_wz_graph = DenseModule(w_dim + z_dim,
+                                      y_dim,
+                                      activation='Softmax')
 
     def forward(self, x):
         _z_x = self.z_x_graph(x)
@@ -147,8 +166,9 @@ class Decoder(nn.Module):
         activation = nargs.get('activation') or 'ReLU'
 
         self.z_wy_graph = nn.Sequential(
-            nn.Linear(w_dim, dense_dim),
-            nn.Linear(dense_dim, z_dim * 2 * self.y_dim),
+            DenseModule(w_dim,
+                        z_dim * 2 * self.y_dim,
+                        activation='Tanh'),
             cn.Reshape((z_dim * 2, self.y_dim))
         )
 
@@ -163,8 +183,7 @@ class Decoder(nn.Module):
                                 activation=activation),
             ConvTransposeModule(conv_ch[-3], in_ch,
                                 convt_kernel=pools[-3],
-                                activation=activation),
-            nn.Sigmoid()
+                                activation='Sigmoid')
         )
 
     def forward(self, z, w):

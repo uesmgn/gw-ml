@@ -11,6 +11,8 @@ def activation(type='ReLU'):
         return torch.nn.Tanh()
     elif type in ('Sigmoid', 'sigmoid'):
         return torch.nn.Sigmoid()
+    elif type in ('Softmax', 'softmax'):
+        return torch.nn.Softmax(dim=-1)    
     elif type in ('ELU', 'elu'):
         return torch.nn.ELU()
     elif type in ('LeakyReLU', 'lrelu'):
