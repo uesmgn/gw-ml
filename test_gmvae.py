@@ -108,8 +108,11 @@ if __name__ == '__main__':
         transforms.ToTensor()
     ])
     dataset = Dataset(df, data_transform)
-    train_set, test_set = dataset.split_dataset(0.8)
-    labels = np.array(dataset.get_labels()).astype(str)
+    old_set, new_set = dataset.split_by_labels(['Helix', 'Scratchy'],
+                                               n_cat=200,
+                                               min_cat=200)
+    train_set, test_set = old_set.split_dataset(0.8)
+    labels = np.array(old_set.get_labels()).astype(str)
     labels_pred = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape,
                   y_dim,

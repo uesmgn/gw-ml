@@ -58,12 +58,10 @@ class DenseModule(nn.Module):
             nn.Linear(middle_dim, out_dim)
         )
         if activation is not None:
-            self.activation = ut.activation(activation)
+            self.features.add_module(activation, ut.activation(activation))
 
     def forward(self, x):
         x = self.features(x)
-        if self.activation is not None:
-            x = self.activation(x)
         return x
 
 
