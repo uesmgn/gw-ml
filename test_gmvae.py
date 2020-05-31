@@ -1,14 +1,16 @@
-import torch
-from torch.utils.data import DataLoader
-from torchvision import transforms
-import pandas as pd
-import numpy as np
 import argparse
 import configparser
 import json
 import time
 import os
+import multiprocessing as mp
 from collections import defaultdict
+
+import torch
+from torch.utils.data import DataLoader
+from torchvision import transforms
+import pandas as pd
+import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
@@ -127,7 +129,7 @@ if __name__ == '__main__':
         epoch = epoch_idx + 1
         # ---------- train ----------
         model.train()
-        print(f'---------- train: {epoch} ----------')
+        print(f'---------- train: {epoch} ... ----------')
         time_start = time.time()
         loss_total = 0
         loss_dict_total = defaultdict(lambda: 0)
@@ -151,7 +153,7 @@ if __name__ == '__main__':
         if epoch % eval_itvl == 0:
             with torch.no_grad():
                 model.eval()
-                print(f'---------- eval: {epoch} ----------')
+                print(f'---------- eval: {epoch} ... ----------')
                 time_start = time.time()
                 loss_total = 0
                 loss_dict_total = defaultdict(lambda: 0)
@@ -175,18 +177,31 @@ if __name__ == '__main__':
                 loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
                 print(loss_info)
                 print(f"calc time = {time_elapse:.3f} sec")
+
+                print(f'---------- decomposition and plot ... ----------')
+                time_start = time.time()
+                pca = PCA(n_components=2)
+                tsne = TSNE(n_components=2)
                 z_x = z_x.cpu().numpy()
                 w_x = w_x.cpu().numpy()
-                # pca = PCA(n_components=2)
-                tsne = TSNE(n_components=2)
-                # z_x_pca = pca.fit_transform(z_x)
-                # w_x_pca = pca.fit_transform(w_x)
-                z_x_tsne = tsne.fit_transform(z_x)
-                w_x_tsne = tsne.fit_transform(w_x)
-                # pl.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}.png')
-                # pl.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}.png')
+
+                with mp.Pool(4) as pool:
+                    z_x_pca = pool.apply_async(pca.fit_transform, z_x).get()
+                    w_x_pca = pool.apply_async(pca.fit_transform, w_x).get()
+                    w_x_tsne = pool.apply_async(tsne.fit_transform, w_x).get()
+                    w_x_tsne = pool.apply_async(tsne.fit_transform, w_x).get()
+
+                ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}_t.png')
+                ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
+                ut.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}_t.png')
+                ut.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels_pred, f'{outdir}/w_pca_{epoch}_p.png')
+
                 ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}_t.png')
                 ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
                 ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}_t.png')
                 ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
+
                 ut.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
+
+                time_elapse = time.time() - time_start
+                print(f"calc time = {time_elapse:.3f} sec")
