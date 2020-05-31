@@ -4,7 +4,7 @@ import  numpy as np
 
 
 def reconstruction_loss(x, x_, sigma=0.001):
-    loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='none')
+    loss = -0.5 / sigma * F.mse_loss(x_, x, reduction='none')
     loss = loss.sum(-1).sum(-1)
     return loss.mean()
 
@@ -18,7 +18,7 @@ def conditional_kl(z_x, z_x_mean, z_x_logvar,
                    z_wy, z_wy_mean, z_wy_logvar):
     logp = __log_normal(z_x, z_x_mean, z_x_logvar)
     logq = __log_normal(z_wy, z_wy_mean, z_wy_logvar)
-    return (logp - logq).mean()
+    return (logq - logp).mean()
 
 
 def w_prior_kl(w_mean, w_logvar):
@@ -27,6 +27,7 @@ def w_prior_kl(w_mean, w_logvar):
 
 
 def y_prior_kl(y_wz):
+    # y_wz_k: (batch_size, y_dim)
     k = y_wz.shape[1]
-    kl = -np.log(k) - torch.sum(y_wz, -1) / k
-    return -kl.mean()
+    kl = -torch.mean(y_wz, -1) - np.log(k)
+    return kl.mean()

@@ -50,7 +50,7 @@ def get_loss(params):
     y_prior_kl = loss.y_prior_kl(y_wz)
     conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_logvar,
                                          z_x, z_wy_mean, z_wy_logvar )
-    total = rec_loss + conditional_kl + w_prior_kl + y_prior_kl
+    total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
     return total, {
         'reconstruction': rec_loss,
         'w_prior_kl': w_prior_kl,
@@ -145,8 +145,8 @@ if __name__ == '__main__':
             # w_x_tsne = tsne.fit_transform(w_x)
             # pl.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}.png')
             # pl.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}.png')
-            pl.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}.png')
-            pl.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/Z_tsne_{epoch}.png')
+            pl.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}_t.png')
+            pl.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
             # pl.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}.png')
             # pl.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}.png')
             pl.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
