@@ -127,9 +127,9 @@ if __name__ == '__main__':
     losses = []
     for epoch_idx in range(n_epoch):
         epoch = epoch_idx + 1
-        # ---------- train ----------
+        # train...
         model.train()
-        print(f'---------- train: {epoch} ... ----------')
+        print(f'### training at epoch {epoch}...')
         time_start = time.time()
         loss_total = 0
         loss_dict_total = defaultdict(lambda: 0)
@@ -149,11 +149,11 @@ if __name__ == '__main__':
         print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
 
-        # ---------- eval ----------
+        # eval...
         if epoch % eval_itvl == 0:
             with torch.no_grad():
                 model.eval()
-                print(f'---------- eval: {epoch} ... ----------')
+                print(f'### evaluating at epoch {epoch}...')
                 time_start = time.time()
                 loss_total = 0
                 loss_dict_total = defaultdict(lambda: 0)
@@ -178,19 +178,22 @@ if __name__ == '__main__':
                 print(loss_info)
                 print(f"calc time = {time_elapse:.3f} sec")
 
-                print(f'---------- decomposition and plot ... ----------')
+                # decompose...
+                print(f'### decomposing and plotting...')
                 time_start = time.time()
                 pca = PCA(n_components=2)
                 tsne = TSNE(n_components=2)
                 z_x = z_x.cpu().numpy()
                 w_x = w_x.cpu().numpy()
 
+                # multi processing
                 with mp.Pool(4) as pool:
                     z_x_pca = pool.apply_async(pca.fit_transform, (z_x, )).get()
                     w_x_pca = pool.apply_async(pca.fit_transform, (w_x, )).get()
                     z_x_tsne = pool.apply_async(tsne.fit_transform, (z_x, )).get()
                     w_x_tsne = pool.apply_async(tsne.fit_transform, (w_x, )).get()
 
+                # output plots
                 ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}_t.png')
                 ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
                 ut.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}_t.png')
