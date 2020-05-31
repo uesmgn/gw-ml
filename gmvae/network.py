@@ -141,7 +141,7 @@ class Decoder(nn.Module):
 
         nargs = nargs or dict()
         conv_ch = nargs.get('conv_channels') or [16, 32, 64]
-        kernels = nargs.get('conv_kernels') or [3, 3, 3]
+        pools = nargs.get('pool_kernels') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
@@ -157,13 +157,13 @@ class Decoder(nn.Module):
             nn.Linear(z_dim, middle_dim),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
             ConvTransposeModule(conv_ch[-1], conv_ch[-2],
-                                conv_kernel=kernels[-1],
+                                conv_kernel=pools[-1],
                                 activation=activation),
             ConvTransposeModule(conv_ch[-2], conv_ch[-3],
-                                conv_kernel=kernels[-2],
+                                conv_kernel=pools[-2],
                                 activation=activation),
             ConvTransposeModule(conv_ch[-3], in_ch,
-                                conv_kernel=kernels[-3],
+                                conv_kernel=pools[-3],
                                 activation=activation),
             nn.Sigmoid()
         )
