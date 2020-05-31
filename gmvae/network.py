@@ -21,9 +21,10 @@ class Encoder(nn.Module):
         self.w_dim = w_dim
 
         nargs = nargs or dict()
-        conv_ch = nargs.get('conv_channels') or [2, 4, 6]
+        conv_ch = nargs.get('conv_channels') or [16, 32, 64]
         kernels = nargs.get('conv_kernels') or [3, 3, 3]
-        strides = nargs.get('conv_strides') or [3, 3, 3]
+        pools = nargs.get('pool_kernels') or [3, 3, 3]
+        strides = nargs.get('pool_strides') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
@@ -32,22 +33,25 @@ class Encoder(nn.Module):
         self.z_x_graph = nn.Sequential(
             nn.Conv2d(in_ch, conv_ch[0],
                       kernel_size=kernels[0],
-                      stride=strides[0],
-                      padding=(kernels[0] - strides[0]) // 2),
+                      padding=(kernels[0] - 1) // 2),
             nn.BatchNorm2d(conv_ch[0]),
             ut.activation(activation),
+            nn.MaxPool2d(kernel_size=pools[0], stride=pools[0]),
+
             nn.Conv2d(conv_ch[0], conv_ch[1],
                       kernel_size=kernels[1],
-                      stride=strides[1],
-                      padding=(kernels[1] - strides[1]) // 2),
+                      padding=(kernels[1] - 1) // 2),
             nn.BatchNorm2d(conv_ch[1]),
             ut.activation(activation),
+            nn.MaxPool2d(kernel_size=pools[1], stride=pools[1]),
+
             nn.Conv2d(conv_ch[1], conv_ch[2],
                       kernel_size=kernels[2],
-                      stride=strides[2],
-                      padding=(kernels[2] - strides[2]) // 2),
+                      padding=(kernels[2] - 1) // 2),
             nn.BatchNorm2d(conv_ch[2]),
             ut.activation(activation),
+            nn.MaxPool2d(kernel_size=pools[2], stride=pools[2]),
+
             nn.Flatten(),
             nn.Linear(middle_dim, z_dim * 2)  # (batch_size, z_dim * 2)
         )
@@ -55,22 +59,26 @@ class Encoder(nn.Module):
         self.w_x_graph = nn.Sequential(
             nn.Conv2d(in_ch, conv_ch[0],
                       kernel_size=kernels[0],
-                      stride=strides[0],
-                      padding=(kernels[0] - strides[0]) // 2),
+                      padding=(kernels[0] - 1) // 2),
             nn.BatchNorm2d(conv_ch[0]),
             ut.activation(activation),
+            nn.MaxPool2d(kernel_size=pools[0], stride=pools[0]),
+
             nn.Conv2d(conv_ch[0], conv_ch[1],
                       kernel_size=kernels[1],
-                      stride=strides[1],
-                      padding=(kernels[1] - strides[1]) // 2),
+                      padding=(kernels[1] - 1) // 2),
             nn.BatchNorm2d(conv_ch[1]),
             ut.activation(activation),
+            nn.MaxPool2d(kernel_size=pools[1], stride=pools[1]),
+
             nn.Conv2d(conv_ch[1], conv_ch[2],
                       kernel_size=kernels[2],
-                      stride=strides[2],
-                      padding=(kernels[2] - strides[2]) // 2),
+                      stride=1,
+                      padding=(kernels[2] - 1) // 2),
             nn.BatchNorm2d(conv_ch[2]),
             ut.activation(activation),
+            nn.MaxPool2d(kernel_size=pools[2], stride=pools[2]),
+
             nn.Flatten(),
             nn.Linear(middle_dim, w_dim * 2)  # (batch_size, w_dim * 2)
         )
@@ -112,9 +120,9 @@ class Decoder(nn.Module):
         self.w_dim = w_dim
 
         nargs = nargs or dict()
-        conv_ch = nargs.get('conv_channels') or (2, 4, 6)
-        kernels = nargs.get('conv_kernels') or (3, 3, 3)
-        strides = nargs.get('conv_strides') or (3, 3, 3)
+        conv_ch = nargs.get('conv_channels') or [16, 32, 64]
+        kernels = nargs.get('conv_kernels') or [3, 3, 3]
+        strides = nargs.get('pool_strides') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
