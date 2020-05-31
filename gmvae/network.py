@@ -14,9 +14,11 @@ class ConvModule(nn.Module):
         self.features = nn.Sequential(
             nn.Conv2d(in_ch, out_ch,
                       kernel_size=conv_kernel,
-                      stride=pool_kernel,
-                      padding=(conv_kernel - pool_kernel) // 2),
-            ut.activation(activation)
+                      stride=1,
+                      padding=(conv_kernel - 1) // 2),
+            ut.activation(activation),
+            nn.MaxPool2d(kernel_size=pool_kernel,
+                         stride=pool_kernel)
         )
 
     def forward(self, x):
