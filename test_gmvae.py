@@ -54,7 +54,7 @@ def get_loss(params):
                                                    z_wy_means, z_wy_logvars, y_wz)
     w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_logvar)
     y_prior_kl_loss = loss.y_prior_kl_loss(y_wz)
-    total = (rec_loss + conditional_kl_loss + w_prior_kl_loss + y_prior_kl_loss)
+    total = rec_loss - conditional_kl_loss - w_prior_kl_loss - y_prior_kl_loss
     total_m = total.mean()
     return total_m, {
         'reconstruction': rec_loss.mean(),
@@ -120,11 +120,11 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_set,
                               batch_size=batch_size,
                               num_workers=num_workers,
-                              shuffle=False)
+                              shuffle=True)
     test_loader = DataLoader(test_set,
                              batch_size=batch_size,
                              num_workers=num_workers,
-                             shuffle=False)
+                             shuffle=True)
     losses = []
     for epoch_idx in range(n_epoch):
         epoch = epoch_idx + 1
