@@ -90,11 +90,11 @@ if __name__ == '__main__':
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
-    n_epoch = args.n_epoch or ini.getfloat('conf', 'n_epoch')
-    batch_size = args.batch_size or ini.getfloat('conf', 'batch_size')
-    num_workers = args.num_workers or ini.getfloat('conf', 'num_workers')
+    n_epoch = args.n_epoch or ini.getint('conf', 'n_epoch')
+    batch_size = args.batch_size or ini.getint('conf', 'batch_size')
+    num_workers = args.num_workers or ini.getint('conf', 'num_workers')
     sigma = args.sigma or ini.getfloat('conf', 'sigma')
-    eval_itvl = args.eval_itvl or ini.getfloat('conf', 'eval_itvl')
+    eval_itvl = args.eval_itvl or ini.getint('conf', 'eval_itvl')
     lr = args.lr or ini.getfloat('conf', 'lr')
 
     outdir = 'result_gmvae'
