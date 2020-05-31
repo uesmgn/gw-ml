@@ -4,6 +4,8 @@ from torchvision import transforms
 import pandas as pd
 import numpy as np
 import argparse
+import configparser
+import json
 import time
 import os
 from collections import defaultdict
@@ -46,16 +48,16 @@ def get_loss(params):
     z_x_mean, z_x_logvar = params['z_x_mean'], params['z_x_logvar'],
     z_wy_means, z_wy_logvars = params['z_wy_means'], params['z_wy_logvars']
     rec_loss = loss.reconstruction_loss(x, x_z)
-    conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_logvar,
-                                         z_wy_means, z_wy_logvars, y_wz)
-    w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
-    y_prior_kl = loss.y_prior_kl(y_wz)
-    total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
+    conditional_kl_loss = loss.conditional_kl_loss(z_x, z_x_mean, z_x_logvar,
+                                                   z_wy_means, z_wy_logvars, y_wz)
+    w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_logvar)
+    y_prior_kl_loss = loss.y_prior_kl_loss(y_wz)
+    total = rec_loss + conditional_kl_loss + w_prior_kl_loss + y_prior_kl_loss
     return total, {
         'reconstruction': rec_loss,
-        'conditional_kl': conditional_kl,
-        'w_prior_kl': w_prior_kl,
-        'y_prior_kl': y_prior_kl
+        'conditional_kl_loss': conditional_kl_loss,
+        'w_prior_kl_loss': w_prior_kl_loss,
+        'y_prior_kl_loss': y_prior_kl_loss
     }
 
 def update_loss(loss_dict_total, loss_dict):
@@ -63,6 +65,16 @@ def update_loss(loss_dict_total, loss_dict):
         loss_dict_total[k] += v.item()
 
 if __name__ == '__main__':
+    # network params
+    ini = configparser.ConfigParser()
+    ini.read('./config.ini', 'utf-8')
+    nargs = dict()
+    nargs['conv_channels'] = json.loads(ini['net']['conv_channels'])
+    nargs['conv_kernels'] = json.loads(ini['net']['conv_kernels'])
+    nargs['conv_strides'] = json.loads(ini['net']['conv_strides'])
+    nargs['middle_size'] = ini['net']['middle_size']
+    nargs['dense_dim'] = ini['net']['dense_dim']
+
     # test params
     x_shape = (1, 486, 486)
     y_dim = args.y_dim
@@ -91,7 +103,8 @@ if __name__ == '__main__':
     dataset = Dataset(df, data_transform)
     labels = np.array(dataset.get_labels()).astype(str)
     labels_pred = np.array(range(y_dim)).astype(str)
-    model = GMVAE(x_shape, y_dim, z_dim, w_dim)
+    model = GMVAE(x_shape, y_dim, z_dim, w_dim,
+                  nargs)
     model.to(device)
     # GPU Parallelize
     if torch.cuda.is_available():
@@ -123,6 +136,7 @@ if __name__ == '__main__':
             labels += l
             labels_pred += list(p.cpu().numpy())
             total, loss_dict = get_loss(output)
+            # print(", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()]))
             total.backward()
             optimizer.step()
             loss_total += total.item()
@@ -137,16 +151,16 @@ if __name__ == '__main__':
         if epoch % plot_itvl == 0:
             z_x = z_x.detach().cpu().numpy()
             w_x = w_x.detach().cpu().numpy()
-            pca = PCA(n_components=2)
+            # pca = PCA(n_components=2)
             tsne = TSNE(n_components=2)
             # z_x_pca = pca.fit_transform(z_x)
             # w_x_pca = pca.fit_transform(w_x)
             z_x_tsne = tsne.fit_transform(z_x)
-            # w_x_tsne = tsne.fit_transform(w_x)
+            w_x_tsne = tsne.fit_transform(w_x)
             # pl.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}.png')
             # pl.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}.png')
             pl.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}_t.png')
             pl.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
-            # pl.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}.png')
-            # pl.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}.png')
+            pl.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}_t.png')
+            pl.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
             pl.plot_loss(losses, f'{outdir}/loss_{epoch}.png')

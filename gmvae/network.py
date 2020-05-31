@@ -10,6 +10,7 @@ class Encoder(nn.Module):
                  y_dim,
                  z_dim,
                  w_dim,
+                 activation=nn.Relu,
                  nargs=None):
         super().__init__()
         in_ch = x_shape[0]
@@ -18,44 +19,58 @@ class Encoder(nn.Module):
         self.y_dim = y_dim
         self.z_dim = z_dim
         self.w_dim = w_dim
+        self.activation = activation
 
         nargs = nargs or dict()
-        conv_ch = nargs.get('conv_channels') or (2, 4, 6)
+        conv_ch = nargs.get('conv_channels') or [2, 4, 6]
+        kernels = nargs.get('conv_kernels') or [3, 3, 3]
+        strides = nargs.get('conv_strides') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
-        kernel = nargs.get('kernel') or 3
 
         self.z_x_graph = nn.Sequential(
             nn.Conv2d(in_ch, conv_ch[0],
-                      kernel_size=kernel,
-                      stride=kernel, padding=0),
-            nn.ReLU(),
+                      kernel_size=kernels[0],
+                      stride=strides[0],
+                      padding=(kernels[0] - strides[0]) // 2),
+            nn.BatchNorm2d(conv_ch[0]),
+            self.activation(),
             nn.Conv2d(conv_ch[0], conv_ch[1],
-                      kernel_size=kernel,
-                      stride=kernel, padding=0),
-            nn.ReLU(),
+                      kernel_size=kernels[1],
+                      stride=strides[1],
+                      padding=(kernels[1] - strides[1]) // 2),
+            nn.BatchNorm2d(conv_ch[1]),
+            self.activation(),
             nn.Conv2d(conv_ch[1], conv_ch[2],
-                      kernel_size=kernel,
-                      stride=kernel, padding=0),
-            nn.ReLU(),
+                      kernel_size=kernels[2],
+                      stride=strides[2],
+                      padding=(kernels[2] - strides[2]) // 2),
+            nn.BatchNorm2d(conv_ch[2]),
+            self.activation(),
             nn.Flatten(),
             nn.Linear(middle_dim, z_dim * 2)  # (batch_size, z_dim * 2)
         )
 
         self.w_x_graph = nn.Sequential(
             nn.Conv2d(in_ch, conv_ch[0],
-                      kernel_size=kernel,
-                      stride=kernel, padding=0),
-            nn.ReLU(),
+                      kernel_size=kernels[0],
+                      stride=strides[0],
+                      padding=(kernels[0] - strides[0]) // 2),
+            nn.BatchNorm2d(conv_ch[0]),
+            self.activation(),
             nn.Conv2d(conv_ch[0], conv_ch[1],
-                      kernel_size=kernel,
-                      stride=kernel, padding=0),
-            nn.ReLU(),
+                      kernel_size=kernels[1],
+                      stride=strides[1],
+                      padding=(kernels[1] - strides[1]) // 2),
+            nn.BatchNorm2d(conv_ch[1]),
+            self.activation(),
             nn.Conv2d(conv_ch[1], conv_ch[2],
-                      kernel_size=kernel,
-                      stride=kernel, padding=0),
-            nn.ReLU(),
+                      kernel_size=kernels[2],
+                      stride=strides[2],
+                      padding=(kernels[2] - strides[2]) // 2),
+            nn.BatchNorm2d(conv_ch[2]),
+            self.activation(),
             nn.Flatten(),
             nn.Linear(middle_dim, w_dim * 2)  # (batch_size, w_dim * 2)
         )
@@ -86,6 +101,7 @@ class Decoder(nn.Module):
                  y_dim,
                  z_dim,
                  w_dim,
+                 activation=nn.Relu
                  nargs=None):
         super().__init__()
         in_ch = x_shape[0]
@@ -94,13 +110,15 @@ class Decoder(nn.Module):
         self.y_dim = y_dim
         self.z_dim = z_dim
         self.w_dim = w_dim
+        self.activation = activation
 
         nargs = nargs or dict()
         conv_ch = nargs.get('conv_channels') or (2, 4, 6)
+        kernels = nargs.get('conv_kernels') or (3, 3, 3)
+        strides = nargs.get('conv_strides') or (3, 3, 3)
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
-        kernel = nargs.get('kernel') or 3
 
         self.z_wy_graph = nn.Sequential(
             nn.Linear(w_dim, dense_dim),
@@ -112,16 +130,21 @@ class Decoder(nn.Module):
             nn.Linear(z_dim, middle_dim),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
             nn.ConvTranspose2d(conv_ch[-1], conv_ch[-2],
-                               kernel_size=kernel,
-                               stride=kernel, padding=0),
-            nn.ReLU(),
+                               kernel_size=kernels[-1],
+                               stride=strides[-1],
+                               padding=(kernels[-1] - strides[-1]) // 2),
+            nn.BatchNorm2d(conv_ch[-2]),
+            self.activation(),
             nn.ConvTranspose2d(conv_ch[-2], conv_ch[-3],
-                               kernel_size=kernel,
-                               stride=kernel, padding=0),
-            nn.ReLU(),
+                               kernel_size=kernels[-2],
+                               stride=strides[-2],
+                               padding=(kernels[-2] - strides[-2]) // 2),
+            nn.BatchNorm2d(conv_ch[-3]),
+            self.activation(),
             nn.ConvTranspose2d(conv_ch[-3], in_ch,
-                               kernel_size=kernel,
-                               stride=kernel, padding=0),
+                               kernel_size=kernels[-3],
+                               stride=strides[-3],
+                               padding=(kernels[-3] - strides[-3]) // 2),
             nn.Sigmoid()
         )
 
@@ -144,12 +167,10 @@ class GMVAE(nn.Module):
 
         self.encoder = Encoder(x_shape, y_dim, z_dim, w_dim, nargs)
         self.decoder = Decoder(x_shape, y_dim, z_dim, w_dim, nargs)
-        self.params = None
 
     def forward(self, x):
         encoder_out = self.encoder(x)
         z_x, w_x = encoder_out['z_x'], encoder_out['w_x']
         decoder_out = self.decoder(z_x, w_x)
         encoder_out.update(decoder_out)
-        self.params = encoder_out
         return encoder_out
