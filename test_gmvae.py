@@ -186,10 +186,10 @@ if __name__ == '__main__':
                 w_x = w_x.cpu().numpy()
 
                 with mp.Pool(4) as pool:
-                    z_x_pca = pool.apply_async(pca.fit_transform, z_x).get()
-                    w_x_pca = pool.apply_async(pca.fit_transform, w_x).get()
-                    w_x_tsne = pool.apply_async(tsne.fit_transform, w_x).get()
-                    w_x_tsne = pool.apply_async(tsne.fit_transform, w_x).get()
+                    z_x_pca = pool.apply_async(pca.fit_transform, (z_x, )).get()
+                    w_x_pca = pool.apply_async(pca.fit_transform, (w_x, )).get()
+                    z_x_tsne = pool.apply_async(tsne.fit_transform, (z_x, )).get()
+                    w_x_tsne = pool.apply_async(tsne.fit_transform, (w_x, )).get()
 
                 ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}_t.png')
                 ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
