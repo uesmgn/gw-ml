@@ -46,6 +46,17 @@ class ConvTransposeModule(nn.Module):
         return x
 
 
+class Gaussian(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        means, logits = torch.split(x, x.shape[0] // 2, 1)
+        vars = F.softplus(logits)
+        x = ut.reparameterize(means, vars)
+        return x, means, vars
+
+
 class DownSample(nn.Module):
     def __init__(self, in_ch, out_ch,
                  pool_kernel=3,
@@ -153,7 +164,8 @@ class Encoder(nn.Module):
                        pool_kernel=pool_kernels[2],
                        activation=activation),
             nn.Flatten(),
-            nn.Linear(middle_dim, z_dim * 2)  # (batch_size, z_dim * 2)
+            nn.Linear(middle_dim, z_dim * 2),  # (batch_size, z_dim * 2)
+            Gaussian()
         )
 
         self.w_x_graph = nn.Sequential(
@@ -167,7 +179,8 @@ class Encoder(nn.Module):
                        pool_kernel=pool_kernels[2],
                        activation=activation),
             nn.Flatten(),
-            nn.Linear(middle_dim, w_dim * 2)  # (batch_size, w_dim * 2)
+            nn.Linear(middle_dim, w_dim * 2),  # (batch_size, w_dim * 2)
+            Gaussian()
         )
 
         self.y_wz_graph = DenseModule(w_dim + z_dim,
@@ -176,16 +189,12 @@ class Encoder(nn.Module):
                                       act_out='Softmax')
 
     def forward(self, x):
-        _z_x = self.z_x_graph(x)
-        z_x_mean, z_x_logvar = torch.split(_z_x, self.z_dim, 1)
-        z_x = ut.reparameterize(z_x_mean, z_x_logvar)
-        _w_x = self.w_x_graph(x)
-        w_x_mean, w_x_logvar = torch.split(_w_x, self.w_dim, 1)
-        w_x = ut.reparameterize(w_x_mean, w_x_logvar)
+        z_x, z_x_mean, z_x_var = self.z_x_graph(x)
+        w_x, w_x_mean, w_x_var = self.w_x_graph(x)
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
         return {'x': x,
-                'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_logvar': z_x_logvar,
-                'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_logvar': w_x_logvar,
+                'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
+                'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
                 'y_wz': y_wz}
 
 
@@ -216,7 +225,8 @@ class Decoder(nn.Module):
             DenseModule(w_dim,
                         z_dim * 2 * self.y_dim,
                         n_middle_layers=1),
-            cn.Reshape((z_dim * 2, self.y_dim))
+            cn.Reshape((z_dim * 2, self.y_dim),
+            Gaussian())
         )
 
         self.x_z_graph = nn.Sequential(
@@ -234,11 +244,10 @@ class Decoder(nn.Module):
         )
 
     def forward(self, z, w):
-        _z_wy = self.z_wy_graph(w)
-        z_wy_means, z_wy_logvars = torch.split(_z_wy, self.z_dim, 1)
+        z_wy, z_wy_means, z_wy_vars = self.z_wy_graph(w)
         x_z = self.x_z_graph(z)
         return {'z_wy_means': z_wy_means,  # (batch_size, z_dim, K)
-                'z_wy_logvars': z_wy_logvars,  # (batch_size, z_dim, K)
+                'z_wy_vars': z_wy_vars,  # (batch_size, z_dim, K)
                 'x_z': x_z}
 
 
