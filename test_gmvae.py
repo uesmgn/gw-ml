@@ -78,6 +78,7 @@ if __name__ == '__main__':
     nargs['middle_size'] = ini['net']['middle_size']
     nargs['dense_dim'] = ini['net']['dense_dim']
     nargs['activation'] = ini['net']['activation']
+    print(nargs)
 
     # test params
     x_shape = (1, 486, 486)
@@ -108,9 +109,13 @@ if __name__ == '__main__':
     train_set, test_set = dataset.split_dataset(0.7)
     labels = np.array(dataset.get_labels()).astype(str)
     labels_pred = np.array(range(y_dim)).astype(str)
-    model = GMVAE(x_shape, y_dim, z_dim, w_dim,
+    model = GMVAE(x_shape,
+                  y_dim,
+                  z_dim,
+                  w_dim,
                   nargs)
     model.to(device)
+    print(model)
     # GPU Parallelize
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model)

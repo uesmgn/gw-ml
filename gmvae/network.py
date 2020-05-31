@@ -16,7 +16,6 @@ class ConvModule(nn.Module):
                       kernel_size=conv_kernel,
                       stride=pool_kernel,
                       padding=(conv_kernel - pool_kernel) // 2),
-            nn.BatchNorm2d(out_ch),
             ut.activation(activation)
         )
 
@@ -37,7 +36,6 @@ class ConvTransposeModule(nn.Module):
                                kernel_size=convt_kernel,
                                stride=convt_kernel,
                                padding=0),
-            nn.BatchNorm2d(out_ch),
             ut.activation(activation)
         )
 
@@ -51,7 +49,6 @@ class Encoder(nn.Module):
                  y_dim,
                  z_dim,
                  w_dim,
-                 activation='ReLU',
                  nargs=None):
         super().__init__()
         in_ch = x_shape[0]
@@ -68,7 +65,7 @@ class Encoder(nn.Module):
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
-        activation = nargs.get('activation') or activation
+        activation = nargs.get('activation') or 'ReLU'
 
         self.z_x_graph = nn.Sequential(
             ConvModule(in_ch, conv_ch[0],
@@ -130,7 +127,6 @@ class Decoder(nn.Module):
                  y_dim,
                  z_dim,
                  w_dim,
-                 activation='ReLU',
                  nargs=None):
         super().__init__()
         in_ch = x_shape[0]
@@ -146,7 +142,7 @@ class Decoder(nn.Module):
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
-        activation = nargs.get('activation') or activation
+        activation = nargs.get('activation') or 'ReLU'
 
         self.z_wy_graph = nn.Sequential(
             nn.Linear(w_dim, dense_dim),
