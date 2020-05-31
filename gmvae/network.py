@@ -3,22 +3,21 @@ import torch.nn as nn
 from .utils import nn as cn
 from . import utils as ut
 
+
 class ConvModule(nn.Module):
     def __init__(self,
                  in_ch,
                  out_ch,
-                 conv_kernel=3,
-                 pool_kernel=3,
+                 kernel=3,
                  activation='ReLU'):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv2d(in_ch, out_ch,
-                      kernel_size=conv_kernel,
+                      kernel_size=kernel,
                       stride=1,
-                      padding=(conv_kernel - 1) // 2),
-            ut.activation(activation),
-            nn.MaxPool2d(kernel_size=pool_kernel,
-                         stride=pool_kernel)
+                      padding=(kernel - 1) // 2),
+            nn.BatchNorm2d(out_ch),
+            ut.activation(activation)
         )
 
     def forward(self, x):
@@ -30,16 +29,50 @@ class ConvTransposeModule(nn.Module):
     def __init__(self,
                  in_ch,
                  out_ch,
-                 convt_kernel=3,
+                 kernel=3,
                  activation='ReLU'):
         super().__init__()
         self.features = nn.Sequential(
             nn.ConvTranspose2d(in_ch, out_ch,
-                               kernel_size=convt_kernel,
-                               stride=convt_kernel,
+                               kernel_size=kernel,
+                               stride=kernel,
                                padding=0),
+            nn.BatchNorm2d(out_ch),
             ut.activation(activation)
         )
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+
+class DownSample(nn.Module):
+    def __init__(self, in_ch, out_ch,
+                 pool_kernel=3,
+                 activation='ReLu'):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.MaxPool2d(kernel_size=pool_kernel,
+                         stride=pool_kernel),
+            ConvModule(in_ch, out_ch,
+                       kernel=1,
+                       activation=activation)
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+
+class Upsample(nn.Module):
+    def __init__(self, in_ch, out_ch,
+                 pool_kernel=3,
+                 activation='ReLu'):
+        super().__init__()
+        self.features = ConvTransposeModule(in_ch,
+                                            out_ch,
+                                            kernel=pool_kernel,
+                                            activation=activation)
 
     def forward(self, x):
         x = self.features(x)
@@ -83,41 +116,35 @@ class Encoder(nn.Module):
         nargs = nargs or dict()
         conv_ch = nargs.get('conv_channels') or [16, 32, 64]
         kernels = nargs.get('conv_kernels') or [3, 3, 3]
-        pools = nargs.get('pool_kernels') or [3, 3, 3]
+        pool_kernels = nargs.get('pool_kernels') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
         activation = nargs.get('activation') or 'ReLU'
 
         self.z_x_graph = nn.Sequential(
-            ConvModule(in_ch, conv_ch[0],
-                       conv_kernel=kernels[0],
-                       pool_kernel=pools[0],
+            DownSample(in_ch, conv_ch[0],
+                       pool_kernel=pool_kernels[0],
                        activation=activation),
-            ConvModule(conv_ch[0], conv_ch[1],
-                       conv_kernel=kernels[1],
-                       pool_kernel=pools[1],
+            DownSample(conv_ch[0], conv_ch[1],
+                       pool_kernel=pool_kernels[1],
                        activation=activation),
-            ConvModule(conv_ch[1], conv_ch[2],
-                       conv_kernel=kernels[2],
-                       pool_kernel=pools[2],
+            DownSample(conv_ch[1], conv_ch[2],
+                       pool_kernel=pool_kernels[2],
                        activation=activation),
             nn.Flatten(),
             nn.Linear(middle_dim, z_dim * 2)  # (batch_size, z_dim * 2)
         )
 
         self.w_x_graph = nn.Sequential(
-            ConvModule(in_ch, conv_ch[0],
-                       conv_kernel=kernels[0],
-                       pool_kernel=pools[0],
+            DownSample(in_ch, conv_ch[0],
+                       pool_kernel=pool_kernels[0],
                        activation=activation),
-            ConvModule(conv_ch[0], conv_ch[1],
-                       conv_kernel=kernels[1],
-                       pool_kernel=pools[1],
+            DownSample(conv_ch[0], conv_ch[1],
+                       pool_kernel=pool_kernels[1],
                        activation=activation),
-            ConvModule(conv_ch[1], conv_ch[2],
-                       conv_kernel=kernels[2],
-                       pool_kernel=pools[2],
+            DownSample(conv_ch[1], conv_ch[2],
+                       pool_kernel=pool_kernels[2],
                        activation=activation),
             nn.Flatten(),
             nn.Linear(middle_dim, w_dim * 2)  # (batch_size, w_dim * 2)
@@ -138,7 +165,7 @@ class Encoder(nn.Module):
         return {'x': x,
                 'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_logvar': z_x_logvar,
                 'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_logvar': w_x_logvar,
-                'y_wz': y_wz }
+                'y_wz': y_wz}
 
 
 class Decoder(nn.Module):
@@ -158,7 +185,7 @@ class Decoder(nn.Module):
 
         nargs = nargs or dict()
         conv_ch = nargs.get('conv_channels') or [16, 32, 64]
-        pools = nargs.get('pool_kernels') or [3, 3, 3]
+        pool_kernels = nargs.get('pool_kernels') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
@@ -173,24 +200,25 @@ class Decoder(nn.Module):
         self.x_z_graph = nn.Sequential(
             nn.Linear(z_dim, middle_dim),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
-            ConvTransposeModule(conv_ch[-1], conv_ch[-2],
-                                convt_kernel=pools[-1],
-                                activation=activation),
-            ConvTransposeModule(conv_ch[-2], conv_ch[-3],
-                                convt_kernel=pools[-2],
-                                activation=activation),
-            ConvTransposeModule(conv_ch[-3], in_ch,
-                                convt_kernel=pools[-3],
-                                activation='Sigmoid')
+            Upsample(conv_ch[-1], conv_ch[-2],
+                     pool_kernel=pool_kernels[-1],
+                     activation=activation),
+            Upsample(conv_ch[-2], conv_ch[-3],
+                     pool_kernel=pool_kernels[-2],
+                     activation=activation),
+            Upsample(conv_ch[-3], in_ch,
+                     pool_kernel=pool_kernels[-3],
+                     activation='Sigmoid')
         )
 
     def forward(self, z, w):
         _z_wy = self.z_wy_graph(w)
         z_wy_means, z_wy_logvars = torch.split(_z_wy, self.z_dim, 1)
         x_z = self.x_z_graph(z)
-        return {'z_wy_means': z_wy_means, # (batch_size, z_dim, K)
-                'z_wy_logvars': z_wy_logvars, # (batch_size, z_dim, K)
-                'x_z': x_z }
+        return {'z_wy_means': z_wy_means,  # (batch_size, z_dim, K)
+                'z_wy_logvars': z_wy_logvars,  # (batch_size, z_dim, K)
+                'x_z': x_z}
+
 
 class GMVAE(nn.Module):
     def __init__(self,
@@ -203,6 +231,13 @@ class GMVAE(nn.Module):
 
         self.encoder = Encoder(x_shape, y_dim, z_dim, w_dim, nargs)
         self.decoder = Decoder(x_shape, y_dim, z_dim, w_dim, nargs)
+
+        # weight initialization
+        for m in self.modules():
+            if type(m) == nn.Linear or type(m) == nn.Conv2d or type(m) == nn.ConvTranspose2d:
+                nn.init.xavier_normal_(m.weight)
+                if m.bias.data is not None:
+                    nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
         encoder_out = self.encoder(x)
