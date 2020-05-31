@@ -75,8 +75,8 @@ if __name__ == '__main__':
     nargs['conv_channels'] = json.loads(ini['net']['conv_channels'])
     nargs['conv_kernels'] = json.loads(ini['net']['conv_kernels'])
     nargs['pool_kernels'] = json.loads(ini['net']['pool_kernels'])
-    nargs['middle_size'] = ini['net']['middle_size']
-    nargs['dense_dim'] = ini['net']['dense_dim']
+    nargs['middle_size'] = ini.getint('net', 'middle_size')
+    nargs['dense_dim'] = ini.getint('net', 'dense_dim')
     nargs['activation'] = ini['net']['activation']
     print(nargs)
 
