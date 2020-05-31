@@ -33,15 +33,15 @@ parser.add_argument('-e', '--n_epoch', default=1000, type=int,
                     help='number of epochs (default: 1000)')
 parser.add_argument('-b', '--batch_size', default=32, type=int,
                     help='batch size (default: 32)')
+parser.add_argument('-s', '--sigma', default=1., type=float,
+                    help='sigma of reconstruction_loss (default: 1.)')
 parser.add_argument('-n', '--num_workers', default=4, type=int,
                     help='num_workers of DataLoader (default: 4)')
-parser.add_argument('-s', '--sigma', default=0.01, type=float,
-                    help='sigma to use reconstruction loss (default: 0.01)')
 parser.add_argument('-i', '--eval_itvl', default=5, type=int,
                     help='eval interval (default: 5)')
 args = parser.parse_args()
 
-def get_loss(params):
+def get_loss(params, sigma=1.):
     x = params['x']
     x_z = params['x_z']
     w_x_mean, w_x_logvar = params['w_x_mean'], params['w_x_logvar']
@@ -49,12 +49,12 @@ def get_loss(params):
     z_x = params['z_x'] # (batch_size, z_dim)
     z_x_mean, z_x_logvar = params['z_x_mean'], params['z_x_logvar'],
     z_wy_means, z_wy_logvars = params['z_wy_means'], params['z_wy_logvars']
-    rec_loss = loss.reconstruction_loss(x, x_z)
+    rec_loss = loss.reconstruction_loss(x, x_z, sigma)
     conditional_kl_loss = loss.conditional_kl_loss(z_x, z_x_mean, z_x_logvar,
                                                    z_wy_means, z_wy_logvars, y_wz)
     w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_logvar)
     y_prior_kl_loss = loss.y_prior_kl_loss(y_wz)
-    total = rec_loss - conditional_kl_loss - w_prior_kl_loss - y_prior_kl_loss
+    total = rec_loss + conditional_kl_loss + w_prior_kl_loss + y_prior_kl_loss
     total_m = total.mean()
     return total_m, {
         'reconstruction': rec_loss.mean(),
@@ -85,7 +85,6 @@ if __name__ == '__main__':
     y_dim = args.y_dim
     z_dim = args.z_dim
     w_dim = args.w_dim
-
     sigma = args.sigma
 
     device_ids = range(torch.cuda.device_count())
@@ -106,7 +105,7 @@ if __name__ == '__main__':
         transforms.ToTensor()
     ])
     dataset = Dataset(df, data_transform)
-    train_set, test_set = dataset.split_dataset(0.7)
+    train_set, test_set = dataset.split_dataset(0.8)
     labels = np.array(dataset.get_labels()).astype(str)
     labels_pred = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape,
@@ -121,7 +120,7 @@ if __name__ == '__main__':
         model = torch.nn.DataParallel(model)
         torch.backends.cudnn.benchmark = True
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     train_loader = DataLoader(train_set,
                               batch_size=batch_size,
                               num_workers=num_workers,
@@ -143,7 +142,7 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             output = model(x)
-            total, loss_dict = get_loss(output)
+            total, loss_dict = get_loss(output, sigma)
             total.backward()
             optimizer.step()
             loss_total += total.item()
@@ -175,7 +174,7 @@ if __name__ == '__main__':
                     _, p = torch.max(output['y_wz'], dim=1)
                     labels += l
                     labels_pred += list(p.cpu().numpy())
-                    total, loss_dict = get_loss(output)
+                    total, loss_dict = get_loss(output, sigma)
                     loss_total += total.item()
                     update_loss(loss_dict_total, loss_dict)
                 time_elapse = time.time() - time_start
