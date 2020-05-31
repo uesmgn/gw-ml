@@ -47,7 +47,7 @@ def get_loss(params):
     z_wy_means, z_wy_logvars = params['z_wy_means'], params['z_wy_logvars']
     rec_loss = loss.reconstruction_loss(x, x_z)
     conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_logvar,
-                                         z_wy_means, z_wy_logvars)
+                                         z_wy_means, z_wy_logvars, y_wz)
     w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
     y_prior_kl = loss.y_prior_kl(y_wz)
     total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
