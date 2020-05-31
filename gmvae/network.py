@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from .utils import nn as cn
 from . import utils as ut
-
+import torch.nn.functional as F
 
 class ConvModule(nn.Module):
     def __init__(self,
@@ -84,17 +84,32 @@ class DenseModule(nn.Module):
                  in_dim,
                  out_dim,
                  middle_dim=1024,
-                 activation=None):
+                 n_middle_layers=0,
+                 act_trans='ReLU',
+                 act_out=None):
         super().__init__()
-        self.features = nn.Sequential(
-            nn.Linear(in_dim, middle_dim),
-            nn.Linear(middle_dim, out_dim)
-        )
-        if activation is not None:
-            self.features.add_module(activation, ut.activation(activation))
+        if n_middle_layers > 0:
+            self.add_module(f'h0',
+                            nn.Linear(in_dim, middle_dim))
+        else:
+            self.add_module(f'h0',
+                            nn.Linear(in_dim, out_dim))
+        for i in range(n_layers):
+            if i == n_layers - 1:
+                self.add_module(f'h{i}',
+                                nn.Linear(middle_dim, out_dim))
+            else:
+                self.add_module(f'h{i}',
+                                nn.Linear(middle_dim, middle_dim))
+                if act_trans:
+                    self.add_module(act_trans,
+                                    ut.activation(act_trans))
+        if act_out:
+            self.add_module(act_out,
+                            ut.activation(act_out))
 
     def forward(self, x):
-        x = self.features(x)
+        x = self(x)
         return x
 
 
@@ -152,7 +167,8 @@ class Encoder(nn.Module):
 
         self.y_wz_graph = DenseModule(w_dim + z_dim,
                                       y_dim,
-                                      activation='Softmax')
+                                      n_middle_layers=1,
+                                      act_out='Softmax')
 
     def forward(self, x):
         _z_x = self.z_x_graph(x)
@@ -193,7 +209,8 @@ class Decoder(nn.Module):
 
         self.z_wy_graph = nn.Sequential(
             DenseModule(w_dim,
-                        z_dim * 2 * self.y_dim),
+                        z_dim * 2 * self.y_dim,
+                        n_middle_layers=1),
             cn.Reshape((z_dim * 2, self.y_dim))
         )
 
