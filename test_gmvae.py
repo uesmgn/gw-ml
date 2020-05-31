@@ -39,6 +39,8 @@ parser.add_argument('-n', '--num_workers', default=4, type=int,
                     help='num_workers of DataLoader (default: 4)')
 parser.add_argument('-i', '--eval_itvl', default=5, type=int,
                     help='eval interval (default: 5)')
+parser.add_argument('-lr', '--lr', default=0.001, type=float,
+                    help='learning rate (default: 0.001)')
 args = parser.parse_args()
 
 def get_loss(params, sigma=1.):
@@ -85,7 +87,7 @@ if __name__ == '__main__':
     y_dim = args.y_dim
     z_dim = args.z_dim
     w_dim = args.w_dim
-    
+
     sigma = args.sigma
 
     device_ids = range(torch.cuda.device_count())
@@ -95,6 +97,7 @@ if __name__ == '__main__':
     num_workers = args.num_workers
 
     eval_itvl = args.eval_itvl
+    lr = args.lr
     outdir = 'result_gmvae'
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -121,7 +124,7 @@ if __name__ == '__main__':
         model = torch.nn.DataParallel(model)
         torch.backends.cudnn.benchmark = True
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     train_loader = DataLoader(train_set,
                               batch_size=batch_size,
                               num_workers=num_workers,
