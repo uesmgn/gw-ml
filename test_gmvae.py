@@ -105,7 +105,7 @@ if __name__ == '__main__':
     ])
     dataset = Dataset(df, data_transform)
     train_set, test_set = dataset.split_dataset(0.7)
-    labels = np.array(train_set.get_labels()).astype(str)
+    labels = np.array(dataset.get_labels()).astype(str)
     labels_pred = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape, y_dim, z_dim, w_dim,
                   nargs)
