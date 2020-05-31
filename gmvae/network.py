@@ -88,28 +88,29 @@ class DenseModule(nn.Module):
                  act_trans='ReLU',
                  act_out=None):
         super().__init__()
+        self.features = nn.Sequential()
         if n_middle_layers > 0:
-            self.add_module(f'h0',
-                            nn.Linear(in_dim, middle_dim))
+            self.features.add_module(f'h0',
+                                     nn.Linear(in_dim, middle_dim))
         else:
-            self.add_module(f'h0',
-                            nn.Linear(in_dim, out_dim))
-        for i in range(n_layers):
+            self.features.add_module(f'h0',
+                                     nn.Linear(in_dim, out_dim))
+        for i in range(n_middle_layers):
             if i == n_layers - 1:
-                self.add_module(f'h{i}',
-                                nn.Linear(middle_dim, out_dim))
+                self.features.add_module(f'h{i+1}',
+                                         nn.Linear(middle_dim, out_dim))
             else:
-                self.add_module(f'h{i}',
-                                nn.Linear(middle_dim, middle_dim))
+                self.features.add_module(f'h{i+1}',
+                                         nn.Linear(middle_dim, middle_dim))
                 if act_trans:
-                    self.add_module(act_trans,
-                                    ut.activation(act_trans))
+                    self.features.add_module(act_trans,
+                                             ut.activation(act_trans))
         if act_out:
-            self.add_module(act_out,
-                            ut.activation(act_out))
+            self.features.add_module(act_out,
+                                     ut.activation(act_out))
 
     def forward(self, x):
-        x = self(x)
+        x = self.features(x)
         return x
 
 
