@@ -42,7 +42,6 @@ def get_loss(params):
     x_z = params['x_z']
     w_x_mean, w_x_logvar = params['w_x_mean'], params['w_x_logvar']
     y_wz = params['y_wz']
-    K = y_wz.shape[1]
     z_x = params['z_x'] # (batch_size, z_dim)
     z_x_mean, z_x_logvar = params['z_x_mean'], params['z_x_logvar'],
     z_wy_means, z_wy_logvars = params['z_wy_means'], params['z_wy_logvars']
@@ -50,8 +49,8 @@ def get_loss(params):
     w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_logvar)
     y_prior_kl = loss.y_prior_kl(y_wz)
     conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_logvar,
-                                         z_wy_means, z_wy_logvars )
-    total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
+                                         z_wy_means, z_wy_logvars)
+    total = rec_loss + conditional_kl + w_prior_kl + y_prior_kl
     return total, {
         'reconstruction': rec_loss,
         'w_prior_kl': w_prior_kl,
@@ -124,6 +123,8 @@ if __name__ == '__main__':
             labels += l
             labels_pred += list(p.cpu().numpy())
             total, loss_dict = get_loss(output)
+            print(total)
+            print(", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()]))
             total.backward()
             optimizer.step()
             loss_total += total.item()
