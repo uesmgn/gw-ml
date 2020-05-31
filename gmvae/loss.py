@@ -31,5 +31,5 @@ def y_prior_kl_loss(y_wz):
     # y_wz_k: (batch_size, y_dim)
     k = y_wz.shape[1]
     # kl = -torch.mean(y_wz, -1) - np.log(k)
-    kl = (y_wz * torch.log(10e-6 + k * y_wz)).sum(1)
+    kl = (y_wz * torch.log(10e-4 + k * y_wz)).sum(1)
     return kl.mean()

@@ -35,8 +35,8 @@ parser.add_argument('-n', '--num_workers', default=4, type=int,
                     help='num_workers of DataLoader (default: 4)')
 parser.add_argument('-s', '--sigma', default=0.01, type=float,
                     help='sigma to use reconstruction loss (default: 0.01)')
-parser.add_argument('-p', '--plot_itvl', default=5, type=int,
-                    help='plot interval (default: 5)')
+parser.add_argument('-i', '--eval_itvl', default=5, type=int,
+                    help='eval interval (default: 5)')
 args = parser.parse_args()
 
 def get_loss(params):
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     num_workers = args.num_workers
 
-    plot_itvl = args.plot_itvl
+    eval_itvl = args.eval_itvl
     outdir = 'result_gmvae'
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -102,7 +102,8 @@ if __name__ == '__main__':
         transforms.ToTensor()
     ])
     dataset = Dataset(df, data_transform)
-    labels = np.array(dataset.get_labels()).astype(str)
+    train_set, test_set = dataset.split_dataset(0.7)
+    labels = np.array(train_set.get_labels()).astype(str)
     labels_pred = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape, y_dim, z_dim, w_dim,
                   nargs)
@@ -113,55 +114,79 @@ if __name__ == '__main__':
         torch.backends.cudnn.benchmark = True
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    loader = DataLoader(dataset,
-                        batch_size=batch_size,
-                        num_workers=num_workers,
-                        shuffle=False)
+    train_loader = DataLoader(train_set,
+                              batch_size=batch_size,
+                              num_workers=num_workers,
+                              shuffle=True)
+    test_loader = DataLoader(test_set,
+                             batch_size=batch_size,
+                             num_workers=num_workers,
+                             shuffle=True)
     losses = []
     for epoch_idx in range(n_epoch):
         epoch = epoch_idx + 1
+        # ---------- train ----------
+        model.train()
+        print(f'---------- train: {epoch} ----------')
         time_start = time.time()
         loss_total = 0
         loss_dict_total = defaultdict(lambda: 0)
-        z_x = torch.Tensor().to(device)
-        w_x = torch.Tensor().to(device)
-        labels = []
-        labels_pred = []
-        for batch_idx, (x, l) in enumerate(loader):
+        for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
             output = model(x)
-            z_x = torch.cat((z_x, output['z_x']), 0)
-            w_x = torch.cat((w_x, output['w_x']), 0)
-            _, p = torch.max(output['y_wz'], dim=1)
-            labels += l
-            labels_pred += list(p.cpu().numpy())
             total, loss_dict = get_loss(output)
-            # print(", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()]))
             total.backward()
             optimizer.step()
             loss_total += total.item()
             update_loss(loss_dict_total, loss_dict)
         losses.append(loss_total)
         time_elapse = time.time() - time_start
-        print(f'loss = {loss_total:.3f} at epoch {epoch_idx+1}')
+        print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
         loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
         print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
 
-        if epoch % plot_itvl == 0:
-            z_x = z_x.detach().cpu().numpy()
-            w_x = w_x.detach().cpu().numpy()
-            # pca = PCA(n_components=2)
-            tsne = TSNE(n_components=2)
-            # z_x_pca = pca.fit_transform(z_x)
-            # w_x_pca = pca.fit_transform(w_x)
-            z_x_tsne = tsne.fit_transform(z_x)
-            w_x_tsne = tsne.fit_transform(w_x)
-            # pl.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}.png')
-            # pl.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}.png')
-            ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}_t.png')
-            ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
-            ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}_t.png')
-            ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
-            ut.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
+        # ---------- eval ----------
+        if epoch % eval_itvl == 0:
+            with torch.no_grad():
+                model.eval()
+                print(f'---------- eval: {epoch} ----------')
+                time_start = time.time()
+                loss_total = 0
+                loss_dict_total = defaultdict(lambda: 0)
+                z_x = torch.Tensor().to(device)
+                w_x = torch.Tensor().to(device)
+                labels = []
+                labels_pred = []
+                for batch_idx, (x, l) in enumerate(train_loader):
+                    x = x.to(device)
+                    output = model(x)
+                    z_x = torch.cat((z_x, output['z_x']), 0)
+                    w_x = torch.cat((w_x, output['w_x']), 0)
+                    _, p = torch.max(output['y_wz'], dim=1)
+                    labels += l
+                    labels_pred += list(p.cpu().numpy())
+                    total, loss_dict = get_loss(output)
+                    loss_total += total.item()
+                    update_loss(loss_dict_total, loss_dict)
+                time_elapse = time.time() - time_start
+                print(f'test loss = {loss_total:.3f} at epoch {epoch_idx+1}')
+                loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
+                print(loss_info)
+                print(f"calc time = {time_elapse:.3f} sec")
+                z_x = z_x.cpu().numpy()
+                w_x = w_x.cpu().numpy()
+                # pca = PCA(n_components=2)
+                tsne = TSNE(n_components=2)
+                # z_x_pca = pca.fit_transform(z_x)
+                # w_x_pca = pca.fit_transform(w_x)
+                z_x_tsne = tsne.fit_transform(z_x)
+                w_x_tsne = tsne.fit_transform(w_x)
+                # pl.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}.png')
+                # pl.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}.png')
+                ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}_t.png')
+                ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
+                ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}_t.png')
+                ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
+                ut.plot_loss(losses, f'{outdir}/loss_{epoch}.png')

@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 
 def reparameterize(mean, logvar):
     std = torch.exp(0.5 * logvar)
@@ -9,10 +8,10 @@ def reparameterize(mean, logvar):
 
 def activation(type='ReLU'):
     if type in ('Tanh', 'tanh'):
-        return nn.Tanh()
+        return torch.nn.Tanh()
     elif type in ('Sigmoid', 'sigmoid'):
-        return nn.Sigmoid()
+        return torch.nn.Sigmoid()
     elif type in ('ELU', 'elu'):
-        return nn.ELU()
+        return torch.nn.ELU()
     else:
-        return nn.ReLU()
+        return torch.nn.ReLU()
