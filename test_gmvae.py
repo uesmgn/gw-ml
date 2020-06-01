@@ -83,6 +83,8 @@ if __name__ == '__main__':
     ini = configparser.ConfigParser()
     ini.read('./config.ini', 'utf-8')
     nargs = dict()
+
+    nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
     nargs['conv_channels'] = json.loads(ini['net']['conv_channels'])
     nargs['conv_kernels'] = json.loads(ini['net']['conv_kernels'])
     nargs['pool_kernels'] = json.loads(ini['net']['pool_kernels'])
