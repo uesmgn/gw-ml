@@ -155,6 +155,7 @@ if __name__ == '__main__':
                              shuffle=True)
     losses = []
     nmis = []
+    times = []
     for epoch_idx in range(n_epoch):
         epoch = epoch_idx + 1
         # train...
@@ -174,11 +175,13 @@ if __name__ == '__main__':
             update_loss(loss_dict_total, loss_dict)
         losses.append([epoch, loss_total])
         time_elapse = time.time() - time_start
+        times.append(time_elapse)
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
         loss_info = ", ".join(
             [f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
         print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
+        print(f"average calc time = {np.array(times).mean():.3f} sec")
 
         # eval...
         if epoch % eval_itvl == 0:
@@ -217,6 +220,8 @@ if __name__ == '__main__':
                 # decompose...
                 print(f'----- decomposing and plotting... -----')
                 print(f'N classes predicted: {len(set(labels_pred))}')
+                print(f'NMI: {nmi:.3f}')
+
                 time_start = time.time()
                 pca = PCA(n_components=2)
                 tsne = TSNE(n_components=2)
