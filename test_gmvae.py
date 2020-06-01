@@ -190,8 +190,6 @@ if __name__ == '__main__':
                 model.eval()
                 print(f'----- evaluating at epoch {epoch}... -----')
                 time_start = time.time()
-                loss_total = 0
-                loss_dict_total = defaultdict(lambda: 0)
                 z_x = torch.Tensor().to(device)
                 w_x = torch.Tensor().to(device)
                 labels_true = []
@@ -205,24 +203,15 @@ if __name__ == '__main__':
                     p = output['y_pred']
                     labels_true += l
                     labels_pred += list(p.cpu().numpy().astype(str))
-                    total, loss_dict = get_loss(output, largs)
-                    loss_total += total.item()
-                    update_loss(loss_dict_total, loss_dict)
-                time_elapse = time.time() - time_start
-                print(f'test loss = {loss_total:.3f} at epoch {epoch_idx+1}')
-                loss_info = ", ".join(
-                    [f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
-                print(loss_info)
-                print(f"calc time = {time_elapse:.3f} sec")
-
                 nmi = ut.nmi(labels_true, labels_pred)
                 nmis.append([epoch, nmi])
+                time_elapse = time.time() - time_start
+                print(f"calc time = {time_elapse:.3f} sec")
+                print(f'# classes predicted: {len(set(labels_pred))}')
+                print(f'NMI: {nmi:.3f}')
 
                 # decompose...
                 print(f'----- decomposing and plotting... -----')
-                print(f'N classes predicted: {len(set(labels_pred))}')
-                print(f'NMI: {nmi:.3f}')
-
                 time_start = time.time()
                 pca = PCA(n_components=2)
                 tsne = TSNE(n_components=2)
