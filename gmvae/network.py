@@ -169,7 +169,8 @@ class Encoder(nn.Module):
                        pool_kernel=pool_kernels[2],
                        activation=activation),
             nn.Flatten(),
-            nn.Linear(middle_dim, z_dim * 2),  # (batch_size, z_dim * 2)
+            DenseModule(middle_dim, z_dim * 2,
+                        act_out=activation), # (batch_size, z_dim * 2)
             Gaussian()
         )
 
@@ -187,7 +188,8 @@ class Encoder(nn.Module):
                        pool_kernel=pool_kernels[2],
                        activation=activation),
             nn.Flatten(),
-            nn.Linear(middle_dim, w_dim * 2),  # (batch_size, w_dim * 2)
+            DenseModule(middle_dim, w_dim * 2,
+                        act_out=activation), # (batch_size, z_dim * 2)
             Gaussian()
         )
 
