@@ -225,7 +225,7 @@ class Decoder(nn.Module):
             DenseModule(w_dim,
                         z_dim * 2 * self.y_dim,
                         n_middle_layers=1),
-            cn.Reshape((z_dim * 2, self.y_dim),
+            cn.Reshape((z_dim * 2, self.y_dim)),
             Gaussian())
         )
 
