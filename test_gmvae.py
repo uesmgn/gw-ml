@@ -236,25 +236,25 @@ if __name__ == '__main__':
                                                                 ylabels)).get()
 
                 # output plots
-                ut.plot_latent(z_x_pca[:, 0], z_x_pca[:, 1],
-                               labels_true, f'{outdir}/z_pca_{epoch}_t.png')
-                ut.plot_latent(z_x_pca[:, 0], z_x_pca[:, 1],
-                               labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
-                ut.plot_latent(w_x_pca[:, 0], w_x_pca[:, 1],
-                               labels_true, f'{outdir}/w_pca_{epoch}_t.png')
-                ut.plot_latent(w_x_pca[:, 0], w_x_pca[:, 1],
-                               labels_pred, f'{outdir}/w_pca_{epoch}_p.png')
+                ut.scatter(z_x_pca[:, 0], z_x_pca[:, 1],
+                           labels_true, f'{outdir}/z_pca_{epoch}_t.png')
+                ut.scatter(z_x_pca[:, 0], z_x_pca[:, 1],
+                           labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
+                ut.scatter(w_x_pca[:, 0], w_x_pca[:, 1],
+                           labels_true, f'{outdir}/w_pca_{epoch}_t.png')
+                ut.scatter(w_x_pca[:, 0], w_x_pca[:, 1],
+                           labels_pred, f'{outdir}/w_pca_{epoch}_p.png')
 
-                ut.plot_latent(z_x_tsne[:, 0], z_x_tsne[:, 1],
-                               labels_true, f'{outdir}/z_tsne_{epoch}_t.png')
-                ut.plot_latent(z_x_tsne[:, 0], z_x_tsne[:, 1],
-                               labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
-                ut.plot_latent(w_x_tsne[:, 0], w_x_tsne[:, 1],
-                               labels_true, f'{outdir}/w_tsne_{epoch}_t.png')
-                ut.plot_latent(w_x_tsne[:, 0], w_x_tsne[:, 1],
-                               labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
+                ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
+                           labels_true, f'{outdir}/z_tsne_{epoch}_t.png')
+                ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
+                           labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
+                ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
+                           labels_true, f'{outdir}/w_tsne_{epoch}_t.png')
+                ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
+                           labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
 
-                ut.plot_cm(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png')
+                ut.cmshow(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png')
 
                 ut.plot(losses, f'{outdir}/loss_{epoch}.png', 'epoch', 'loss')
                 ut.plot(nmis, f'{outdir}/nmi_{epoch}.png', 'epoch', 'normalized mutual information')
