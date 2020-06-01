@@ -52,10 +52,13 @@ class Gaussian(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        means, logits = torch.split(x, x.shape[1] // 2, 1)
-        vars = F.softplus(logits)
-        x = ut.reparameterize(means, vars)
-        return x, means, vars
+        mean, logit = torch.split(x, x.shape[1] // 2, 1)
+        var = F.softplus(logit)
+        if self.training:
+            x = ut.reparameterize(mean, var)
+        else:
+            x = mean
+        return x, mean, var
 
 
 class DownSample(nn.Module):
