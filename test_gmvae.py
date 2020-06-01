@@ -124,8 +124,8 @@ if __name__ == '__main__':
     train_set, test_set = dataset.split_by_labels(['Helix', 'Scratchy'],
                                                n_cat=200,
                                                min_cat=200)
-    labels = np.array(dataset.get_labels()).astype(str)
-    labels_pred = np.array(range(y_dim)).astype(str)
+    xlabels = np.array(dataset.get_labels()).astype(str)
+    ylabels = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape,
                   y_dim,
                   z_dim,
@@ -182,7 +182,7 @@ if __name__ == '__main__':
                 loss_dict_total = defaultdict(lambda: 0)
                 z_x = torch.Tensor().to(device)
                 w_x = torch.Tensor().to(device)
-                labels = []
+                labels_true = []
                 labels_pred = []
                 for batch_idx, (x, l) in enumerate(train_loader):
                     x = x.to(device)
@@ -190,7 +190,7 @@ if __name__ == '__main__':
                     z_x = torch.cat((z_x, output['z_x']), 0)
                     w_x = torch.cat((w_x, output['w_x']), 0)
                     _, p = torch.max(output['y_wz'], dim=1)
-                    labels += l
+                    labels_true += l
                     labels_pred += list(p.cpu().numpy())
                     total, loss_dict = get_loss(output, largs)
                     loss_total += total.item()
@@ -203,29 +203,37 @@ if __name__ == '__main__':
 
                 # decompose...
                 print(f'----- decomposing and plotting... -----')
+                print(f'N classes predicted: {len(set(labels_pred))}')
                 time_start = time.time()
                 pca = PCA(n_components=2)
                 tsne = TSNE(n_components=2)
                 z_x = z_x.cpu().numpy()
                 w_x = w_x.cpu().numpy()
 
+
                 # multi processing
-                with mp.Pool(4) as pool:
+                with mp.Pool(6) as pool:
                     z_x_pca = pool.apply_async(pca.fit_transform, (z_x, )).get()
                     w_x_pca = pool.apply_async(pca.fit_transform, (w_x, )).get()
                     z_x_tsne = pool.apply_async(tsne.fit_transform, (z_x, )).get()
                     w_x_tsne = pool.apply_async(tsne.fit_transform, (w_x, )).get()
+                    cm = pool.apply_async(ut.confution_matrix, (labels_true,
+                                                                labels_pred,
+                                                                xlabels,
+                                                                ylabels)).get()
 
                 # output plots
-                ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels, f'{outdir}/z_pca_{epoch}_t.png')
+                ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels_true, f'{outdir}/z_pca_{epoch}_t.png')
                 ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
-                ut.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels, f'{outdir}/w_pca_{epoch}_t.png')
+                ut.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels_true, f'{outdir}/w_pca_{epoch}_t.png')
                 ut.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels_pred, f'{outdir}/w_pca_{epoch}_p.png')
 
-                ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels, f'{outdir}/z_tsne_{epoch}_t.png')
+                ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_true, f'{outdir}/z_tsne_{epoch}_t.png')
                 ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
-                ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels, f'{outdir}/w_tsne_{epoch}_t.png')
+                ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_true, f'{outdir}/w_tsne_{epoch}_t.png')
                 ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
+
+                ut.plot_cm(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png')
 
                 ut.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
 

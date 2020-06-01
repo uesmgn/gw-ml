@@ -21,3 +21,17 @@ def activation(type='ReLU'):
         return torch.nn.PReLU()
     else:
         return torch.nn.ReLU()
+
+def confution_matrix(xx, yy, xlabels=None, ylabels=None, normalize=True):
+    if xlabels is None:
+        xlabels = sorted(list(set(xx)))
+    if ylabels is None:
+        ylabels = sorted(list(set(yy)))
+    cm = np.zeros([len(xlabels), len(ylabels)])
+    xlabels = list(xlabels)
+    ylabels = list(ylabels)
+    for (x, y) in zip(xx, yy):
+        cm[xlabels.index(x), ylabels.index(y)] += 1.
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    return cm
