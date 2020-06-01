@@ -249,7 +249,7 @@ class Decoder(nn.Module):
                      activation=activation),
             Upsample(conv_ch[-3], bottle_ch,
                      pool_kernel=pool_kernels[-3],
-                     activation='Sigmoid'),
+                     activation=activation),
             ConvTransposeModule(bottle_ch, in_ch,
                                 kernel=1,
                                 activation='Sigmoid')
