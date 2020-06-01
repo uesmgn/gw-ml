@@ -127,7 +127,7 @@ if __name__ == '__main__':
     train_set, test_set = dataset.split_by_labels(['Helix', 'Scratchy'],
                                                   n_cat=200,
                                                   min_cat=200)
-    xlabels = np.array(dataset.get_labels()).astype(str)
+    xlabels = np.array(train_set.get_labels()).astype(str)
     ylabels = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape,
                   y_dim,
@@ -188,6 +188,7 @@ if __name__ == '__main__':
                 w_x = torch.Tensor().to(device)
                 labels_true = []
                 labels_pred = []
+
                 for batch_idx, (x, l) in enumerate(train_loader):
                     x = x.to(device)
                     output = model(x)
