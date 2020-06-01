@@ -6,15 +6,15 @@ import matplotlib.colors as mcolors
 import itertools
 
 
-def plot_loss(losses, out):
-    if len(losses) > 2:
+def plot(yy, out, xlabel=None, ylabel=None):
+    if len(yy) > 2:
         plt.figure(figsize=[8, 4])
-        xx = np.array(range(len(losses))) + 1
-        plt.xlabel('epoch')
-        plt.ylabel('loss')
+        xx = np.array(range(len(yy))) + 1
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
         plt.xlim([min(xx), max(xx)])
-        plt.ylim([min(losses), max(losses)])
-        plt.plot(xx, losses)
+        plt.ylim([min(yy), max(yy)])
+        plt.plot(xx, yy)
         ax = plt.gca()
         ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
         ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
@@ -23,7 +23,7 @@ def plot_loss(losses, out):
         plt.close()
 
 
-def plot(xx, yy, labels, out):
+def scatter(xx, yy, labels, out):
     df = pd.DataFrame((xx, yy, labels), index=['x', 'y', 'label']).T
     x_mean = np.mean(xx)
     x_sigma = 3. * np.std(xx)
