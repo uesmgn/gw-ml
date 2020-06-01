@@ -51,7 +51,7 @@ class Gaussian(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        means, logits = torch.split(x, x.shape[0] // 2, 1)
+        means, logits = torch.split(x, x.shape[1] // 2, 1)
         vars = F.softplus(logits)
         x = ut.reparameterize(means, vars)
         return x, means, vars
@@ -226,7 +226,7 @@ class Decoder(nn.Module):
                         z_dim * 2 * self.y_dim,
                         n_middle_layers=1),
             cn.Reshape((z_dim * 2, self.y_dim)),
-            Gaussian())
+            Gaussian()
         )
 
         self.x_z_graph = nn.Sequential(

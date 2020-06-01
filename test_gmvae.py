@@ -33,8 +33,6 @@ parser.add_argument('-e', '--n_epoch', type=int,
                     help='number of epochs')
 parser.add_argument('-b', '--batch_size', type=int,
                     help='batch size')
-parser.add_argument('-s', '--sigma', type=float,
-                    help='sigma of reconstruction_loss')
 parser.add_argument('-n', '--num_workers', type=int,
                     help='num_workers of DataLoader')
 parser.add_argument('-i', '--eval_itvl', type=int,
@@ -43,20 +41,28 @@ parser.add_argument('-lr', '--lr', type=float,
                     help='learning rate')
 args = parser.parse_args()
 
-def get_loss(params, sigma=1.):
+def get_loss(params, args):
     x = params['x']
     x_z = params['x_z']
-    w_x_mean, w_x_logvar = params['w_x_mean'], params['w_x_logvar']
+    w_x_mean, w_x_var = params['w_x_mean'], params['w_x_var']
     y_wz = params['y_wz']
     z_x = params['z_x'] # (batch_size, z_dim)
-    z_x_mean, z_x_logvar = params['z_x_mean'], params['z_x_logvar'],
-    z_wy_means, z_wy_logvars = params['z_wy_means'], params['z_wy_logvars']
+    z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
+    z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
+
+    sigma = args.get('sigma') or 1.
+    rec_wei = args.get('rec_wei') or 1.
+    cond_wei = args.get('cond_wei') or 1.
+    w_wei = args.get('w_wei') or 1.
+    y_wei = args.get('y_wei') or 1.
+
     rec_loss = loss.reconstruction_loss(x, x_z, sigma)
-    conditional_kl_loss = loss.conditional_kl_loss(z_x, z_x_mean, z_x_logvar,
-                                                   z_wy_means, z_wy_logvars, y_wz)
-    w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_logvar)
+    conditional_kl_loss = loss.conditional_kl_loss(z_x, z_x_mean, z_x_var,
+                                                   z_wy_means, z_wy_vars, y_wz)
+    w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_var)
     y_prior_kl_loss = loss.y_prior_kl_loss(y_wz)
-    total = rec_loss + conditional_kl_loss + w_prior_kl_loss + y_prior_kl_loss
+    total = rec_loss * rec_wei + conditional_kl_loss * cond_wei \
+            + w_prior_kl_loss * w_wei + y_prior_kl_loss * y_wei
     total_m = total.mean()
     return total_m, {
         'reconstruction': rec_loss.mean(),
@@ -93,9 +99,16 @@ if __name__ == '__main__':
     n_epoch = args.n_epoch or ini.getint('conf', 'n_epoch')
     batch_size = args.batch_size or ini.getint('conf', 'batch_size')
     num_workers = args.num_workers or ini.getint('conf', 'num_workers')
-    sigma = args.sigma or ini.getfloat('conf', 'sigma')
     eval_itvl = args.eval_itvl or ini.getint('conf', 'eval_itvl')
     lr = args.lr or ini.getfloat('conf', 'lr')
+
+    largs = dict()
+    largs['sigma'] = ini.getfloat('loss', 'sigma') or 1.
+    largs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
+    largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
+    largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
+    largs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
+    print(largs)
 
     outdir = 'result_gmvae'
     if not os.path.exists(outdir):
@@ -147,7 +160,7 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             output = model(x)
-            total, loss_dict = get_loss(output, sigma)
+            total, loss_dict = get_loss(output, largs)
             total.backward()
             optimizer.step()
             loss_total += total.item()
@@ -179,7 +192,7 @@ if __name__ == '__main__':
                     _, p = torch.max(output['y_wz'], dim=1)
                     labels += l
                     labels_pred += list(p.cpu().numpy())
-                    total, loss_dict = get_loss(output, sigma)
+                    total, loss_dict = get_loss(output, largs)
                     loss_total += total.item()
                     update_loss(loss_dict_total, loss_dict)
                 time_elapse = time.time() - time_start
