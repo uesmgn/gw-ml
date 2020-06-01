@@ -12,7 +12,6 @@ def plot(xy, out, xlabel=None, ylabel=None):
         xx = xy[:,0]
         yy = xy[:,1]
         plt.figure(figsize=[8, 4])
-        xx = np.array(range(len(yy))) + 1
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.xlim([min(xx), max(xx)])
