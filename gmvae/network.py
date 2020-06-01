@@ -97,6 +97,7 @@ class DenseModule(nn.Module):
                  out_dim,
                  middle_dim=1024,
                  n_middle_layers=0,
+                 drop_rate=0.5,
                  act_trans='ReLU',
                  act_out=None):
         super().__init__()
@@ -109,7 +110,8 @@ class DenseModule(nn.Module):
                                      nn.Linear(in_dim, out_dim))
         for i in range(n_middle_layers):
             self.features.add_module(f'dropout',
-                                     nn.Dropout())
+                                     nn.Dropout(p=drop_rate,
+                                     inplace=True))
             if act_trans is not None:
                 self.features.add_module(act_trans,
                                          ut.activation(act_trans))
@@ -154,6 +156,7 @@ class Encoder(nn.Module):
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
         activation = nargs.get('activation') or 'ReLU'
+        drop_rate = nargs.get('drop_rate') or 0.5
 
         self.z_x_graph = nn.Sequential(
             ConvModule(in_ch, bottle_ch,
@@ -171,6 +174,7 @@ class Encoder(nn.Module):
             nn.Flatten(),
             DenseModule(middle_dim, z_dim * 2,
                         n_middle_layers=1,
+                        drop_rate=drop_rate,
                         act_trans=activation), # (batch_size, z_dim * 2)
             Gaussian()
         )
@@ -191,6 +195,7 @@ class Encoder(nn.Module):
             nn.Flatten(),
             DenseModule(middle_dim, w_dim * 2,
                         n_middle_layers=1,
+                        drop_rate=drop_rate,
                         act_trans=activation), # (batch_size, z_dim * 2)
             Gaussian()
         )
@@ -198,6 +203,7 @@ class Encoder(nn.Module):
         self.y_wz_graph = DenseModule(w_dim + z_dim,
                                       y_dim,
                                       n_middle_layers=1,
+                                      drop_rate=drop_rate,
                                       act_out='Softmax')
 
     def forward(self, x):
@@ -233,10 +239,12 @@ class Decoder(nn.Module):
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
         activation = nargs.get('activation') or 'ReLU'
+        drop_rate = nargs.get('drop_rate') or 0.5
 
         self.z_wy_graph = nn.Sequential(
             DenseModule(w_dim, z_dim * 2 * self.y_dim,
                         n_middle_layers=1,
+                        drop_rate=drop_rate,
                         act_trans=activation), # (batch_size, z_dim * 2)
             cn.Reshape((z_dim * 2, self.y_dim)),
             Gaussian()
