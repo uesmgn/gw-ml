@@ -29,18 +29,14 @@ def activation(type='ReLU'):
 
 
 def confution_matrix(xx, yy, xlabels=None, ylabels=None, normalize=True):
-    if xlabels is None:
-        xlabels = sorted(list(set(xx)))
-    if ylabels is None:
-        ylabels = sorted(list(set(yy)))
+    xlabels = sorted(list(set(xx))) if xlabels is None else sorted(list(xlabels))
+    ylabels = sorted(list(set(yy))) if ylabels is None else sorted(list(ylabels))
     cm = np.zeros([len(xlabels), len(ylabels)])
-    xlabels = list(xlabels)
-    ylabels = list(ylabels)
     for (x, y) in zip(xx, yy):
         cm[xlabels.index(x), ylabels.index(y)] += 1.
     if normalize:
         cm = sp.normalize(cm, axis=1, norm='l1')
-    return cm
+    return cm, xlabels, ylabels
 
 
 def nmi(labels_true, labels_pred):
