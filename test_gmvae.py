@@ -256,8 +256,8 @@ if __name__ == '__main__':
 
                 ut.plot_cm(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png')
 
-                ut.plot(losses, f'{outdir}/loss_{epoch}.png')
-                ut.plot(nmis, f'{outdir}/nmi_{epoch}.png')
+                ut.plot(losses, f'{outdir}/loss_{epoch}.png', 'epoch', 'loss')
+                ut.plot(nmis, f'{outdir}/nmi_{epoch}.png', 'epoch', 'normalized mutual information')
 
                 time_elapse = time.time() - time_start
                 print(f"calc time = {time_elapse:.3f} sec")
