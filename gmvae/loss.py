@@ -24,7 +24,7 @@ def conditional_kl_loss(z_x, z_x_mean, z_x_var,
     K = z_wy_means.shape[-1]
     z_wy = z_x.repeat(1, K).view(
         z_x.shape[0], K, -1).transpose(1, 2)  # (batch_size, z_dim, K)
-    logp = -0.5 * (y_wz * torch.log(z_wy_vars.sum(1) + eps)
+    logp = -0.5 * (y_wz * torch.log(z_wy_vars + eps).sum(1)
                    + y_wz * (torch.pow(z_wy - z_wy_means, 2) / z_wy_vars).sum(1)).sum(1)
     kl = logq - logp
     return kl
