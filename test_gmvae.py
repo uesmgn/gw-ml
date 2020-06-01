@@ -191,6 +191,7 @@ if __name__ == '__main__':
                 print(f'----- evaluating at epoch {epoch}... -----')
                 time_start = time.time()
                 z_x = torch.Tensor().to(device)
+                z_wy = torch.Tensor().to(device)
                 w_x = torch.Tensor().to(device)
                 labels_true = []
                 labels_pred = []
@@ -199,6 +200,7 @@ if __name__ == '__main__':
                     x = x.to(device)
                     output = model(x)
                     z_x = torch.cat((z_x, output['z_x']), 0)
+                    z_wy = torch.cat((z_wy, output['z_wy']), 0)
                     w_x = torch.cat((w_x, output['w_x']), 0)
                     p = output['y_pred']
                     labels_true += l
@@ -216,43 +218,46 @@ if __name__ == '__main__':
                 pca = PCA(n_components=2)
                 tsne = TSNE(n_components=2)
                 z_x = z_x.cpu().numpy()
+                z_wy = z_wy.cpu().numpy()
                 w_x = w_x.cpu().numpy()
 
                 # multi processing
                 with mp.Pool(6) as pool:
-                    z_x_pca = pool.apply_async(
-                        pca.fit_transform, (z_x, )).get()
-                    w_x_pca = pool.apply_async(
-                        pca.fit_transform, (w_x, )).get()
                     z_x_tsne = pool.apply_async(
                         tsne.fit_transform, (z_x, )).get()
+                    z_wy_tsne = pool.apply_async(
+                        tsne.fit_transform, (z_wy, )).get()
                     w_x_tsne = pool.apply_async(
                         tsne.fit_transform, (w_x, )).get()
-                    cm = pool.apply_async(ut.confution_matrix, (labels_true,
-                                                                labels_pred,
-                                                                xlabels,
-                                                                ylabels)).get()
+                    cm, cm_index, cm_columnns = pool.apply_async(ut.confution_matrix, (labels_true,
+                                                                 labels_pred,
+                                                                 xlabels,
+                                                                 ylabels)).get()
 
                 # output plots
-                ut.scatter(z_x_pca[:, 0], z_x_pca[:, 1],
-                           labels_true, f'{outdir}/z_pca_{epoch}_t.png')
-                ut.scatter(z_x_pca[:, 0], z_x_pca[:, 1],
-                           labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
-                ut.scatter(w_x_pca[:, 0], w_x_pca[:, 1],
-                           labels_true, f'{outdir}/w_pca_{epoch}_t.png')
-                ut.scatter(w_x_pca[:, 0], w_x_pca[:, 1],
-                           labels_pred, f'{outdir}/w_pca_{epoch}_p.png')
+                # ut.scatter(z_x_pca[:, 0], z_x_pca[:, 1],
+                #            labels_true, f'{outdir}/z_pca_{epoch}_t.png')
+                # ut.scatter(z_x_pca[:, 0], z_x_pca[:, 1],
+                #            labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
+                # ut.scatter(w_x_pca[:, 0], w_x_pca[:, 1],
+                #            labels_true, f'{outdir}/w_pca_{epoch}_t.png')
+                # ut.scatter(w_x_pca[:, 0], w_x_pca[:, 1],
+                #            labels_pred, f'{outdir}/w_pca_{epoch}_p.png')
 
                 ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
-                           labels_true, f'{outdir}/z_tsne_{epoch}_t.png')
+                           labels_true, f'{outdir}/zx_tsne_{epoch}_t.png')
                 ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
-                           labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
+                           labels_pred, f'{outdir}/zx_tsne_{epoch}_p.png')
+                ut.scatter(z_wy_tsne[:, 0], z_wy_tsne[:, 1],
+                           labels_true, f'{outdir}/zwy_tsne_{epoch}_t.png')
+                ut.scatter(z_wy_tsne[:, 0], z_wy_tsne[:, 1],
+                           labels_pred, f'{outdir}/zwy_tsne_{epoch}_p.png')
                 ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
-                           labels_true, f'{outdir}/w_tsne_{epoch}_t.png')
+                           labels_true, f'{outdir}/wx_tsne_{epoch}_t.png')
                 ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
-                           labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
+                           labels_pred, f'{outdir}/wx_tsne_{epoch}_p.png')
 
-                ut.cmshow(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png')
+                ut.cmshow(cm, cm_index, cm_columnns, f'{outdir}/cm_{epoch}.png')
 
                 ut.plot(losses, f'{outdir}/loss_{epoch}.png', 'epoch', 'loss')
                 ut.plot(nmis, f'{outdir}/nmi_{epoch}.png', 'epoch', 'normalized mutual information')
