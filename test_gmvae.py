@@ -201,7 +201,7 @@ if __name__ == '__main__':
                     output = model(x)
                     z_x = torch.cat((z_x, output['z_x']), 0)
                     w_x = torch.cat((w_x, output['w_x']), 0)
-                    _, p = torch.max(output['y_wz'], dim=1)
+                    p = output['y_pred']
                     labels_true += l
                     labels_pred += list(p.cpu().numpy().astype(str))
                     total, loss_dict = get_loss(output, largs)
