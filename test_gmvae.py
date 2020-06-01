@@ -151,6 +151,7 @@ if __name__ == '__main__':
                              num_workers=num_workers,
                              shuffle=True)
     losses = []
+    nmis = []
     for epoch_idx in range(n_epoch):
         epoch = epoch_idx + 1
         # train...
@@ -207,6 +208,9 @@ if __name__ == '__main__':
                 print(loss_info)
                 print(f"calc time = {time_elapse:.3f} sec")
 
+                nmi = ut.nmi(labels_true, labels_pred)
+                nmis.append(nmi)
+
                 # decompose...
                 print(f'----- decomposing and plotting... -----')
                 print(f'N classes predicted: {len(set(labels_pred))}')
@@ -252,7 +256,8 @@ if __name__ == '__main__':
 
                 ut.plot_cm(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png')
 
-                ut.plot_loss(losses, f'{outdir}/loss_{epoch}.png')
+                ut.plot(losses, f'{outdir}/loss_{epoch}.png')
+                ut.plot(nmis, f'{outdir}/nmi_{epoch}.png')
 
                 time_elapse = time.time() - time_start
                 print(f"calc time = {time_elapse:.3f} sec")

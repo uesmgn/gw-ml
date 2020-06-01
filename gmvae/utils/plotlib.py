@@ -23,7 +23,7 @@ def plot_loss(losses, out):
         plt.close()
 
 
-def plot_latent(xx, yy, labels, out):
+def plot(xx, yy, labels, out):
     df = pd.DataFrame((xx, yy, labels), index=['x', 'y', 'label']).T
     x_mean = np.mean(xx)
     x_sigma = 3. * np.std(xx)

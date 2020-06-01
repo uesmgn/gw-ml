@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import sklearn.preprocessing as sp
+from sklearn.metrics.cluster import normalized_mutual_info_score
 
 
 def reparameterize(mean, var):
@@ -40,3 +41,9 @@ def confution_matrix(xx, yy, xlabels=None, ylabels=None, normalize=True):
     if normalize:
         cm = sp.normalize(cm, axis=1, norm='l1')
     return cm
+
+
+def nmi(labels_true, labels_pred):
+    trues, preds = np.array(labels_true), np.array(labels_pred)
+    assert trues.size == preds.size
+    return normalized_mutual_info_score(trues, preds, average_method='arithmetic')
