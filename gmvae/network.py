@@ -100,6 +100,7 @@ class DenseModule(nn.Module):
                  out_dim,
                  middle_dim=1024,
                  n_middle_layers=0,
+                 drop=0,
                  drop_rate=0.5,
                  act_trans='ReLU',
                  act_out=None):
@@ -112,9 +113,13 @@ class DenseModule(nn.Module):
             self.features.add_module(f'h0',
                                      nn.Linear(in_dim, out_dim))
         for i in range(n_middle_layers):
-            self.features.add_module(f'dropout',
-                                     nn.Dropout(p=drop_rate,
-                                     inplace=True))
+            if drop:
+                self.features.add_module(f'drop',
+                                         nn.Dropout(p=drop_rate,
+                                                    inplace=True))
+            else:
+                self.features.add_module(f'bn',
+                                         nn.BatchNorm1d(middle_dim))
             if act_trans is not None:
                 self.features.add_module(act_trans,
                                          ut.activation(act_trans))
