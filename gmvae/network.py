@@ -170,7 +170,8 @@ class Encoder(nn.Module):
                        activation=activation),
             nn.Flatten(),
             DenseModule(middle_dim, z_dim * 2,
-                        act_out=activation), # (batch_size, z_dim * 2)
+                        n_middle_layers=1,
+                        act_trans=activation), # (batch_size, z_dim * 2)
             Gaussian()
         )
 
@@ -189,7 +190,8 @@ class Encoder(nn.Module):
                        activation=activation),
             nn.Flatten(),
             DenseModule(middle_dim, w_dim * 2,
-                        act_out=activation), # (batch_size, z_dim * 2)
+                        n_middle_layers=1,
+                        act_trans=activation), # (batch_size, z_dim * 2)
             Gaussian()
         )
 
@@ -233,9 +235,9 @@ class Decoder(nn.Module):
         activation = nargs.get('activation') or 'ReLU'
 
         self.z_wy_graph = nn.Sequential(
-            DenseModule(w_dim,
-                        z_dim * 2 * self.y_dim,
-                        n_middle_layers=1),
+            DenseModule(w_dim, z_dim * 2 * self.y_dim,
+                        n_middle_layers=1,
+                        act_trans=activation), # (batch_size, z_dim * 2)
             cn.Reshape((z_dim * 2, self.y_dim)),
             Gaussian()
         )
