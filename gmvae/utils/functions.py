@@ -19,13 +19,13 @@ def activation(type='ReLU'):
     elif type in ('Softmax', 'softmax'):
         return torch.nn.Softmax(dim=-1)
     elif type in ('ELU', 'elu'):
-        return torch.nn.ELU()
+        return torch.nn.ELU(inplace=True)
     elif type in ('LeakyReLU', 'lrelu'):
         return torch.nn.LeakyReLU(0.1)
     elif type in ('PReLU', 'prelu'):
         return torch.nn.PReLU()
     else:
-        return torch.nn.ReLU()
+        return torch.nn.ReLU(inplace=True)
 
 
 def confution_matrix(xx, yy, xlabels=None, ylabels=None, normalize=True):
