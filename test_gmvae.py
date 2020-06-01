@@ -91,6 +91,7 @@ if __name__ == '__main__':
     nargs['middle_size'] = ini.getint('net', 'middle_size')
     nargs['dense_dim'] = ini.getint('net', 'dense_dim')
     nargs['activation'] = ini.get('net', 'activation')
+    nargs['drop_rate'] = ini.get('net', 'drop_rate')
     print(nargs)
 
     # test params
