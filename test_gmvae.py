@@ -49,7 +49,6 @@ def get_loss(params, args):
     y_wz = params['y_wz']
     z_x = params['z_x']  # (batch_size, z_dim)
     z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
-    z_wy = params['z_wy']
     z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
 
     sigma = args.get('sigma') or 1.
@@ -60,7 +59,7 @@ def get_loss(params, args):
 
     rec_loss = loss.reconstruction_loss(x, x_z, sigma)
     conditional_kl_loss = loss.conditional_kl_loss(z_x, z_x_mean, z_x_var,
-                                                   z_wy, z_wy_means, z_wy_vars,
+                                                   z_wy_means, z_wy_vars,
                                                    y_wz)
     w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_var)
     y_prior_kl_loss = loss.y_prior_kl_loss(y_wz)
