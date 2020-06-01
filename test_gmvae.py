@@ -169,7 +169,7 @@ if __name__ == '__main__':
             optimizer.step()
             loss_total += total.item()
             update_loss(loss_dict_total, loss_dict)
-        losses.append(loss_total)
+        losses.append([epoch, loss_total])
         time_elapse = time.time() - time_start
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
         loss_info = ", ".join(
@@ -209,7 +209,7 @@ if __name__ == '__main__':
                 print(f"calc time = {time_elapse:.3f} sec")
 
                 nmi = ut.nmi(labels_true, labels_pred)
-                nmis.append(nmi)
+                nmis.append([epoch, nmi])
 
                 # decompose...
                 print(f'----- decomposing and plotting... -----')
