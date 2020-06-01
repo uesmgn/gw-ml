@@ -228,6 +228,7 @@ class Encoder(nn.Module):
                 'y_wz': y_wz,
                 'y_pred': p,
                 'z_wy': z_wy, # (batch_size, z_dim, K)
+                'z_wys', z_wys,
                 'z_wy_means': z_wy_means,
                 'z_wy_vars': z_wy_vars }
 
