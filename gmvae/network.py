@@ -146,7 +146,8 @@ class Encoder(nn.Module):
         self.w_dim = w_dim
 
         nargs = nargs or dict()
-        conv_ch = nargs.get('conv_channels') or [16, 32, 64]
+        bottle_ch = nargs.get('bottle_channel') or 32
+        conv_ch = nargs.get('conv_channels') or [64, 128, 256]
         kernels = nargs.get('conv_kernels') or [3, 3, 3]
         pool_kernels = nargs.get('pool_kernels') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
@@ -155,7 +156,10 @@ class Encoder(nn.Module):
         activation = nargs.get('activation') or 'ReLU'
 
         self.z_x_graph = nn.Sequential(
-            DownSample(in_ch, conv_ch[0],
+            ConvModule(in_ch, bottle_ch,
+                       kernel=1,
+                       activation=activation),
+            DownSample(bottle_ch, conv_ch[0],
                        pool_kernel=pool_kernels[0],
                        activation=activation),
             DownSample(conv_ch[0], conv_ch[1],
@@ -170,7 +174,10 @@ class Encoder(nn.Module):
         )
 
         self.w_x_graph = nn.Sequential(
-            DownSample(in_ch, conv_ch[0],
+            ConvModule(in_ch, bottle_ch,
+                       kernel=1,
+                       activation=activation),
+            DownSample(bottle_ch, conv_ch[0],
                        pool_kernel=pool_kernels[0],
                        activation=activation),
             DownSample(conv_ch[0], conv_ch[1],
@@ -215,7 +222,8 @@ class Decoder(nn.Module):
         self.w_dim = w_dim
 
         nargs = nargs or dict()
-        conv_ch = nargs.get('conv_channels') or [16, 32, 64]
+        bottle_ch = nargs.get('bottle_channel') or 32
+        conv_ch = nargs.get('conv_channels') or [64, 128, 256]
         pool_kernels = nargs.get('pool_kernels') or [3, 3, 3]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
@@ -239,9 +247,12 @@ class Decoder(nn.Module):
             Upsample(conv_ch[-2], conv_ch[-3],
                      pool_kernel=pool_kernels[-2],
                      activation=activation),
-            Upsample(conv_ch[-3], in_ch,
+            Upsample(conv_ch[-3], bottle_ch,
                      pool_kernel=pool_kernels[-3],
-                     activation='Sigmoid')
+                     activation='Sigmoid'),
+            ConvTransposeModule(bottle_ch, in_ch,
+                                kernel=1,
+                                activation='Sigmoid')
         )
 
     def forward(self, z, w):
