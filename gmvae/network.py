@@ -226,7 +226,7 @@ class Decoder(nn.Module):
                         z_dim * 2 * self.y_dim,
                         n_middle_layers=1),
             cn.Reshape((z_dim * 2, self.y_dim)),
-            Gaussian()
+            Gaussian())
         )
 
         self.x_z_graph = nn.Sequential(
