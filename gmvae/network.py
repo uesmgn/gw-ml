@@ -206,14 +206,30 @@ class Encoder(nn.Module):
                                       drop_rate=drop_rate,
                                       act_out='Softmax')
 
+        self.z_wy_graph = nn.Sequential(
+            DenseModule(w_dim, z_dim * 2 * y_dim,
+                        n_middle_layers=1,
+                        drop_rate=drop_rate,
+                        act_trans='Tanh'), # (batch_size, z_dim * 2)
+            cn.Reshape((z_dim * 2, y_dim)),
+            Gaussian()
+        )
+
     def forward(self, x):
         z_x, z_x_mean, z_x_var = self.z_x_graph(x)
         w_x, w_x_mean, w_x_var = self.w_x_graph(x)
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
+        _, p = torch.max(y_wz, dim=1) # (batch_size, )
+        z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(w_x) # (batch_size, z_dim, K)
+        z_wy = z_wys[torch.arange(z_wys.shape[0]),:,p] # (batch_size, z_dim)
         return {'x': x,
                 'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
                 'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
-                'y_wz': y_wz}
+                'y_wz': y_wz,
+                'y_pred': p,
+                'z_wy': z_wy, # (batch_size, z_dim, K)
+                'z_wy_means': z_wy_means,
+                'z_wy_vars': z_wy_vars }
 
 
 class Decoder(nn.Module):
@@ -241,15 +257,6 @@ class Decoder(nn.Module):
         activation = nargs.get('activation') or 'ReLU'
         drop_rate = nargs.get('drop_rate') or 0.5
 
-        self.z_wy_graph = nn.Sequential(
-            DenseModule(w_dim, z_dim * 2 * self.y_dim,
-                        n_middle_layers=1,
-                        drop_rate=drop_rate,
-                        act_trans='Tanh'), # (batch_size, z_dim * 2)
-            cn.Reshape((z_dim * 2, self.y_dim)),
-            Gaussian()
-        )
-
         self.x_z_graph = nn.Sequential(
             nn.Linear(z_dim, middle_dim),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
@@ -267,12 +274,9 @@ class Decoder(nn.Module):
                                 activation='Sigmoid')
         )
 
-    def forward(self, z, w):
-        z_wy, z_wy_means, z_wy_vars = self.z_wy_graph(w)
-        x_z = self.x_z_graph(z)
-        return {'z_wy_means': z_wy_means,  # (batch_size, z_dim, K)
-                'z_wy_vars': z_wy_vars,  # (batch_size, z_dim, K)
-                'x_z': x_z}
+    def forward(self, x):
+        x_z = self.x_z_graph(x)
+        return {'x_z': x_z}
 
 
 class GMVAE(nn.Module):
@@ -296,7 +300,7 @@ class GMVAE(nn.Module):
 
     def forward(self, x):
         encoder_out = self.encoder(x)
-        z_x, w_x = encoder_out['z_x'], encoder_out['w_x']
-        decoder_out = self.decoder(z_x, w_x)
+        z_wy = encoder_out['z_wy']
+        decoder_out = self.decoder(z_wy)
         encoder_out.update(decoder_out)
         return encoder_out
