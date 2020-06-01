@@ -195,7 +195,7 @@ if __name__ == '__main__':
                     w_x = torch.cat((w_x, output['w_x']), 0)
                     _, p = torch.max(output['y_wz'], dim=1)
                     labels_true += l
-                    labels_pred += list(p.cpu().numpy())
+                    labels_pred += list(p.cpu().numpy().astype(str))
                     total, loss_dict = get_loss(output, largs)
                     loss_total += total.item()
                     update_loss(loss_dict_total, loss_dict)

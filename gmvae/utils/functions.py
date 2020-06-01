@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from sklearn.preprocessing import normalize
 
 
 def reparameterize(mean, var):
@@ -37,5 +38,5 @@ def confution_matrix(xx, yy, xlabels=None, ylabels=None, normalize=True):
     for (x, y) in zip(xx, yy):
         cm[xlabels.index(x), ylabels.index(y)] += 1.
     if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        cm = normalize(cm, axis=1, norm='l1')
     return cm
