@@ -6,8 +6,11 @@ import matplotlib.colors as mcolors
 import itertools
 
 
-def plot(yy, out, xlabel=None, ylabel=None):
-    if len(yy) > 2:
+def plot(xy, out, xlabel=None, ylabel=None):
+    xy = np.array(xy)
+    if xy.shape[0] > 2:
+        xx = xy[:,0]
+        yy = xy[:,1]
         plt.figure(figsize=[8, 4])
         xx = np.array(range(len(yy))) + 1
         plt.xlabel(xlabel)
