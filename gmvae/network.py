@@ -4,6 +4,7 @@ from .utils import nn as cn
 from . import utils as ut
 import torch.nn.functional as F
 
+
 class ConvModule(nn.Module):
     def __init__(self,
                  in_ch,

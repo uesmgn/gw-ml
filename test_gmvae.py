@@ -41,12 +41,13 @@ parser.add_argument('-lr', '--lr', type=float,
                     help='learning rate')
 args = parser.parse_args()
 
+
 def get_loss(params, args):
     x = params['x']
     x_z = params['x_z']
     w_x_mean, w_x_var = params['w_x_mean'], params['w_x_var']
     y_wz = params['y_wz']
-    z_x = params['z_x'] # (batch_size, z_dim)
+    z_x = params['z_x']  # (batch_size, z_dim)
     z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
     z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
 
@@ -62,7 +63,7 @@ def get_loss(params, args):
     w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_var)
     y_prior_kl_loss = loss.y_prior_kl_loss(y_wz)
     total = rec_loss * rec_wei + conditional_kl_loss * cond_wei \
-            + w_prior_kl_loss * w_wei + y_prior_kl_loss * y_wei
+        + w_prior_kl_loss * w_wei + y_prior_kl_loss * y_wei
     total_m = total.mean()
     return total_m, {
         'reconstruction': rec_loss.mean(),
@@ -71,9 +72,11 @@ def get_loss(params, args):
         'y_prior_kl_loss': y_prior_kl_loss.mean()
     }
 
+
 def update_loss(loss_dict_total, loss_dict):
     for k, v in loss_dict.items():
         loss_dict_total[k] += v.item()
+
 
 if __name__ == '__main__':
     # network params
@@ -122,8 +125,8 @@ if __name__ == '__main__':
     ])
     dataset = Dataset(df, data_transform)
     train_set, test_set = dataset.split_by_labels(['Helix', 'Scratchy'],
-                                               n_cat=200,
-                                               min_cat=200)
+                                                  n_cat=200,
+                                                  min_cat=200)
     xlabels = np.array(dataset.get_labels()).astype(str)
     ylabels = np.array(range(y_dim)).astype(str)
     model = GMVAE(x_shape,
@@ -168,7 +171,8 @@ if __name__ == '__main__':
         losses.append(loss_total)
         time_elapse = time.time() - time_start
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
-        loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
+        loss_info = ", ".join(
+            [f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
         print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
 
@@ -197,7 +201,8 @@ if __name__ == '__main__':
                     update_loss(loss_dict_total, loss_dict)
                 time_elapse = time.time() - time_start
                 print(f'test loss = {loss_total:.3f} at epoch {epoch_idx+1}')
-                loss_info = ", ".join([f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
+                loss_info = ", ".join(
+                    [f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
                 print(loss_info)
                 print(f"calc time = {time_elapse:.3f} sec")
 
@@ -210,28 +215,39 @@ if __name__ == '__main__':
                 z_x = z_x.cpu().numpy()
                 w_x = w_x.cpu().numpy()
 
-
                 # multi processing
                 with mp.Pool(6) as pool:
-                    z_x_pca = pool.apply_async(pca.fit_transform, (z_x, )).get()
-                    w_x_pca = pool.apply_async(pca.fit_transform, (w_x, )).get()
-                    z_x_tsne = pool.apply_async(tsne.fit_transform, (z_x, )).get()
-                    w_x_tsne = pool.apply_async(tsne.fit_transform, (w_x, )).get()
+                    z_x_pca = pool.apply_async(
+                        pca.fit_transform, (z_x, )).get()
+                    w_x_pca = pool.apply_async(
+                        pca.fit_transform, (w_x, )).get()
+                    z_x_tsne = pool.apply_async(
+                        tsne.fit_transform, (z_x, )).get()
+                    w_x_tsne = pool.apply_async(
+                        tsne.fit_transform, (w_x, )).get()
                     cm = pool.apply_async(ut.confution_matrix, (labels_true,
                                                                 labels_pred,
                                                                 xlabels,
                                                                 ylabels)).get()
 
                 # output plots
-                ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels_true, f'{outdir}/z_pca_{epoch}_t.png')
-                ut.plot_latent(z_x_pca[:,0], z_x_pca[:,1], labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
-                ut.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels_true, f'{outdir}/w_pca_{epoch}_t.png')
-                ut.plot_latent(w_x_pca[:,0], w_x_pca[:,1], labels_pred, f'{outdir}/w_pca_{epoch}_p.png')
+                ut.plot_latent(z_x_pca[:, 0], z_x_pca[:, 1],
+                               labels_true, f'{outdir}/z_pca_{epoch}_t.png')
+                ut.plot_latent(z_x_pca[:, 0], z_x_pca[:, 1],
+                               labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
+                ut.plot_latent(w_x_pca[:, 0], w_x_pca[:, 1],
+                               labels_true, f'{outdir}/w_pca_{epoch}_t.png')
+                ut.plot_latent(w_x_pca[:, 0], w_x_pca[:, 1],
+                               labels_pred, f'{outdir}/w_pca_{epoch}_p.png')
 
-                ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_true, f'{outdir}/z_tsne_{epoch}_t.png')
-                ut.plot_latent(z_x_tsne[:,0], z_x_tsne[:,1], labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
-                ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_true, f'{outdir}/w_tsne_{epoch}_t.png')
-                ut.plot_latent(w_x_tsne[:,0], w_x_tsne[:,1], labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
+                ut.plot_latent(z_x_tsne[:, 0], z_x_tsne[:, 1],
+                               labels_true, f'{outdir}/z_tsne_{epoch}_t.png')
+                ut.plot_latent(z_x_tsne[:, 0], z_x_tsne[:, 1],
+                               labels_pred, f'{outdir}/z_tsne_{epoch}_p.png')
+                ut.plot_latent(w_x_tsne[:, 0], w_x_tsne[:, 1],
+                               labels_true, f'{outdir}/w_tsne_{epoch}_t.png')
+                ut.plot_latent(w_x_tsne[:, 0], w_x_tsne[:, 1],
+                               labels_pred, f'{outdir}/w_tsne_{epoch}_p.png')
 
                 ut.plot_cm(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png')
 

@@ -1,10 +1,13 @@
 import torch
+import numpy as np
+
 
 def reparameterize(mean, var):
     std = torch.pow(var, 0.5)
     eps = torch.randn_like(std)
     x = mean + eps * std
     return x
+
 
 def activation(type='ReLU'):
     if type in ('Tanh', 'tanh'):
@@ -21,6 +24,7 @@ def activation(type='ReLU'):
         return torch.nn.PReLU()
     else:
         return torch.nn.ReLU()
+
 
 def confution_matrix(xx, yy, xlabels=None, ylabels=None, normalize=True):
     if xlabels is None:
