@@ -31,7 +31,7 @@ def scatter(xx, yy, labels, out):
     x_sigma = 3. * np.std(xx)
     y_mean = np.mean(yy)
     y_sigma = 3. * np.std(yy)
-    labels = list(set(labels))
+    labels = sorted(list(set(labels)))
     cmap = plt.get_cmap("tab20")
     for i, label in enumerate(labels):
         idf = df[df['label'] == label]
