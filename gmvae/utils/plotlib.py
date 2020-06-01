@@ -49,7 +49,7 @@ def scatter(xx, yy, labels, out):
     plt.close()
 
 
-def plot_cm(cm, index, columns, out, title=None):
+def cmshow(cm, index, columns, out, title=None):
 
     cmap = plt.get_cmap('Blues')
 
