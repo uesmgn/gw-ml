@@ -131,7 +131,7 @@ class DenseModule(nn.Module):
                 self.features.add_module(f'h{i+1}',
                                          nn.Linear(middle_dim, middle_dim))
 
-        if act_out:
+        if act_out is not None:
             self.features.add_module(act_out,
                                      ut.activation(act_out))
 
