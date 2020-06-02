@@ -185,7 +185,8 @@ class GMVAE_graph(nn.Module):
             DenseModule(middle_dim, z_dim * 2,
                         n_middle_layers=1,
                         drop_rate=drop_rate,
-                        act_trans='Tanh'), # (batch_size, z_dim * 2)
+                        act_trans=activation,
+                        act_out='Tanh'), # (batch_size, z_dim * 2)
             Gaussian()
         )
 
@@ -206,7 +207,8 @@ class GMVAE_graph(nn.Module):
             DenseModule(middle_dim, w_dim * 2,
                         n_middle_layers=1,
                         drop_rate=drop_rate,
-                        act_trans='Tanh'), # (batch_size, z_dim * 2)
+                        act_trans=activation,
+                        act_out='Tanh'), # (batch_size, z_dim * 2)
             Gaussian()
         )
 
@@ -220,7 +222,8 @@ class GMVAE_graph(nn.Module):
             DenseModule(w_dim, z_dim * 2 * y_dim,
                         n_middle_layers=1,
                         drop_rate=drop_rate,
-                        act_trans='Tanh'), # (batch_size, z_dim * 2)
+                        act_trans=activation,
+                        act_out='Tanh'), # (batch_size, z_dim * 2)
             cn.Reshape((z_dim * 2, y_dim)),
             Gaussian()
         )
