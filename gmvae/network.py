@@ -114,14 +114,14 @@ class DenseModule(nn.Module):
                                      nn.Linear(in_dim, out_dim))
         for i in range(n_middle_layers):
             if drop:
-                self.features.add_module(f'drop',
+                self.features.add_module(f'drop{i+1}',
                                          nn.Dropout(p=drop_rate,
                                                     inplace=True))
             else:
-                self.features.add_module(f'bn',
+                self.features.add_module(f'bn{i+1}',
                                          nn.BatchNorm1d(middle_dim))
             if act_trans is not None:
-                self.features.add_module(act_trans,
+                self.features.add_module(f'act_trans{i+1}',
                                          ut.activation(act_trans))
             # last layer
             if i == n_middle_layers - 1:
@@ -132,7 +132,7 @@ class DenseModule(nn.Module):
                                          nn.Linear(middle_dim, middle_dim))
 
         if act_out is not None:
-            self.features.add_module(act_out,
+            self.features.add_module('act_out',
                                      ut.activation(act_out))
 
     def forward(self, x):
