@@ -9,7 +9,7 @@ def reparameterize(mean, var):
         std = torch.pow(var, 0.5)
     else:
         std = np.sqrt(var)
-    eps = torch.randn_like(std)
+    eps = torch.randn_like(mean)
     x = mean + eps * std
     return x
 
