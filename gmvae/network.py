@@ -57,11 +57,11 @@ class Gaussian(nn.Module):
         x = self.act_in(x)
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit)
-        if self.training:
-            x = ut.reparameterize(mean, var)
-        else:
-            x = mean
-        # x = ut.reparameterize(mean, var)
+        # if self.training:
+        #     x = ut.reparameterize(mean, var)
+        # else:
+        #     x = mean
+        x = ut.reparameterize(mean, var)
         return x, mean, var
 
 
@@ -220,6 +220,7 @@ class GMVAE_graph(nn.Module):
         self.z_wy_graph = nn.Sequential(
             DenseModule(w_dim, z_dim * 2 * y_dim,
                         n_middle_layers=1,
+                        norm_trans='bn',
                         act_trans=activation), # (batch_size, z_dim * 2)
             cn.Reshape((z_dim * 2, y_dim)),
             Gaussian()
