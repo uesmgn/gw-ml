@@ -85,8 +85,10 @@ if __name__ == '__main__':
     # network params
     ini = configparser.ConfigParser()
     ini.read('./config.ini', 'utf-8')
-    nargs = dict()
 
+    self.sigma = ini.getfloat('net', 'sigma')
+
+    nargs = dict()
     nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
     nargs['conv_channels'] = json.loads(ini['net']['conv_channels'])
     nargs['conv_kernels'] = json.loads(ini['net']['conv_kernels'])
@@ -95,6 +97,7 @@ if __name__ == '__main__':
     nargs['dense_dim'] = ini.getint('net', 'dense_dim')
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
+    nargs['sigma'] = self.sigma
     print(nargs)
 
     # test params
@@ -114,7 +117,7 @@ if __name__ == '__main__':
     lr = args.lr or ini.getfloat('conf', 'lr')
 
     largs = dict()
-    largs['sigma'] = ini.getfloat('loss', 'sigma') or 1.
+    largs['sigma'] = self.sigma
     largs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
     largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
     largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
