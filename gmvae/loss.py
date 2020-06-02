@@ -6,7 +6,8 @@ import numpy as np
 def reconstruction_loss(x, x_, sigma=1.):
     # Reconstruction loss
     # 1/2σ * Σ(x - x_)**2
-    loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='none')
+    # loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='none')
+    loss = F.binary_cross_entropy(x_, x, reduction='none')
     loss = loss.sum(-1).sum(-1)
     return loss
 
