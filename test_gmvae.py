@@ -179,10 +179,11 @@ if __name__ == '__main__':
         checkpoint = torch.load(model_path)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        init_epoch = checkpoint['epoch_idx']
+        init_epoch = checkpoint['epoch']
         losses = checkpoint['losses']
         nmis = checkpoint['nmis']
         times = checkpoint['times']
+        print(f'load model from epoch {init_epoch}')
 
     print(model)
 
@@ -300,7 +301,7 @@ if __name__ == '__main__':
 
         if epoch % save_itvl == 0:
             torch.save({
-            'epoch_idx': epoch_idx,
+            'epoch': epoch,
             'losses': losses,
             'nmis': nmis,
             'times': times,
