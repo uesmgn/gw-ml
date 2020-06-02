@@ -41,6 +41,8 @@ parser.add_argument('-lr', '--lr', type=float,
                     help='learning rate')
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='verbose')
+parser.add_argument('-s', '--sample', action='store_true',
+                    help='sample dataset into minimum N of each class')
 args = parser.parse_args()
 
 
@@ -86,7 +88,7 @@ if __name__ == '__main__':
     ini = configparser.ConfigParser()
     ini.read('./config.ini', 'utf-8')
 
-    self.sigma = ini.getfloat('net', 'sigma')
+    sigma = ini.getfloat('net', 'sigma')
 
     nargs = dict()
     nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
@@ -97,7 +99,7 @@ if __name__ == '__main__':
     nargs['dense_dim'] = ini.getint('net', 'dense_dim')
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
-    nargs['sigma'] = self.sigma
+    nargs['sigma'] = sigma
     print(nargs)
 
     # test params
@@ -115,9 +117,10 @@ if __name__ == '__main__':
     num_workers = args.num_workers or ini.getint('conf', 'num_workers')
     eval_itvl = args.eval_itvl or ini.getint('conf', 'eval_itvl')
     lr = args.lr or ini.getfloat('conf', 'lr')
+    sample = args.sample or ini.getboolean('conf', 'sample')
 
     largs = dict()
-    largs['sigma'] = self.sigma
+    largs['sigma'] = sigma
     largs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
     largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
     largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
@@ -136,6 +139,7 @@ if __name__ == '__main__':
     ])
     dataset = Dataset(df, data_transform)
     train_set, test_set = dataset.split_by_labels(['Helix', 'Scratchy'],
+                                                  sample=sample,
                                                   min_cat=200)
     xlabels = np.array(train_set.get_labels()).astype(str)
     ylabels = np.array(range(y_dim)).astype(str)
