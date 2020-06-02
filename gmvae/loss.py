@@ -12,8 +12,8 @@ def reconstruction_loss(x, x_, sigma=1.):
     return loss
 
 
-def conditional_kl_loss(z_x, z_x_mean, z_x_var,
-                        z_wy_means, z_wy_vars, y_wz):
+def conditional_kl(z_x, z_x_mean, z_x_var,
+                   z_wy_means, z_wy_vars, y_wz):
     # Conditional loss
     # q(z|x)=N(μ_x,σ_x)
     # logp = −0.5 * { log(det(σ_x^2)) + (z − μ_x)^2 / σ_x^2 }
@@ -31,17 +31,17 @@ def conditional_kl_loss(z_x, z_x_mean, z_x_var,
     return kl
 
 
-def w_prior_kl_loss(w_mean, w_var):
+def w_prior_kl(w_mean, w_var):
     eps = 1e-6
     kl = 0.5 * (w_var - 1 - torch.log(w_var + eps) +
                 torch.pow(w_mean, 2)).sum(-1)
     return kl
 
 
-def y_prior_kl_loss(y_wz, thres=1000.):
+def y_prior_kl(y_wz, thres=100.):
     eps = 1e-6
     k = y_wz.shape[1]
     kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(1)
     # kl = (y_wz * (torch.log(y_wz + eps) + np.log(k))).sum(1)
-    kl = torch.max(kl, torch.ones_like(kl)*thres)
+    # kl = torch.max(kl, torch.ones_like(kl)*thres)
     return kl
