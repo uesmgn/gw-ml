@@ -91,8 +91,10 @@ if __name__ == '__main__':
     ini = configparser.ConfigParser()
     ini.read('./config.ini', 'utf-8')
 
-    model_path = ini.getfloat('net', 'model_path')
+    model_path = ini.get('net', 'model_path')
     load_model = args.load_model or False
+    sigma = ini.getfloat('net', 'sigma')
+    verbose = args.verbose or False
 
     nargs = dict()
     nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
@@ -111,8 +113,6 @@ if __name__ == '__main__':
     y_dim = args.y_dim or ini.getint('net', 'y_dim')
     z_dim = args.z_dim or ini.getint('net', 'z_dim')
     w_dim = args.w_dim or ini.getint('net', 'w_dim')
-    sigma = ini.getfloat('net', 'sigma')
-    verbose = args.verbose or False
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
@@ -164,6 +164,10 @@ if __name__ == '__main__':
                   w_dim,
                   nargs)
     model.to(device)
+    # GPU Parallelize
+    if torch.cuda.is_available():
+        model = torch.nn.DataParallel(model)
+        torch.backends.cudnn.benchmark = True
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     init_epoch = 0
     losses = []
@@ -181,10 +185,6 @@ if __name__ == '__main__':
         times = checkpoint['times']
 
     print(model)
-    # GPU Parallelize
-    if torch.cuda.is_available():
-        model = torch.nn.DataParallel(model)
-        torch.backends.cudnn.benchmark = True
 
     for epoch_idx in range(init_epoch, n_epoch):
         epoch = epoch_idx + 1
