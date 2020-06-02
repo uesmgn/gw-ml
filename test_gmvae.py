@@ -169,6 +169,9 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             output = model(x)
             total, loss_dict = get_loss(output, largs)
+            loss_info = ", ".join(
+                [f'{k}: {v:.3f}' for k, v in loss_dict.items()])
+            print(loss_info)
             total.backward()
             optimizer.step()
             loss_total += total.item()
