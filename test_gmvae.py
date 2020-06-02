@@ -72,18 +72,13 @@ def get_loss(params, args):
     y_prior_kl_loss = loss.y_prior_kl_loss(y_wz, y_thres)
     total = rec_loss * rec_wei - conditional_kl_loss * cond_wei \
         - w_prior_kl_loss * w_wei - y_prior_kl_loss * y_wei
-    total_m = total.mean()
-    return total_m, {
-        'reconstruction': rec_loss.mean(),
-        'conditional_kl_loss': conditional_kl_loss.mean(),
-        'w_prior_kl_loss': w_prior_kl_loss.mean(),
-        'y_prior_kl_loss': y_prior_kl_loss.mean()
+    total = total.sum()
+    return total, {
+        'reconstruction_mean': rec_loss.mean(),
+        'conditional_kl_loss_mean': conditional_kl_loss.mean(),
+        'w_prior_kl_loss_mean': w_prior_kl_loss.mean(),
+        'y_prior_kl_loss_mean': y_prior_kl_loss.mean()
     }
-
-
-def update_loss(loss_dict_total, loss_dict):
-    for k, v in loss_dict.items():
-        loss_dict_total[k] += v.item()
 
 
 if __name__ == '__main__':
@@ -194,7 +189,7 @@ if __name__ == '__main__':
         print(f'----- training at epoch {epoch}... -----')
         time_start = time.time()
         loss_total = 0
-        loss_dict_total = defaultdict(lambda: 0)
+        n_samples = 0
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
@@ -207,14 +202,12 @@ if __name__ == '__main__':
             total.backward()
             optimizer.step()
             loss_total += total.item()
-            update_loss(loss_dict_total, loss_dict)
+            n_samples += x.shape[0]
+        loss_total /= n_samples
         losses.append([epoch, loss_total])
         time_elapse = time.time() - time_start
         times.append(time_elapse)
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
-        loss_info = ", ".join(
-            [f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
-        print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(times).mean():.3f} sec")
 
