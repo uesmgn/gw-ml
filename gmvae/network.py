@@ -48,10 +48,12 @@ class ConvTransposeModule(nn.Module):
 
 
 class Gaussian(nn.Module):
-    def __init__(self):
+    def __init__(self, act_in='Tanh'):
         super().__init__()
+        self.act_in = ut.activation(act_in)
 
     def forward(self, x):
+        x = self.act_in(x)
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit)
         # if self.training:
@@ -101,7 +103,7 @@ class DenseModule(nn.Module):
                  out_dim,
                  middle_dim=1024,
                  n_middle_layers=0,
-                 drop=0,
+                 norm_trans='none',
                  drop_rate=0.5,
                  act_trans='ReLU',
                  act_out=None):
@@ -114,11 +116,11 @@ class DenseModule(nn.Module):
             self.features.add_module(f'h0',
                                      nn.Linear(in_dim, out_dim))
         for i in range(n_middle_layers):
-            if drop:
+            if norm_trans in ('Dropout', 'dropout', 'drop'):
                 self.features.add_module(f'drop{i+1}',
                                          nn.Dropout(p=drop_rate,
                                                     inplace=True))
-            else:
+            elif norm_trans in ('BatchNorm', 'batchnorm', 'bn'):
                 self.features.add_module(f'bn{i+1}',
                                          nn.BatchNorm1d(middle_dim))
             if act_trans is not None:
@@ -184,10 +186,7 @@ class GMVAE_graph(nn.Module):
                        activation=activation),
             nn.Flatten(),
             DenseModule(middle_dim, z_dim * 2,
-                        n_middle_layers=1,
-                        drop_rate=drop_rate,
-                        act_trans=activation,
-                        act_out='Tanh'), # (batch_size, z_dim * 2)
+                        n_middle_layers=0), # (batch_size, z_dim * 2)
             Gaussian()
         )
 
@@ -206,25 +205,20 @@ class GMVAE_graph(nn.Module):
                        activation=activation),
             nn.Flatten(),
             DenseModule(middle_dim, w_dim * 2,
-                        n_middle_layers=1,
-                        drop_rate=drop_rate,
-                        act_trans=activation,
-                        act_out='Tanh'), # (batch_size, z_dim * 2)
+                        n_middle_layers=0), # (batch_size, z_dim * 2)
             Gaussian()
         )
 
         self.y_wz_graph = DenseModule(w_dim + z_dim,
                                       y_dim,
                                       n_middle_layers=1,
-                                      drop_rate=drop_rate,
+                                      norm_trans='bn'
                                       act_out='Softmax')
 
         self.z_wy_graph = nn.Sequential(
             DenseModule(w_dim, z_dim * 2 * y_dim,
                         n_middle_layers=1,
-                        drop_rate=drop_rate,
-                        act_trans=activation,
-                        act_out='Tanh'), # (batch_size, z_dim * 2)
+                        act_trans=activation), # (batch_size, z_dim * 2)
             cn.Reshape((z_dim * 2, y_dim)),
             Gaussian()
         )
