@@ -65,19 +65,19 @@ def get_loss(params, args):
     y_thres = args.get('y_thres') or 1000.
 
     rec_loss = loss.reconstruction_loss(x, x_z, sigma)
-    conditional_kl_loss = loss.conditional_kl_loss(z_x, z_x_mean, z_x_var,
+    conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_var,
                                                    z_wy_means, z_wy_vars,
                                                    y_wz)
-    w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_var)
-    y_prior_kl_loss = loss.y_prior_kl_loss(y_wz, y_thres)
-    total = rec_loss * rec_wei - conditional_kl_loss * cond_wei \
-        - w_prior_kl_loss * w_wei - y_prior_kl_loss * y_wei
+    w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_var)
+    y_prior_kl = loss.y_prior_kl(y_wz, y_thres)
+    total = rec_loss * rec_wei - conditional_kl * cond_wei \
+        - w_prior_kl * w_wei - y_prior_kl * y_wei
     total = total.sum()
     return total, {
-        'reconstruction_mean': rec_loss.sum(),
-        'conditional_kl_loss_mean': conditional_kl_loss.sum(),
-        'w_prior_kl_loss_mean': w_prior_kl_loss.sum(),
-        'y_prior_kl_loss_mean': y_prior_kl_loss.sum()
+        'reconstruction_loss': rec_loss.sum(),
+        'conditional_kl': conditional_kl.sum(),
+        'w_prior_kl': w_prior_kl.sum(),
+        'y_prior_kl': y_prior_kl.sum()
     }
 
 
