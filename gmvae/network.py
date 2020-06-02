@@ -76,7 +76,6 @@ class DownSample(nn.Module):
                          stride=pool_kernel),
             ConvModule(in_ch, out_ch,
                        kernel=conv_kernel,
-                       padding=(conv_kernel - 1) // 2,
                        activation=activation)
         )
 
