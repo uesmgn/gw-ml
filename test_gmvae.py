@@ -67,8 +67,8 @@ def get_loss(params, args):
                                                    y_wz)
     w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_var)
     y_prior_kl_loss = loss.y_prior_kl_loss(y_wz)
-    total = rec_loss * rec_wei + conditional_kl_loss * cond_wei \
-        + w_prior_kl_loss * w_wei + y_prior_kl_loss * y_wei
+    total = rec_loss * rec_wei - conditional_kl_loss * cond_wei \
+        - w_prior_kl_loss * w_wei - y_prior_kl_loss * y_wei
     total_m = total.mean()
     return total_m, {
         'reconstruction': rec_loss.mean(),
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     num_workers = args.num_workers or ini.getint('conf', 'num_workers')
     eval_itvl = args.eval_itvl or ini.getint('conf', 'eval_itvl')
     lr = args.lr or ini.getfloat('conf', 'lr')
-    sample = args.sample or ini.getboolean('conf', 'sample')
+    sample = args.sample or False
 
     largs = dict()
     largs['sigma'] = sigma
