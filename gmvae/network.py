@@ -249,7 +249,7 @@ class GMVAE_graph(nn.Module):
         z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(w_x) # (batch_size, z_dim, K)
         _, p = torch.max(y_wz, dim=1) # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]),:,p] # (batch_size, z_dim)
-        x_z = self.x_z_graph(z_wys.mean(-1)) # EDIT
+        x_z = self.x_z_graph(z_wy) # EDIT
         return {'x': x,
                 'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
                 'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
