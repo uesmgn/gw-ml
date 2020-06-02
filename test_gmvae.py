@@ -60,13 +60,14 @@ def get_loss(params, args):
     cond_wei = args.get('cond_wei') or 1.
     w_wei = args.get('w_wei') or 1.
     y_wei = args.get('y_wei') or 1.
+    y_thres = args.get('y_thres') or 1000.
 
     rec_loss = loss.reconstruction_loss(x, x_z, sigma)
     conditional_kl_loss = loss.conditional_kl_loss(z_x, z_x_mean, z_x_var,
                                                    z_wy_means, z_wy_vars,
                                                    y_wz)
     w_prior_kl_loss = loss.w_prior_kl_loss(w_x_mean, w_x_var)
-    y_prior_kl_loss = loss.y_prior_kl_loss(y_wz)
+    y_prior_kl_loss = loss.y_prior_kl_loss(y_wz, y_thres)
     total = rec_loss * rec_wei - conditional_kl_loss * cond_wei \
         - w_prior_kl_loss * w_wei - y_prior_kl_loss * y_wei
     total_m = total.mean()
@@ -125,6 +126,7 @@ if __name__ == '__main__':
     largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
     largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
     largs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
+    largs['y_thres'] = ini.getfloat('loss', 'y_thres') or 1000.
     print(largs)
 
     outdir = 'result_gmvae'
