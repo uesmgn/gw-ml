@@ -74,10 +74,10 @@ def get_loss(params, args):
         - w_prior_kl_loss * w_wei - y_prior_kl_loss * y_wei
     total = total.sum()
     return total, {
-        'reconstruction_mean': rec_loss.mean(),
-        'conditional_kl_loss_mean': conditional_kl_loss.mean(),
-        'w_prior_kl_loss_mean': w_prior_kl_loss.mean(),
-        'y_prior_kl_loss_mean': y_prior_kl_loss.mean()
+        'reconstruction_mean': rec_loss.sum(),
+        'conditional_kl_loss_mean': conditional_kl_loss.sum(),
+        'w_prior_kl_loss_mean': w_prior_kl_loss.sum(),
+        'y_prior_kl_loss_mean': y_prior_kl_loss.sum()
     }
 
 
@@ -190,6 +190,7 @@ if __name__ == '__main__':
         time_start = time.time()
         loss_total = 0
         n_samples = 0
+        loss_dict_total = defaultdict(lambda: 0)
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
@@ -197,17 +198,24 @@ if __name__ == '__main__':
             total, loss_dict = get_loss(output, largs)
             if verbose:
                 loss_info = ", ".join(
-                    [f'{k}: {v:.3f}' for k, v in loss_dict.items()])
+                    [f'{k}: {v/x.shape[0]:.3f}' for k, v in loss_dict.items()])
                 print(loss_info)
             total.backward()
             optimizer.step()
             loss_total += total.item()
+            for k, v in loss_dict.items():
+                loss_dict_total[k] += v.item()
             n_samples += x.shape[0]
         loss_total /= n_samples
+        for k, v in loss_dict_total.items():
+            loss_dict_total[k] /= n_samples
         losses.append([epoch, loss_total])
         time_elapse = time.time() - time_start
         times.append(time_elapse)
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
+        loss_info = ", ".join(
+            [f'{k}: {v:.3f}' for k, v in loss_dict_total.items()])
+        print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(times).mean():.3f} sec")
 
