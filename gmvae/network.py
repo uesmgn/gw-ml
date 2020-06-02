@@ -140,7 +140,7 @@ class DenseModule(nn.Module):
         return x
 
 
-class Encoder(nn.Module):
+class GMVAE_graph(nn.Module):
     def __init__(self,
                  x_shape,
                  y_dim,
@@ -223,49 +223,6 @@ class Encoder(nn.Module):
             Gaussian()
         )
 
-    def forward(self, x):
-        z_x, z_x_mean, z_x_var = self.z_x_graph(x)
-        w_x, w_x_mean, w_x_var = self.w_x_graph(x)
-        y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
-        _, p = torch.max(y_wz, dim=1) # (batch_size, )
-        z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(w_x) # (batch_size, z_dim, K)
-        z_wy = z_wys[torch.arange(z_wys.shape[0]),:,p] # (batch_size, z_dim)
-        return {'x': x,
-                'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
-                'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
-                'y_wz': y_wz,
-                'y_pred': p,
-                'z_wy': z_wy, # (batch_size, z_dim, K)
-                'z_wys': z_wys,
-                'z_wy_means': z_wy_means,
-                'z_wy_vars': z_wy_vars }
-
-
-class Decoder(nn.Module):
-    def __init__(self,
-                 x_shape,
-                 y_dim,
-                 z_dim,
-                 w_dim,
-                 nargs=None):
-        super().__init__()
-        in_ch = x_shape[0]
-        self.in_width = x_shape[1]
-        self.in_height = x_shape[2]
-        self.y_dim = y_dim
-        self.z_dim = z_dim
-        self.w_dim = w_dim
-
-        nargs = nargs or dict()
-        bottle_ch = nargs.get('bottle_channel') or 32
-        conv_ch = nargs.get('conv_channels') or [64, 128, 256]
-        pool_kernels = nargs.get('pool_kernels') or [3, 3, 3]
-        middle_size = nargs.get('middle_size') or 18
-        middle_dim = conv_ch[-1] * middle_size * middle_size
-        dense_dim = nargs.get('dense_dim') or 1024
-        activation = nargs.get('activation') or 'ReLU'
-        drop_rate = nargs.get('drop_rate') or 0.5
-
         self.x_z_graph = nn.Sequential(
             nn.Linear(z_dim, middle_dim),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
@@ -284,8 +241,25 @@ class Decoder(nn.Module):
         )
 
     def forward(self, x):
-        x_z = self.x_z_graph(x)
-        return {'x_z': x_z}
+        # Encoder
+        z_x, z_x_mean, z_x_var = self.z_x_graph(x)
+        w_x, w_x_mean, w_x_var = self.w_x_graph(x)
+        y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
+        # Decoder
+        z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(w_x) # (batch_size, z_dim, K)
+        _, p = torch.max(y_wz, dim=1) # (batch_size, )
+        z_wy = z_wys[torch.arange(z_wys.shape[0]),:,p] # (batch_size, z_dim)
+        x_z = self.x_z_graph(z_wys.mean(-1)) # EDIT
+        return {'x': x,
+                'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
+                'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
+                'y_wz': y_wz,
+                'y_pred': p,
+                'z_wy': z_wy, # (batch_size, z_dim, K)
+                'z_wys': z_wys,
+                'z_wy_means': z_wy_means,
+                'z_wy_vars': z_wy_vars,
+                'x_z': x_z }
 
 
 class GMVAE(nn.Module):
@@ -297,8 +271,7 @@ class GMVAE(nn.Module):
                  nargs=None):
         super().__init__()
 
-        self.encoder = Encoder(x_shape, y_dim, z_dim, w_dim, nargs)
-        self.decoder = Decoder(x_shape, y_dim, z_dim, w_dim, nargs)
+        self.net = GMVAE_graph(x_shape, y_dim, z_dim, w_dim, nargs)
 
         # weight initialization
         for m in self.modules():
@@ -308,8 +281,5 @@ class GMVAE(nn.Module):
                     nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        encoder_out = self.encoder(x)
-        z_wy = encoder_out['z_wy']
-        decoder_out = self.decoder(z_wy)
-        encoder_out.update(decoder_out)
-        return encoder_out
+        args = self.net(x)
+        return args
