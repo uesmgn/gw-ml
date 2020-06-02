@@ -5,7 +5,10 @@ from sklearn.metrics.cluster import normalized_mutual_info_score
 
 
 def reparameterize(mean, var):
-    std = torch.pow(var, 0.5)
+    if torch.is_tensor(var):
+        std = torch.pow(var, 0.5)
+    else:
+        std = np.sqrt(var)
     eps = torch.randn_like(std)
     x = mean + eps * std
     return x
