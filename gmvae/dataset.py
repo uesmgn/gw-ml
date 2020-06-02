@@ -23,7 +23,7 @@ class Dataset(data.Dataset):
         labels = self.df.iloc[:, 0].unique().astype(dtype)
         return sorted(labels)
 
-    def split_by_labels(self, new_labels, n_cat=None, min_cat=200):
+    def split_by_labels(self, new_labels, sample=False, min_cat=200):
         df = self.df
         columns = self.df.columns
 
@@ -33,10 +33,10 @@ class Dataset(data.Dataset):
         old_labels = [k for k, v in old_dict.items() if v >= min_cat]
 
         old_df_ = pd.DataFrame(columns=columns)
-        if n_cat:
+        if sample:
             for c in old_labels:
                 old_df_ = old_df_.append(
-                    old_df[old_df['label'] == c].sample(n=n_cat, random_state=123)
+                    old_df[old_df['label'] == c].sample(n=min_cat, random_state=123)
                 )
         else:
             for c in old_labels:
@@ -49,10 +49,10 @@ class Dataset(data.Dataset):
 
         new_df = df[df['label'].isin(new_labels)]
         new_df_ = pd.DataFrame(columns=columns)
-        if n_cat:
+        if sample:
             for c in new_labels:
                 new_df_ = new_df_.append(
-                    new_df[new_df['label'] == c].sample(n=n_cat, random_state=123)
+                    new_df[new_df['label'] == c].sample(n=min_cat, random_state=123)
                 )
         else:
             for c in new_labels:
