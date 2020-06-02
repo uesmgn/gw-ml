@@ -129,7 +129,6 @@ if __name__ == '__main__':
     ])
     dataset = Dataset(df, data_transform)
     train_set, test_set = dataset.split_by_labels(['Helix', 'Scratchy'],
-                                                  n_cat=200,
                                                   min_cat=200)
     xlabels = np.array(train_set.get_labels()).astype(str)
     ylabels = np.array(range(y_dim)).astype(str)
