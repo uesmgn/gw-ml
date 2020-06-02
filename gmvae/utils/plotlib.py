@@ -28,9 +28,9 @@ def plot(xy, out, xlabel=None, ylabel=None):
 def scatter(xx, yy, labels, out):
     df = pd.DataFrame((xx, yy, labels), index=['x', 'y', 'label']).T
     x_mean = np.mean(xx)
-    x_sigma = 3. * np.std(xx)
+    x_sigma = 4. * np.std(xx)
     y_mean = np.mean(yy)
-    y_sigma = 3. * np.std(yy)
+    y_sigma = 4. * np.std(yy)
     labels = sorted(list(set(labels)))
     cmap = plt.get_cmap("tab20")
     for i, label in enumerate(labels):
