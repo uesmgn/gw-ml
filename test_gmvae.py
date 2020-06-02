@@ -39,6 +39,8 @@ parser.add_argument('-i', '--eval_itvl', type=int,
                     help='eval interval')
 parser.add_argument('-lr', '--lr', type=float,
                     help='learning rate')
+parser.add_argument('-v', '--verbose', action='store_true',
+                    help='verbose')
 args = parser.parse_args()
 
 
@@ -100,6 +102,8 @@ if __name__ == '__main__':
     y_dim = args.y_dim or ini.getint('net', 'y_dim')
     z_dim = args.z_dim or ini.getint('net', 'z_dim')
     w_dim = args.w_dim or ini.getint('net', 'w_dim')
+
+    verbose = args.verbose or False
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
@@ -169,9 +173,10 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             output = model(x)
             total, loss_dict = get_loss(output, largs)
-            loss_info = ", ".join(
-                [f'{k}: {v:.3f}' for k, v in loss_dict.items()])
-            print(loss_info)
+            if verbose:
+                loss_info = ", ".join(
+                    [f'{k}: {v:.3f}' for k, v in loss_dict.items()])
+                print(loss_info)
             total.backward()
             optimizer.step()
             loss_total += total.item()
