@@ -68,13 +68,15 @@ class Gaussian(nn.Module):
 class DownSample(nn.Module):
     def __init__(self, in_ch, out_ch,
                  pool_kernel=3,
+                 conv_kernel=3,
                  activation='ReLu'):
         super().__init__()
         self.features = nn.Sequential(
             nn.MaxPool2d(kernel_size=pool_kernel,
                          stride=pool_kernel),
             ConvModule(in_ch, out_ch,
-                       kernel=1,
+                       kernel=conv_kernel,
+                       padding=(conv_kernel - 1) // 2,
                        activation=activation)
         )
 
