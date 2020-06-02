@@ -212,7 +212,7 @@ class GMVAE_graph(nn.Module):
         self.y_wz_graph = DenseModule(w_dim + z_dim,
                                       y_dim,
                                       n_middle_layers=1,
-                                      norm_trans='bn'
+                                      norm_trans='bn',
                                       act_out='Softmax')
 
         self.z_wy_graph = nn.Sequential(
