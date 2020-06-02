@@ -43,6 +43,8 @@ parser.add_argument('-v', '--verbose', action='store_true',
                     help='verbose')
 parser.add_argument('-s', '--sample', action='store_true',
                     help='sample dataset into minimum N of each class')
+parser.add_argument('-l', '--load_model', action='store_true',
+                    help='load saved model')
 args = parser.parse_args()
 
 
@@ -89,7 +91,8 @@ if __name__ == '__main__':
     ini = configparser.ConfigParser()
     ini.read('./config.ini', 'utf-8')
 
-    sigma = ini.getfloat('net', 'sigma')
+    model_path = ini.getfloat('net', 'model_path')
+    load_model = args.load_model or False
 
     nargs = dict()
     nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
@@ -108,7 +111,7 @@ if __name__ == '__main__':
     y_dim = args.y_dim or ini.getint('net', 'y_dim')
     z_dim = args.z_dim or ini.getint('net', 'z_dim')
     w_dim = args.w_dim or ini.getint('net', 'w_dim')
-
+    sigma = ini.getfloat('net', 'sigma')
     verbose = args.verbose or False
 
     device_ids = range(torch.cuda.device_count())
@@ -117,6 +120,7 @@ if __name__ == '__main__':
     batch_size = args.batch_size or ini.getint('conf', 'batch_size')
     num_workers = args.num_workers or ini.getint('conf', 'num_workers')
     eval_itvl = args.eval_itvl or ini.getint('conf', 'eval_itvl')
+    save_itvl = ini.getint('conf', 'save_itvl')
     lr = args.lr or ini.getfloat('conf', 'lr')
     sample = args.sample or False
 
@@ -145,19 +149,6 @@ if __name__ == '__main__':
                                                   min_cat=200)
     xlabels = np.array(train_set.get_labels()).astype(str)
     ylabels = np.array(range(y_dim)).astype(str)
-    model = GMVAE(x_shape,
-                  y_dim,
-                  z_dim,
-                  w_dim,
-                  nargs)
-    model.to(device)
-    print(model)
-    # GPU Parallelize
-    if torch.cuda.is_available():
-        model = torch.nn.DataParallel(model)
-        torch.backends.cudnn.benchmark = True
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     train_loader = DataLoader(train_set,
                               batch_size=batch_size,
                               num_workers=num_workers,
@@ -166,10 +157,36 @@ if __name__ == '__main__':
                              batch_size=batch_size,
                              num_workers=num_workers,
                              shuffle=True)
+
+    model = GMVAE(x_shape,
+                  y_dim,
+                  z_dim,
+                  w_dim,
+                  nargs)
+    model.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    init_epoch = 0
     losses = []
     nmis = []
     times = []
-    for epoch_idx in range(n_epoch):
+
+    if load_model and type(model_path) is str:
+        assert os.path.exists(model_path)
+        checkpoint = torch.load(model_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        init_epoch = checkpoint['epoch_idx']
+        losses = checkpoint['losses']
+        nmis = checkpoint['nmis']
+        times = checkpoint['times']
+
+    print(model)
+    # GPU Parallelize
+    if torch.cuda.is_available():
+        model = torch.nn.DataParallel(model)
+        torch.backends.cudnn.benchmark = True
+
+    for epoch_idx in range(init_epoch, n_epoch):
         epoch = epoch_idx + 1
         # train...
         model.train()
@@ -280,3 +297,13 @@ if __name__ == '__main__':
 
                 time_elapse = time.time() - time_start
                 print(f"calc time = {time_elapse:.3f} sec")
+
+        if epoch % save_itvl == 0:
+            torch.save({
+            'epoch_idx': epoch_idx,
+            'losses': losses,
+            'nmis': nmis,
+            'times': times,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            }, model_path )
