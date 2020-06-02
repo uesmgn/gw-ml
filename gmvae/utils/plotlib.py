@@ -40,7 +40,7 @@ def scatter(xx, yy, labels, out):
         color = mcolors.rgb2hex(cmap(i))
         plt.scatter(x, y,
                     c=color,
-                    s=5.0,
+                    s=8.0,
                     label=label)
     plt.xlim(x_mean - x_sigma, x_mean + x_sigma)
     plt.ylim(y_mean - y_sigma, y_mean + y_sigma)
