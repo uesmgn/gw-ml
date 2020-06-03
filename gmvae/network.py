@@ -346,7 +346,7 @@ class GMVAE(nn.Module):
         z_wy_vars_stack = []
         for graph in self.z_wy_graphs:
             # (batch_size, z_dim)
-            z_wy, z_wy_mean, z_wy_var = graph(torch.cat((z_x, w_x), 1))
+            z_wy, z_wy_mean, z_wy_var = graph(w_x)
             z_wys_stack.append(z_wy)
             z_wy_means_stack.append(z_wy_mean)
             z_wy_vars_stack.append(z_wy_var)
