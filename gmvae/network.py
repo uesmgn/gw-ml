@@ -78,12 +78,16 @@ class ConvTransposeModule(nn.Module):
         return x
 
 
-class GAP(nn.Module):
-    def __init__(self):
+class GlobalPool(nn.Module):
+    def __init__(self, pooling):
         super().__init__()
+        self.pooling = pooling
 
     def forward(self, x):
-        x = F.avg_pool2d(x, kernel_size=x.size()[2:])
+        if self.pooling is 'max':
+            x = F.max_pool2d(x, kernel_size=x.size()[2:])
+        elif self.pooling is 'avg':
+            x = F.avg_pool2d(x, kernel_size=x.size()[2:])
         x = x.view(x.shape[0], -1)
         return x
 
@@ -248,7 +252,7 @@ class GMVAE(nn.Module):
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
                        activation=activation),
-            GAP(),
+            GlobalPool(pooling),
             DenseModule(conv_ch[2], z_dim * 2,
                         n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian()
@@ -269,7 +273,7 @@ class GMVAE(nn.Module):
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
                        activation=activation),
-            GAP(),
+            GlobalPool(pooling),
             DenseModule(conv_ch[2], w_dim * 2,
                         n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian()
