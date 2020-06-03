@@ -234,7 +234,7 @@ class GMVAE_graph(nn.Module):
                        pool_kernel=pool_kernels[2],
                        activation=activation),
             GAP(),
-            DenseModule(conv_ch[2],, w_dim * 2,
+            DenseModule(conv_ch[2], w_dim * 2,
                         n_middle_layers=0), # (batch_size, z_dim * 2)
             Gaussian()
         )
