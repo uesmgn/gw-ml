@@ -297,10 +297,9 @@ if __name__ == '__main__':
                 ut.cmshow(cm, cm_index, cm_columnns, f'{outdir}/cm_{epoch}.png')
 
                 for k, v in loss_cum.items():
-                    ut.plot(v, f'{outdir}/{k}_{epoch}.png', 'epoch', k,
-                            xlim=(min(v[:,0]), max(v[:,0])), ylim=(min(v[:,1]), max(v[:,1])))
+                    ut.plot(v, f'{outdir}/{k}_{epoch}.png', 'epoch', k)
                 ut.plot(nmis, f'{outdir}/nmi_{epoch}.png', 'epoch', 'normalized mutual information',
-                        xlim=(min(nmis[:,0]), max(nmis[:,0])), ylim=(-0.1,1))
+                        ylim=(-0.1,1))
 
                 time_elapse = time.time() - time_start
                 print(f"calc time = {time_elapse:.3f} sec")
