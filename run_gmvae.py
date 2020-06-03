@@ -201,6 +201,9 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             params = model(x, return_params=True)
             total, loss_latest = get_loss(params, largs)
+            if verbose:
+                loss_info = ', '.join([f'{k}: {v.item() / x.shape[0]}' for k, v in loss_latest.items()])
+                print(loss_info)
             total.backward()
             optimizer.step()
             update_loss(loss_dict, loss_latest)
