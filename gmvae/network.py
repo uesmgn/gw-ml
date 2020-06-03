@@ -84,6 +84,7 @@ class GAP(nn.Module):
 
     def forward(self, x):
         x = F.avg_pool2d(x, kernel_size=x.size()[2:])
+        x = x.view(x.shape[0], -1)
         return x
 
 
