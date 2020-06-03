@@ -22,7 +22,8 @@ def plot(xy, out, xlabel=None, ylabel=None,
         if type(ylim) in (tuple, list):
             plt.ylim([ylim[0], ylim[1]])
         else:
-            plt.ylim([min(yy), max(yy)])
+            margin = (max(yy)-min(yy)) / 20.
+            plt.ylim([min(yy)-margin, max(yy)+margin])
         plt.plot(xx, yy)
         ax = plt.gca()
         ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
