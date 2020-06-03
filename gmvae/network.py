@@ -175,7 +175,7 @@ class DenseModule(nn.Module):
         return x
 
 
-class GMVAE_graph(nn.Module):
+class GMVAE(nn.Module):
     def __init__(self,
                  x_shape,
                  y_dim,
@@ -202,8 +202,6 @@ class GMVAE_graph(nn.Module):
         drop_rate = nargs.get('drop_rate') or 0.5
 
         self.sigma = nargs.get('sigma') or 0.01
-
-        self.params = None
 
         self.z_x_graph = nn.Sequential(
             ConvModule(in_ch, bottle_ch,
@@ -275,6 +273,15 @@ class GMVAE_graph(nn.Module):
                                 activation='Sigmoid'),
         )
 
+        self.params = None
+
+        # weight initialization
+        for m in self.modules():
+            if type(m) == nn.Linear or type(m) == nn.Conv2d or type(m) == nn.ConvTranspose2d:
+                nn.init.xavier_normal_(m.weight)
+                if m.bias.data is not None:
+                    nn.init.constant_(m.bias, 0)
+
     def forward(self, x):
         # Encoder
         z_x, z_x_mean, z_x_var = self.z_x_graph(x)
@@ -288,37 +295,14 @@ class GMVAE_graph(nn.Module):
         # x_z = ut.reparameterize(x_z_mean, self.sigma)
         x_z_mean = self.x_z_graph(z_wy) # EDIT
         x_z = ut.reparameterize(x_z_mean, self.sigma)
-        params =  {'x': x,
-                   'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
-                   'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
-                   'y_wz': y_wz,
-                   'y_pred': p,
-                   'z_wy': z_wy, # (batch_size, z_dim, K)
-                   'z_wys': z_wys,
-                   'z_wy_means': z_wy_means,
-                   'z_wy_vars': z_wy_vars,
-                   'x_z': x_z }
-        return x_z, params
-
-
-class GMVAE(nn.Module):
-    def __init__(self,
-                 x_shape,
-                 y_dim,
-                 z_dim,
-                 w_dim,
-                 nargs=None):
-        super().__init__()
-
-        self.net = GMVAE_graph(x_shape, y_dim, z_dim, w_dim, nargs)
-
-        # weight initialization
-        for m in self.modules():
-            if type(m) == nn.Linear or type(m) == nn.Conv2d or type(m) == nn.ConvTranspose2d:
-                nn.init.xavier_normal_(m.weight)
-                if m.bias.data is not None:
-                    nn.init.constant_(m.bias, 0)
-
-    def forward(self, x):
-        x, params = self.net(x)
-        return x, params
+        self.params =  {'x': x,
+                        'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
+                        'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
+                        'y_wz': y_wz,
+                        'y_pred': p,
+                        'z_wy': z_wy, # (batch_size, z_dim, K)
+                        'z_wys': z_wys,
+                        'z_wy_means': z_wy_means,
+                        'z_wy_vars': z_wy_vars,
+                        'x_z': x_z }
+        return x_z
