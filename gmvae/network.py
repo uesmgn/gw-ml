@@ -83,7 +83,7 @@ class GAP(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        x = x.mean(-1).mean(-1)
+        x = F.avg_pool2d(x, kernel_size=x.size()[2:])
         return x
 
 
