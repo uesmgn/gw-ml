@@ -329,7 +329,8 @@ class GMVAE(nn.Module):
         z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(
             w_x)  # (batch_size, z_dim, K)
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
-        z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
+        # z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
+        z_wy = z_wys.mean(-1)
         x_z_mean = self.x_z_graph(z_x) # EDIT
         x_z = ut.reparameterize(x_z_mean, self.sigma)
         # x_z_mean = self.x_z_graph(z_wy)  # EDIT
