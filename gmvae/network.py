@@ -330,10 +330,10 @@ class GMVAE(nn.Module):
             w_x)  # (batch_size, z_dim, K)
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
-        # x_z_mean = self.x_z_graph(z_x) # EDIT
-        # x_z = ut.reparameterize(x_z_mean, self.sigma)
-        x_z_mean = self.x_z_graph(z_wy)  # EDIT
+        x_z_mean = self.x_z_graph(z_x) # EDIT
         x_z = ut.reparameterize(x_z_mean, self.sigma)
+        # x_z_mean = self.x_z_graph(z_wy)  # EDIT
+        # x_z = ut.reparameterize(x_z_mean, self.sigma)
         if return_params:
             return {'x': x,
                     'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
