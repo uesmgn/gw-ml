@@ -11,13 +11,14 @@ class ConvModule(nn.Module):
                  in_ch,
                  out_ch,
                  kernel=3,
+                 stride=1,
                  activation='ReLU'):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv2d(in_ch, out_ch,
                       kernel_size=kernel,
-                      stride=1,
-                      padding=(kernel - 1) // 2),
+                      stride=stride,
+                      padding=(kernel - stride) // 2),
             nn.BatchNorm2d(out_ch),
             ut.activation(activation)
         )
@@ -32,13 +33,14 @@ class ConvTransposeModule(nn.Module):
                  in_ch,
                  out_ch,
                  kernel=3,
+                 stride=1,
                  activation='ReLU'):
         super().__init__()
         self.features = nn.Sequential(
             nn.ConvTranspose2d(in_ch, out_ch,
                                kernel_size=kernel,
-                               stride=kernel,
-                               padding=0),
+                               stride=stride,
+                               padding=(kernel - stride) // 2)),
             nn.BatchNorm2d(out_ch),
             ut.activation(activation)
         )
@@ -68,16 +70,29 @@ class Gaussian(nn.Module):
 class DownSample(nn.Module):
     def __init__(self, in_ch, out_ch,
                  pool_kernel=3,
-                 conv_kernel=3,
+                 pooling='avg',
+                 conv_kernel=1,
                  activation='ReLu'):
         super().__init__()
-        self.features = nn.Sequential(
-            nn.MaxPool2d(kernel_size=pool_kernel,
-                         stride=pool_kernel),
-            ConvModule(in_ch, out_ch,
-                       kernel=conv_kernel,
-                       activation=activation)
-        )
+        self.features = nn.Sequential()
+        if pooling is 'avg':
+            self.features.add_module(f'{pool_kernel}x{pool_kernel}AvgPool',
+                                     nn.AvgPool2d(kernel_size=pool_kernel,
+                                                  stride=pool_kernel))
+        elif pooling is 'max':
+            self.features.add_module(f'{pool_kernel}x{pool_kernel}MaxPool',
+                                     nn.MaxPool2d(kernel_size=pool_kernel,
+                                                  stride=pool_kernel))
+        else:
+            self.features.add_module(f'{pool_kernel}x{pool_kernel}conv',
+                                     ConvModule(in_ch, in_ch,
+                                                kernel=pool_kernel,
+                                                stride=pool_kernel,
+                                                activation=activation)
+        self.features.add_module(f'{conv_kernel}x{conv_kernel}conv',
+                                 ConvModule(in_ch, out_ch,
+                                            kernel=conv_kernel,
+                                            activation=activation))
 
     def forward(self, x):
         x = self.features(x)
@@ -89,10 +104,16 @@ class Upsample(nn.Module):
                  pool_kernel=3,
                  activation='ReLu'):
         super().__init__()
-        self.features = ConvTransposeModule(in_ch,
-                                            out_ch,
-                                            kernel=pool_kernel,
-                                            activation=activation)
+        self.features = nn.Sequential(
+                            ConvTransposeModule(in_ch,
+                                                in_ch,
+                                                kernel=pool_kernel,
+                                                stride=pool_kernel
+                                                activation=activation),
+                            ConvTransposeModule(in_ch,
+                                                out_ch,
+                                                kernel=1,
+                                                activation=activation))
 
     def forward(self, x):
         x = self.features(x)
@@ -175,7 +196,6 @@ class GMVAE_graph(nn.Module):
 
         self.z_x_graph = nn.Sequential(
             ConvModule(in_ch, bottle_ch,
-                       kernel=1,
                        activation=activation),
             DownSample(bottle_ch, conv_ch[0],
                        pool_kernel=pool_kernels[0],
@@ -186,6 +206,7 @@ class GMVAE_graph(nn.Module):
             DownSample(conv_ch[1], conv_ch[2],
                        pool_kernel=pool_kernels[2],
                        activation=activation),
+            nn.AvgPool2d(conv_ch[2], kernel_size=middle_dim),
             nn.Flatten(),
             DenseModule(middle_dim, z_dim * 2,
                         n_middle_layers=0), # (batch_size, z_dim * 2)
@@ -194,7 +215,6 @@ class GMVAE_graph(nn.Module):
 
         self.w_x_graph = nn.Sequential(
             ConvModule(in_ch, bottle_ch,
-                       kernel=1,
                        activation=activation),
             DownSample(bottle_ch, conv_ch[0],
                        pool_kernel=pool_kernels[0],
@@ -205,6 +225,7 @@ class GMVAE_graph(nn.Module):
             DownSample(conv_ch[1], conv_ch[2],
                        pool_kernel=pool_kernels[2],
                        activation=activation),
+            nn.AvgPool2d(conv_ch[2], kernel_size=middle_dim),
             nn.Flatten(),
             DenseModule(middle_dim, w_dim * 2,
                         n_middle_layers=0), # (batch_size, z_dim * 2)
@@ -227,7 +248,9 @@ class GMVAE_graph(nn.Module):
         )
 
         self.x_z_graph = nn.Sequential(
-            nn.Linear(z_dim, middle_dim),
+            DenseModule(z_dim, middle_dim,
+                        n_middle_layers=0,
+                        act_out=activation), # (batch_size, z_dim * 2)
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
