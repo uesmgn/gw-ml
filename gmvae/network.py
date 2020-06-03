@@ -291,9 +291,7 @@ class GMVAE(nn.Module):
                         n_middle_layers=0,
                         act_out=activation),
             cn.Reshape((conv_ch[-1], 1, 1)),
-            ConvTransposeModule(conv_ch[-1], conv_ch[-1],
-                                kernel=3,
-                                stride=middle_size),
+            nn.Upsample(scale_factor=middle_size),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
                      activation=activation),
@@ -329,14 +327,14 @@ class GMVAE(nn.Module):
         # x_z = ut.reparameterize(x_z_mean, self.sigma)
         x_z_mean = self.x_z_graph(z_wy)  # EDIT
         x_z = ut.reparameterize(x_z_mean, self.sigma)
-        self.outdict = {'x': x,
-                       'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
-                       'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
-                       'y_wz': y_wz,
-                       'y_pred': p,
-                       'z_wy': z_wy,  # (batch_size, z_dim, K)
-                       'z_wys': z_wys,
-                       'z_wy_means': z_wy_means,
-                       'z_wy_vars': z_wy_vars,
-                       'x_z': x_z}
-        return x_z
+        outdict = {'x': x,
+                   'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
+                   'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
+                   'y_wz': y_wz,
+                   'y_pred': p,
+                   'z_wy': z_wy,  # (batch_size, z_dim, K)
+                   'z_wys': z_wys,
+                   'z_wy_means': z_wy_means,
+                   'z_wy_vars': z_wy_vars,
+                   'x_z': x_z}
+        return x_z, outdict
