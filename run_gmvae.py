@@ -208,16 +208,17 @@ if __name__ == '__main__':
             loss_total += total.item()
             update_loss(loss_dict, loss_latest)
             n_samples += x.shape[0]
-        total /= n_samples
+        loss_total /= n_samples
+        loss_cum['total_loss'].append([epoch, loss_total])
         for k, v in loss_dict.items():
             loss_dict[k] /= n_samples
             loss_cum[k].append([epoch, loss_dict[k]])
         if verbose:
-            loss_info = ', '.join([f'{k}: {v.item():.3f}' for k, v in loss_dict.items()])
-            print(f'{total.item():.3f},', loss_info)
+            loss_info = ', '.join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
+            print(f'{loss_total:.3f},', loss_info)
         time_elapse = time.time() - time_start
         times.append(time_elapse)
-        print(f'train loss = {loss_dict["total_loss"]:.3f} at epoch {epoch_idx+1}')
+        print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(times).mean():.3f} sec")
 
