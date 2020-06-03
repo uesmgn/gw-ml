@@ -154,12 +154,15 @@ if __name__ == '__main__':
                   z_dim,
                   w_dim,
                   nargs)
+
     # GPU Parallelize
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model)
         torch.backends.cudnn.benchmark = True
     model.to(device)
 
+    summary(model, x_shape)
+    
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     init_epoch = 0
     losses = []
@@ -188,7 +191,7 @@ if __name__ == '__main__':
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
-            x_z, params = model(x)
+            x_z, params = model(x, return_params=True)
             total = get_loss(params, largs)
             total.backward()
             optimizer.step()
@@ -216,7 +219,7 @@ if __name__ == '__main__':
 
                 for batch_idx, (x, l) in enumerate(train_loader):
                     x = x.to(device)
-                    x_z, params = model(x)
+                    x_z, params = model(x, return_params=True)
                     z_x = torch.cat((z_x, params['z_x']), 0)
                     z_wy = torch.cat((z_wy, params['z_wy']), 0)
                     w_x = torch.cat((w_x, params['w_x']), 0)
