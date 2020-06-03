@@ -73,9 +73,15 @@ def get_loss(params, args):
     y_prior_kl = loss.y_prior_kl(y_wz, y_thres)
     total = rec_loss * rec_wei - conditional_kl * cond_wei \
             - w_prior_kl * w_wei - y_prior_kl * y_wei
-    total = total.sum()
-    return total
+    return {'total_loss': total.sum(),
+            'rec_loss': rec_loss.sum(),
+            'conditional_kl': conditional_kl.sum(),
+            'w_prior_kl': w_prior_kl.sum(),
+            'y_prior_kl': y_prior_kl.sum() }
 
+def update_loss(loss_dict, loss_latest):
+    for k, v in loss_latest.items():
+        loss_dict[k] += v.item()
 
 if __name__ == '__main__':
     # network params
@@ -167,7 +173,7 @@ if __name__ == '__main__':
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     init_epoch = 0
-    losses = []
+    loss_cum = defaultdict(list)
     nmis = []
     times = []
 
@@ -189,18 +195,20 @@ if __name__ == '__main__':
         print(f'----- training at epoch {epoch}... -----')
         time_start = time.time()
         loss_total = 0
+        loss_dict = defaultdict(lambda: 0)
         n_samples = 0
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
-            total = get_loss(params, largs)
+            total, loss_latest = get_loss(params, largs)
             total.backward()
             optimizer.step()
-            loss_total += total.item()
+            update_loss(loss_dict, loss_latest)
             n_samples += x.shape[0]
-        loss_total /= n_samples
-        losses.append([epoch, loss_total])
+        for k, v in loss_dict.items():
+            loss_dict[k] /= n_samples
+            losses[k].append([epoch, loss_total])
         time_elapse = time.time() - time_start
         times.append(time_elapse)
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
@@ -282,7 +290,8 @@ if __name__ == '__main__':
 
                 ut.cmshow(cm, cm_index, cm_columnns, f'{outdir}/cm_{epoch}.png')
 
-                ut.plot(losses, f'{outdir}/loss_{epoch}.png', 'epoch', 'loss')
+                for k, v in loss_cum.items():
+                    ut.plot(v, f'{outdir}/{k}_{epoch}.png', 'epoch', k)
                 ut.plot(nmis, f'{outdir}/nmi_{epoch}.png', 'epoch', 'normalized mutual information')
 
                 time_elapse = time.time() - time_start
