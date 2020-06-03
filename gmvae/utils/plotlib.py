@@ -17,8 +17,12 @@ def plot(xy, out, xlabel=None, ylabel=None,
         plt.ylabel(ylabel)
         if type(xlim) in (tuple, list):
             plt.xlim([xlim[0], xlim[1]])
+        else:
+            plt.xlim([min(xx), max(xx)])
         if type(ylim) in (tuple, list):
             plt.ylim([ylim[0], ylim[1]])
+        else:
+            plt.ylim([min(yy), max(yy)])
         plt.plot(xx, yy)
         ax = plt.gca()
         ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
