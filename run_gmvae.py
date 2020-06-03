@@ -194,6 +194,7 @@ if __name__ == '__main__':
         time_start = time.time()
         loss_dict = defaultdict(lambda: 0)
         n_samples = 0
+        loss_total = 0
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
@@ -204,6 +205,7 @@ if __name__ == '__main__':
                 print(f'{total.item():.3f},', loss_info)
             total.backward()
             optimizer.step()
+            loss_total += total.item()
             update_loss(loss_dict, loss_latest)
             n_samples += x.shape[0]
         total /= n_samples
