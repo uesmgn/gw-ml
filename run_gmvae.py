@@ -71,10 +71,8 @@ def get_loss(params, args):
                                                    y_wz)
     w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_var)
     y_prior_kl = loss.y_prior_kl(y_wz, y_thres)
-    total = rec_loss * rec_wei - conditional_kl * cond_wei \
-            - w_prior_kl * w_wei - y_prior_kl * y_wei
-    return total.sum(), {'total_loss': total.sum(),
-                         'rec_loss': rec_loss.sum(),
+    total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
+    return total.sum(), {'rec_loss': rec_loss.sum(),
                          'conditional_kl': conditional_kl.sum(),
                          'w_prior_kl': w_prior_kl.sum(),
                          'y_prior_kl': y_prior_kl.sum() }
@@ -202,15 +200,19 @@ if __name__ == '__main__':
             params = model(x, return_params=True)
             total, loss_latest = get_loss(params, largs)
             if verbose:
-                loss_info = ', '.join([f'{k}: {v.item() / x.shape[0]}' for k, v in loss_latest.items()])
-                print(loss_info)
+                loss_info = ', '.join([f'{k}: {v.item():.3f}' for k, v in loss_latest.items()])
+                print(f'{total.item():.3f},', loss_info)
             total.backward()
             optimizer.step()
             update_loss(loss_dict, loss_latest)
             n_samples += x.shape[0]
+        total /= n_samples
         for k, v in loss_dict.items():
             loss_dict[k] /= n_samples
-            loss_cum[k].append([epoch, v])
+            loss_cum[k].append([epoch, loss_dict[k]])
+        if verbose:
+            loss_info = ', '.join([f'{k}: {v.item():.3f}' for k, v in loss_dict.items()])
+            print(f'{total.item():.3f},', loss_info)
         time_elapse = time.time() - time_start
         times.append(time_elapse)
         print(f'train loss = {loss_dict["total_loss"]:.3f} at epoch {epoch_idx+1}')
