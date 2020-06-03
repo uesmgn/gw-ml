@@ -12,16 +12,30 @@ class ConvModule(nn.Module):
                  out_ch,
                  kernel=3,
                  stride=1,
-                 activation='ReLU'):
+                 activation='ReLU',
+                 dim=2):
         super().__init__()
-        self.features = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch,
-                      kernel_size=kernel,
-                      stride=stride,
-                      padding=(kernel - stride) // 2),
-            nn.BatchNorm2d(out_ch),
-            ut.activation(activation)
-        )
+
+        self.features = nn.Sequential()
+
+        if dim = 2:
+            self.features.add_module('Conv2d',
+                                     nn.Conv2d(in_ch, out_ch,
+                                               kernel_size=kernel,
+                                               stride=stride,
+                                               padding=(kernel - stride) // 2))
+            self.features.add_module('BatchNorm2d',
+                                     nn.BatchNorm2d(out_ch))
+        else:
+            self.features.add_module('Conv1d',
+                                     nn.Conv1d(in_ch, out_ch,
+                                               kernel_size=kernel,
+                                               stride=stride,
+                                               padding=(kernel - stride) // 2))
+            self.features.add_module('BatchNorm1d',
+                                     nn.BatchNorm1d(out_ch))
+        self.features.add_module('activation',
+                                 ut.activation(activation))
 
     def forward(self, x):
         x = self.features(x)
@@ -34,16 +48,30 @@ class ConvTransposeModule(nn.Module):
                  out_ch,
                  kernel=3,
                  stride=1,
-                 activation='ReLU'):
+                 activation='ReLU',
+                 dim=1):
         super().__init__()
-        self.features = nn.Sequential(
-            nn.ConvTranspose2d(in_ch, out_ch,
-                               kernel_size=kernel,
-                               stride=stride,
-                               padding=(kernel - stride) // 2),
-            nn.BatchNorm2d(out_ch),
-            ut.activation(activation)
-        )
+
+        self.features = nn.Sequential()
+
+        if dim = 2:
+            self.features.add_module('ConvTranspose2d',
+                                     nn.ConvTranspose2d(in_ch, out_ch,
+                                                        kernel_size=kernel,
+                                                        stride=stride,
+                                                        padding=(kernel - stride) // 2))
+            self.features.add_module('BatchNorm2d',
+                                     nn.BatchNorm2d(out_ch))
+        else:
+            self.features.add_module('ConvTranspose1d',
+                                     nn.ConvTranspose1d(in_ch, out_ch,
+                                                        kernel_size=kernel,
+                                                        stride=stride,
+                                                        padding=(kernel - stride) // 2))
+            self.features.add_module('BatchNorm1d',
+                                     nn.BatchNorm1d(out_ch))
+        self.features.add_module('activation',
+                                 ut.activation(activation))
 
     def forward(self, x):
         x = self.features(x)
@@ -114,15 +142,15 @@ class Upsample(nn.Module):
                  activation='ReLu'):
         super().__init__()
         self.features = nn.Sequential(
-                            ConvTransposeModule(in_ch,
-                                                in_ch,
-                                                kernel=pool_kernel,
-                                                stride=pool_kernel,
-                                                activation=activation),
-                            ConvTransposeModule(in_ch,
-                                                out_ch,
-                                                kernel=1,
-                                                activation=activation))
+            ConvTransposeModule(in_ch,
+                                in_ch,
+                                kernel=pool_kernel,
+                                stride=pool_kernel,
+                                activation=activation),
+            ConvTransposeModule(in_ch,
+                                out_ch,
+                                kernel=1,
+                                activation=activation))
 
     def forward(self, x):
         x = self.features(x)
@@ -217,7 +245,7 @@ class GMVAE(nn.Module):
                        activation=activation),
             GAP(),
             DenseModule(conv_ch[2], z_dim * 2,
-                        n_middle_layers=0), # (batch_size, z_dim * 2)
+                        n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian()
         )
 
@@ -235,7 +263,7 @@ class GMVAE(nn.Module):
                        activation=activation),
             GAP(),
             DenseModule(conv_ch[2], w_dim * 2,
-                        n_middle_layers=0), # (batch_size, z_dim * 2)
+                        n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian()
         )
 
@@ -246,17 +274,22 @@ class GMVAE(nn.Module):
                                       act_out='Softmax')
 
         self.z_wy_graph = nn.Sequential(
-            DenseModule(w_dim, z_dim * 2 * y_dim,
-                        n_middle_layers=1,
-                        norm_trans='bn',
-                        act_trans=activation), # (batch_size, z_dim * 2)
-            cn.Reshape((z_dim * 2, y_dim)),
+            DenseModule(w_dim, z_dim * 2,
+                        n_middle_layers=0,
+                        act_out=activation), # (batch_size, z_dim * 2)
+            cn.Reshape((z_dim * 2, 1)),
+            ConvModule(1, y_dim,
+                       kernel=1,
+                       activation=activation,
+                       dim=1),
             Gaussian()
         )
 
         self.x_z_graph = nn.Sequential(
-            cn.Reshape((z_dim, 1)),
-            nn.Upsample(scale_factor=middle_size),
+            DenseModule(z_dim, conv_ch[-1],
+                        n_middle_layers=0),
+            cn.Reshape((conv_ch[-1], 1, 1)),
+            nn.Upsample(size=(conv_ch[-1], middle_size, middle_size)),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
                      activation=activation),
@@ -286,21 +319,22 @@ class GMVAE(nn.Module):
         w_x, w_x_mean, w_x_var = self.w_x_graph(x)
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
         # Decoder
-        z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(w_x) # (batch_size, z_dim, K)
-        _, p = torch.max(y_wz, dim=1) # (batch_size, )
-        z_wy = z_wys[torch.arange(z_wys.shape[0]),:,p] # (batch_size, z_dim)
+        z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(
+            w_x)  # (batch_size, z_dim, K)
+        _, p = torch.max(y_wz, dim=1)  # (batch_size, )
+        z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
         # x_z_mean = self.x_z_graph(z_x) # EDIT
         # x_z = ut.reparameterize(x_z_mean, self.sigma)
-        x_z_mean = self.x_z_graph(z_wy) # EDIT
+        x_z_mean = self.x_z_graph(z_wy)  # EDIT
         x_z = ut.reparameterize(x_z_mean, self.sigma)
-        self.params =  {'x': x,
-                        'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
-                        'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
-                        'y_wz': y_wz,
-                        'y_pred': p,
-                        'z_wy': z_wy, # (batch_size, z_dim, K)
-                        'z_wys': z_wys,
-                        'z_wy_means': z_wy_means,
-                        'z_wy_vars': z_wy_vars,
-                        'x_z': x_z }
+        self.params = {'x': x,
+                       'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
+                       'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
+                       'y_wz': y_wz,
+                       'y_pred': p,
+                       'z_wy': z_wy,  # (batch_size, z_dim, K)
+                       'z_wys': z_wys,
+                       'z_wy_means': z_wy_means,
+                       'z_wy_vars': z_wy_vars,
+                       'x_z': x_z}
         return x_z
