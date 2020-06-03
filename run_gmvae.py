@@ -71,11 +71,11 @@ def get_loss(params, args):
                                                    y_wz)
     w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_var)
     y_prior_kl = loss.y_prior_kl(y_wz, y_thres)
-    total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
-    return total.sum(), {'rec_loss': rec_loss.sum(),
-                         'conditional_kl': conditional_kl.sum(),
-                         'w_prior_kl': w_prior_kl.sum(),
-                         'y_prior_kl': y_prior_kl.sum() }
+    total = rec_loss.sum() - conditional_kl.sum() - w_prior_kl.sum() - y_prior_kl.sum()
+    return total, {'rec_loss': rec_loss.sum(),
+                   'conditional_kl': conditional_kl.sum(),
+                   'w_prior_kl': w_prior_kl.sum(),
+                   'y_prior_kl': y_prior_kl.sum() }
 
 def update_loss(loss_dict, loss_latest):
     for k, v in loss_latest.items():
