@@ -93,19 +93,25 @@ class GlobalPool(nn.Module):
 
 
 class Gaussian(nn.Module):
-    def __init__(self, act_in='Tanh'):
+    def __init__(self,
+                 in_dim,
+                 out_dim,
+                 act_regur='Tanh'):
         super().__init__()
-        self.act_in = ut.activation(act_in)
+        self.dense = nn.Sequential(
+            nn.Linear(in_dim, out_dim * 2),
+            ut.activation(act_regur)
+        )
 
     def forward(self, x):
-        x = self.act_in(x)
+        x = self.dense(x)
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit)
-        # if self.training:
-        #     x = ut.reparameterize(mean, var)
-        # else:
-        #     x = mean
-        x = ut.reparameterize(mean, var)
+        if self.training:
+            x = ut.reparameterize(mean, var)
+        else:
+            x = mean
+        # x = ut.reparameterize(mean, var)
         return x, mean, var
 
 
@@ -254,8 +260,10 @@ class GMVAE(nn.Module):
                        activation=activation),
             GlobalPool(pooling),
             DenseModule(conv_ch[2], z_dim * 2,
-                        n_middle_layers=0),  # (batch_size, z_dim * 2)
-            Gaussian()
+                        n_middle_layers=0,
+                        activation=activation),  # (batch_size, z_dim * 2)
+            Gaussian(in_dim=z_dim * 2,
+                     out_dim=z_dim)
         )
 
         self.w_x_graph = nn.Sequential(
@@ -275,27 +283,30 @@ class GMVAE(nn.Module):
                        activation=activation),
             GlobalPool(pooling),
             DenseModule(conv_ch[2], w_dim * 2,
-                        n_middle_layers=0),  # (batch_size, z_dim * 2)
-            Gaussian()
+                        n_middle_layers=0,
+                        activation=activation),  # (batch_size, z_dim * 2)
+            Gaussian(in_dim=w_dim * 2,
+                     out_dim=w_dim)
         )
 
         self.y_wz_graph = DenseModule(w_dim + z_dim,
                                       y_dim,
                                       n_middle_layers=1,
                                       norm_trans='bn',
+                                      act_trans=activation,
                                       act_out='Softmax')
 
-        self.z_wy_graph = nn.Sequential(
-            DenseModule(w_dim+y_dim, z_dim * 2,
-                        n_middle_layers=0,
-                        act_out=activation), # (batch_size, z_dim * 2)
-            cn.Reshape((z_dim * 2, 1)),
-            nn.ConvTranspose1d(z_dim * 2, z_dim * 2,
-                               kernel_size=y_dim),
-            nn.BatchNorm1d(z_dim * 2),
-            cn.Reshape((z_dim * 2, y_dim)),
-            Gaussian()
-        )
+
+        self.z_wy_graphs = nn.ModuleList([
+            nn.Sequential(
+                DenseModule(w_dim, z_dim * 2,
+                            n_middle_layers=0,
+                            act_out=activation), # (batch_size, z_dim * 2)
+                Gaussian(in_dim=z_dim * 2,
+                         out_dim=z_dim)
+            ) for _ in range(self.y_dim)
+        ])
+
 
         self.x_z_graph = nn.Sequential(
             DenseModule(z_dim, conv_ch[-1],
@@ -330,16 +341,22 @@ class GMVAE(nn.Module):
         w_x, w_x_mean, w_x_var = self.w_x_graph(x)
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
         # Decoder
-        # EDIT
-        # z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(w_x)  # (batch_size, z_dim, K)
-        z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(torch.cat((w_x, y_wz), 1))  # (batch_size, z_dim, K)
+        z_wys_stack = []
+        z_wy_means_stack = []
+        z_wy_vars_stack = []
+        for graph in self.z_wy_graphs:
+            # (batch_size, z_dim)
+            z_wy, z_wy_mean, z_wy_var = graph(torch.cat((z_x, w_x), 1))
+            z_wys_stack.append(z_wy)
+            z_wy_means_stack.append(z_wy_mean)
+            z_wy_vars_stack.append(z_wy_var)
+        z_wys = torch.stack(z_wys_stack)
+        z_means = torch.stack(z_wy_means_stack)
+        z_vars = torch.stack(z_wy_vars_stack)
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
-        # z_wy = z_wys.mean(-1)
-        x_z_mean = self.x_z_graph(z_wy) # EDIT
+        x_z_mean = self.x_z_graph(z_x) # EDIT
         x_z = ut.reparameterize(x_z_mean, self.sigma)
-        # x_z_mean = self.x_z_graph(z_wy)  # EDIT
-        # x_z = ut.reparameterize(x_z_mean, self.sigma)
         if return_params:
             return {'x': x,
                     'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
