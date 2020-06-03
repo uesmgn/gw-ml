@@ -350,9 +350,10 @@ class GMVAE(nn.Module):
             z_wys_stack.append(z_wy)
             z_wy_means_stack.append(z_wy_mean)
             z_wy_vars_stack.append(z_wy_var)
-        z_wys = torch.stack(z_wys_stack)
-        z_means = torch.stack(z_wy_means_stack)
-        z_vars = torch.stack(z_wy_vars_stack)
+        z_wys = torch.stack(z_wys_stack, 2)
+        z_wy_means = torch.stack(z_wy_means_stack, 2)
+        z_wy_vars = torch.stack(z_wy_vars_stack, 2)
+        print(z_wy_vars.shape)
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
         x_z_mean = self.x_z_graph(z_x) # EDIT
