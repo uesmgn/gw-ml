@@ -189,7 +189,7 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             x_z = model(x)
-            total = get_loss(model.module.params, largs)
+            total = get_loss(model.module.outdict, largs)
             total.backward(retain_graph=True)
             optimizer.step()
             loss_total += total.item()
@@ -217,11 +217,11 @@ if __name__ == '__main__':
                 for batch_idx, (x, l) in enumerate(train_loader):
                     x = x.to(device)
                     x_z = model(x)
-                    params = model.module.params
-                    z_x = torch.cat((z_x, model.module.params['z_x']), 0)
-                    z_wy = torch.cat((z_wy, model.module.params['z_wy']), 0)
-                    w_x = torch.cat((w_x, model.module.params['w_x']), 0)
-                    p = model.module.params['y_pred']
+                    params = model.module.outdict
+                    z_x = torch.cat((z_x, params['z_x']), 0)
+                    z_wy = torch.cat((z_wy, params['z_wy']), 0)
+                    w_x = torch.cat((w_x, params['w_x']), 0)
+                    p = params['y_pred']
                     labels_true += l
                     labels_pred += list(p.cpu().numpy().astype(str))
                 nmi = ut.nmi(labels_true, labels_pred)
