@@ -55,8 +55,7 @@ class GAP(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        x = F.avg_pool2d(x, kernel_size=x.shape[1])
-        x = x.view(x.shape[0], -1)
+        x = x.mean(-1).mean(-1)
         return x
 
 
@@ -217,7 +216,7 @@ class GMVAE_graph(nn.Module):
                        pool_kernel=pool_kernels[2],
                        activation=activation),
             GAP(),
-            DenseModule(middle_dim, z_dim * 2,
+            DenseModule(conv_ch[2], z_dim * 2,
                         n_middle_layers=0), # (batch_size, z_dim * 2)
             Gaussian()
         )
@@ -235,7 +234,7 @@ class GMVAE_graph(nn.Module):
                        pool_kernel=pool_kernels[2],
                        activation=activation),
             GAP(),
-            DenseModule(middle_dim, w_dim * 2,
+            DenseModule(conv_ch[2],, w_dim * 2,
                         n_middle_layers=0), # (batch_size, z_dim * 2)
             Gaussian()
         )
@@ -309,6 +308,7 @@ class GMVAE(nn.Module):
         super().__init__()
 
         self.net = GMVAE_graph(x_shape, y_dim, z_dim, w_dim, nargs)
+        self.params = None
 
         # weight initialization
         for m in self.modules():
@@ -318,5 +318,5 @@ class GMVAE(nn.Module):
                     nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        args = self.net(x)
-        return args
+        self.params = self.net(x)
+        return self.params['x_z']
