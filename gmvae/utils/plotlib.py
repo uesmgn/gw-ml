@@ -22,7 +22,7 @@ def plot(xy, out, xlabel=None, ylabel=None,
         if type(ylim) in (tuple, list):
             plt.ylim([ylim[0], ylim[1]])
         else:
-            margin = (max(yy)-min(yy)) / 20.
+            margin = (max(yy) - min(yy) + 0.1) / 20.
             plt.ylim([min(yy)-margin, max(yy)+margin])
         plt.plot(xx, yy)
         ax = plt.gca()
