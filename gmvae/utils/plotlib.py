@@ -14,7 +14,7 @@ def plot(xy, out, xlabel=None, ylabel=None):
         plt.figure(figsize=[8, 4])
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
-        plt.xlim([min(xx)., max(xx).])
+        plt.xlim([min(xx), max(xx)])
         plt.ylim([min(yy)-1., max(yy)+1.])
         plt.plot(xx, yy)
         ax = plt.gca()
