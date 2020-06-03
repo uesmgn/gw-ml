@@ -130,3 +130,5 @@ dataset/
 result*
 *.png
 .idea
+unset_proxy.sh
+set_proxy.sh
