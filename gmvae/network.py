@@ -18,7 +18,7 @@ class ConvModule(nn.Module):
 
         self.features = nn.Sequential()
 
-        if dim = 2:
+        if dim == 2:
             self.features.add_module('Conv2d',
                                      nn.Conv2d(in_ch, out_ch,
                                                kernel_size=kernel,
@@ -49,12 +49,12 @@ class ConvTransposeModule(nn.Module):
                  kernel=3,
                  stride=1,
                  activation='ReLU',
-                 dim=1):
+                 dim=2):
         super().__init__()
 
         self.features = nn.Sequential()
 
-        if dim = 2:
+        if dim == 2:
             self.features.add_module('ConvTranspose2d',
                                      nn.ConvTranspose2d(in_ch, out_ch,
                                                         kernel_size=kernel,
@@ -277,19 +277,23 @@ class GMVAE(nn.Module):
             DenseModule(w_dim, z_dim * 2,
                         n_middle_layers=0,
                         act_out=activation), # (batch_size, z_dim * 2)
-            cn.Reshape((z_dim * 2, 1)),
+            cn.Reshape((1, z_dim * 2)),
             ConvModule(1, y_dim,
                        kernel=1,
                        activation=activation,
                        dim=1),
+            cn.Reshape((z_dim * 2, y_dim)),
             Gaussian()
         )
 
         self.x_z_graph = nn.Sequential(
             DenseModule(z_dim, conv_ch[-1],
-                        n_middle_layers=0),
+                        n_middle_layers=0,
+                        act_out=activation),
             cn.Reshape((conv_ch[-1], 1, 1)),
-            nn.Upsample(size=(conv_ch[-1], middle_size, middle_size)),
+            ConvTransposeModule(conv_ch[-1], conv_ch[-1],
+                                kernel=middle_size,
+                                stride=middle_size),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
                      activation=activation),
