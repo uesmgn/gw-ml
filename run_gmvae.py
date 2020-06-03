@@ -96,6 +96,7 @@ if __name__ == '__main__':
     nargs['dense_dim'] = ini.getint('net', 'dense_dim')
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
+    nargs['pooling'] = ini.get('net', 'pooling')
     nargs['sigma'] = sigma
     print(nargs)
 
