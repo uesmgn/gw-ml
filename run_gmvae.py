@@ -148,11 +148,13 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_set,
                               batch_size=batch_size,
                               num_workers=num_workers,
-                              shuffle=True)
+                              shuffle=True,
+                              drop_last=True)
     test_loader = DataLoader(test_set,
                              batch_size=batch_size,
                              num_workers=num_workers,
-                             shuffle=True)
+                             shuffle=True,
+                             drop_last=True)
 
     model = GMVAE(x_shape,
                   y_dim,
