@@ -88,7 +88,7 @@ class DownSample(nn.Module):
                                      ConvModule(in_ch, in_ch,
                                                 kernel=pool_kernel,
                                                 stride=pool_kernel,
-                                                activation=activation)
+                                                activation=activation))
         self.features.add_module(f'{conv_kernel}x{conv_kernel}conv',
                                  ConvModule(in_ch, out_ch,
                                             kernel=conv_kernel,
@@ -108,7 +108,7 @@ class Upsample(nn.Module):
                             ConvTransposeModule(in_ch,
                                                 in_ch,
                                                 kernel=pool_kernel,
-                                                stride=pool_kernel
+                                                stride=pool_kernel,
                                                 activation=activation),
                             ConvTransposeModule(in_ch,
                                                 out_ch,
