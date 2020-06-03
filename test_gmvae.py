@@ -9,6 +9,7 @@ from collections import defaultdict
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from torchsummary import summary
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
@@ -153,6 +154,7 @@ if __name__ == '__main__':
                   z_dim,
                   w_dim,
                   nargs)
+    summary(model, input_size=(batch_size, input_size, input_size))
     model.to(device)
     # GPU Parallelize
     if torch.cuda.is_available():
@@ -174,8 +176,6 @@ if __name__ == '__main__':
         nmis = checkpoint['nmis']
         times = checkpoint['times']
         print(f'load model from epoch {init_epoch}')
-
-    print(model)
 
     for epoch_idx in range(init_epoch, n_epoch):
         epoch = epoch_idx + 1
