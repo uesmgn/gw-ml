@@ -19,7 +19,7 @@ def conditional_kl(z_x, z_x_mean, z_x_var,
     # logp = −0.5 * { log(det(σ_x^2)) + (z − μ_x)^2 / σ_x^2 }
     # q(z|w,y=1)=N(μ_w,σ_w)
     # logq = −0.5 * { Σπlog(det(σ_w^2)) + Σπ(z − μ_w)^2 / σ_w^2 }
-    eps = 1e-6
+    eps = 1e-10
     logq = -0.5 * (torch.log(z_x_var + eps)
                    + torch.pow(z_x - z_x_mean, 2) / z_x_var).sum(1)
     K = y_wz.shape[-1]
@@ -32,16 +32,16 @@ def conditional_kl(z_x, z_x_mean, z_x_var,
 
 
 def w_prior_kl(w_mean, w_var):
-    eps = 1e-6
+    eps = 1e-10
     kl = 0.5 * (w_var - 1 - torch.log(w_var + eps) +
                 torch.pow(w_mean, 2)).sum(-1)
     return kl
 
 
-def y_prior_kl(y_wz, thres=100.):
-    eps = 1e-6
+def y_prior_kl(y_wz, thres=1.):
+    eps = 1e-10
     k = y_wz.shape[1]
-    # kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(1)
-    kl = (y_wz * (torch.log(y_wz + eps) + np.log(k))).sum(1)
+    kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(1)
+    # kl = (y_wz * (torch.log(y_wz + eps) + np.log(k))).sum(1)
     kl = torch.max(kl, torch.ones_like(kl)*thres)
     return kl
