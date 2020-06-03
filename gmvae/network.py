@@ -108,7 +108,7 @@ class Gaussian(nn.Module):
 class DownSample(nn.Module):
     def __init__(self, in_ch, out_ch,
                  pool_kernel=3,
-                 pooling='avg',
+                 pooling='max',
                  conv_kernel=1,
                  activation='ReLu'):
         super().__init__()
