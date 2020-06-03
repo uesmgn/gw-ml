@@ -40,7 +40,7 @@ class ConvTransposeModule(nn.Module):
             nn.ConvTranspose2d(in_ch, out_ch,
                                kernel_size=kernel,
                                stride=stride,
-                               padding=(kernel - stride) // 2)),
+                               padding=(kernel - stride) // 2),
             nn.BatchNorm2d(out_ch),
             ut.activation(activation)
         )
