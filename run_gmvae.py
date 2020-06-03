@@ -73,11 +73,11 @@ def get_loss(params, args):
     y_prior_kl = loss.y_prior_kl(y_wz, y_thres)
     total = rec_loss * rec_wei - conditional_kl * cond_wei \
             - w_prior_kl * w_wei - y_prior_kl * y_wei
-    return {'total_loss': total.sum(),
-            'rec_loss': rec_loss.sum(),
-            'conditional_kl': conditional_kl.sum(),
-            'w_prior_kl': w_prior_kl.sum(),
-            'y_prior_kl': y_prior_kl.sum() }
+    return total.sum(), {'total_loss': total.sum(),
+                         'rec_loss': rec_loss.sum(),
+                         'conditional_kl': conditional_kl.sum(),
+                         'w_prior_kl': w_prior_kl.sum(),
+                         'y_prior_kl': y_prior_kl.sum() }
 
 def update_loss(loss_dict, loss_latest):
     for k, v in loss_latest.items():
@@ -183,7 +183,7 @@ if __name__ == '__main__':
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         init_epoch = checkpoint['epoch']
-        losses = checkpoint['losses']
+        loss_cum = checkpoint['loss_cum']
         nmis = checkpoint['nmis']
         times = checkpoint['times']
         print(f'load model from epoch {init_epoch}')
@@ -194,7 +194,6 @@ if __name__ == '__main__':
         model.train()
         print(f'----- training at epoch {epoch}... -----')
         time_start = time.time()
-        loss_total = 0
         loss_dict = defaultdict(lambda: 0)
         n_samples = 0
         for batch_idx, (x, l) in enumerate(train_loader):
@@ -208,10 +207,10 @@ if __name__ == '__main__':
             n_samples += x.shape[0]
         for k, v in loss_dict.items():
             loss_dict[k] /= n_samples
-            losses[k].append([epoch, loss_total])
+            loss_cum[k].append([epoch, loss_total])
         time_elapse = time.time() - time_start
         times.append(time_elapse)
-        print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
+        print(f'train loss = {loss_dict['total_loss']:.3f} at epoch {epoch_idx+1}')
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(times).mean():.3f} sec")
 
@@ -300,7 +299,7 @@ if __name__ == '__main__':
         if epoch % save_itvl == 0:
             torch.save({
             'epoch': epoch,
-            'losses': losses,
+            'loss_cum': loss_cum,
             'nmis': nmis,
             'times': times,
             'model_state_dict': model.state_dict(),
