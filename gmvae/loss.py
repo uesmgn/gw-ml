@@ -41,7 +41,7 @@ def w_prior_kl(w_mean, w_var):
 def y_prior_kl(y_wz, thres=100.):
     eps = 1e-6
     k = y_wz.shape[1]
-    kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(1)
-    # kl = (y_wz * (torch.log(y_wz + eps) + np.log(k))).sum(1)
+    # kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(1)
+    kl = (y_wz * (torch.log(y_wz + eps) + np.log(k))).sum(1)
     kl = torch.max(kl, torch.ones_like(kl)*thres)
     return kl
