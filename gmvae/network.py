@@ -229,6 +229,7 @@ class GMVAE(nn.Module):
         dense_dim = nargs.get('dense_dim') or 1024
         activation = nargs.get('activation') or 'ReLU'
         drop_rate = nargs.get('drop_rate') or 0.5
+        pooling = nargs.get('pooling') or 'max'
 
         self.sigma = nargs.get('sigma') or 0.01
 
@@ -237,12 +238,15 @@ class GMVAE(nn.Module):
                        activation=activation),
             DownSample(bottle_ch, conv_ch[0],
                        pool_kernel=pool_kernels[0],
+                       pooling=pooling,
                        activation=activation),
             DownSample(conv_ch[0], conv_ch[1],
                        pool_kernel=pool_kernels[1],
+                       pooling=pooling,
                        activation=activation),
             DownSample(conv_ch[1], conv_ch[2],
                        pool_kernel=pool_kernels[2],
+                       pooling=pooling,
                        activation=activation),
             GAP(),
             DenseModule(conv_ch[2], z_dim * 2,
@@ -255,12 +259,15 @@ class GMVAE(nn.Module):
                        activation=activation),
             DownSample(bottle_ch, conv_ch[0],
                        pool_kernel=pool_kernels[0],
+                       pooling=pooling,
                        activation=activation),
             DownSample(conv_ch[0], conv_ch[1],
                        pool_kernel=pool_kernels[1],
+                       pooling=pooling,
                        activation=activation),
             DownSample(conv_ch[1], conv_ch[2],
                        pool_kernel=pool_kernels[2],
+                       pooling=pooling,
                        activation=activation),
             GAP(),
             DenseModule(conv_ch[2], w_dim * 2,
