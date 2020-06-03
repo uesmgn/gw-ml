@@ -213,12 +213,11 @@ if __name__ == '__main__':
         for k, v in loss_dict.items():
             loss_dict[k] /= n_samples
             loss_cum[k].append([epoch, loss_dict[k]])
-        if verbose:
-            loss_info = ', '.join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
-            print(f'{loss_total:.3f},', loss_info)
         time_elapse = time.time() - time_start
         times.append(time_elapse)
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
+        loss_info = ', '.join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
+        print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(times).mean():.3f} sec")
 
