@@ -255,10 +255,7 @@ class GMVAE(nn.Module):
         )
 
         self.x_z_graph = nn.Sequential(
-            DenseModule(z_dim, middle_dim,
-                        n_middle_layers=0,
-                        act_out=activation), # (batch_size, z_dim * 2)
-            cn.Reshape((conv_ch[-1], middle_size, middle_size)),
+            nn.Upsample(size=(conv_ch[-1], middle_size, middle_size)),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
                      activation=activation),
