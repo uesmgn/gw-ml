@@ -278,6 +278,7 @@ class GMVAE(nn.Module):
             DenseModule(w_dim, z_dim * 2,
                         n_middle_layers=0,
                         act_out=activation), # (batch_size, z_dim * 2)
+            cn.Reshape((z_dim * 2, 1)),
             nn.ConvTranspose1d(z_dim * 2, z_dim * 2,
                                kernel_size=y_dim),
             nn.BatchNorm1d(z_dim * 2),
