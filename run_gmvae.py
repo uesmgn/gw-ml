@@ -207,10 +207,10 @@ if __name__ == '__main__':
             n_samples += x.shape[0]
         for k, v in loss_dict.items():
             loss_dict[k] /= n_samples
-            loss_cum[k].append([epoch, loss_total])
+            loss_cum[k].append([epoch, v])
         time_elapse = time.time() - time_start
         times.append(time_elapse)
-        print(f'train loss = {loss_dict['total_loss']:.3f} at epoch {epoch_idx+1}')
+        print(f'train loss = {loss_dict["total_loss"]:.3f} at epoch {epoch_idx+1}')
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(times).mean():.3f} sec")
 
