@@ -50,6 +50,16 @@ class ConvTransposeModule(nn.Module):
         return x
 
 
+class GAP(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        x = F.avg_pool2d(x, kernel_size=x.shape[1])
+        x = x.view(x.shape[0], -1)
+        return x
+
+
 class Gaussian(nn.Module):
     def __init__(self, act_in='Tanh'):
         super().__init__()
@@ -206,8 +216,7 @@ class GMVAE_graph(nn.Module):
             DownSample(conv_ch[1], conv_ch[2],
                        pool_kernel=pool_kernels[2],
                        activation=activation),
-            nn.AvgPool2d(conv_ch[2], kernel_size=middle_dim),
-            nn.Flatten(),
+            GAP(),
             DenseModule(middle_dim, z_dim * 2,
                         n_middle_layers=0), # (batch_size, z_dim * 2)
             Gaussian()
@@ -225,8 +234,7 @@ class GMVAE_graph(nn.Module):
             DownSample(conv_ch[1], conv_ch[2],
                        pool_kernel=pool_kernels[2],
                        activation=activation),
-            nn.AvgPool2d(conv_ch[2], kernel_size=middle_dim),
-            nn.Flatten(),
+            GAP(),
             DenseModule(middle_dim, w_dim * 2,
                         n_middle_layers=0), # (batch_size, z_dim * 2)
             Gaussian()
