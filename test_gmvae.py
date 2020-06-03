@@ -189,9 +189,8 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             x_z = model(x)
-            params = model.module.params
-            total = get_loss(params, largs)
-            total.backward()
+            total = get_loss(model.module.params, largs)
+            total.backward(retain_graph=True)
             optimizer.step()
             loss_total += total.item()
             n_samples += x.shape[0]
