@@ -286,7 +286,7 @@ class GMVAE(nn.Module):
                                       act_out='Softmax')
 
         self.z_wy_graph = nn.Sequential(
-            DenseModule(w_dim, z_dim * 2,
+            DenseModule(w_dim+y_dim, z_dim * 2,
                         n_middle_layers=0,
                         act_out=activation), # (batch_size, z_dim * 2)
             cn.Reshape((z_dim * 2, 1)),
@@ -330,8 +330,9 @@ class GMVAE(nn.Module):
         w_x, w_x_mean, w_x_var = self.w_x_graph(x)
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
         # Decoder
-        z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(
-            w_x)  # (batch_size, z_dim, K)
+        # EDIT
+        # z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(w_x)  # (batch_size, z_dim, K)
+        z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(torch.cat((w_x, y_wz), 1))  # (batch_size, z_dim, K)
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
         # z_wy = z_wys.mean(-1)
