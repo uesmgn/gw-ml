@@ -261,7 +261,7 @@ class GMVAE(nn.Module):
             GlobalPool(pooling),
             DenseModule(conv_ch[2], z_dim * 2,
                         n_middle_layers=0,
-                        activation=activation),  # (batch_size, z_dim * 2)
+                        act_out=activation),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=z_dim * 2,
                      out_dim=z_dim)
         )
@@ -284,7 +284,7 @@ class GMVAE(nn.Module):
             GlobalPool(pooling),
             DenseModule(conv_ch[2], w_dim * 2,
                         n_middle_layers=0,
-                        activation=activation),  # (batch_size, z_dim * 2)
+                        act_out=activation),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=w_dim * 2,
                      out_dim=w_dim)
         )
