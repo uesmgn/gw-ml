@@ -79,15 +79,15 @@ class ConvTransposeModule(nn.Module):
 
 
 class GlobalPool(nn.Module):
-    def __init__(self, pooling):
+    def __init__(self, pooling='max'):
         super().__init__()
         self.pooling = pooling
 
     def forward(self, x):
-        if self.pooling is 'max':
-            x = F.max_pool2d(x, kernel_size=x.size()[2:])
-        elif self.pooling is 'avg':
+        if self.pooling is 'avg':
             x = F.avg_pool2d(x, kernel_size=x.size()[2:])
+        else:
+            x = F.max_pool2d(x, kernel_size=x.size()[2:])
         x = x.view(x.shape[0], -1)
         return x
 
