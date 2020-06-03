@@ -154,8 +154,8 @@ if __name__ == '__main__':
                   z_dim,
                   w_dim,
                   nargs)
-    summary(model, input_size=(batch_size, input_size, input_size))
     model.to(device)
+    summary(model, x_shape)
     # GPU Parallelize
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model)
