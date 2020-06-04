@@ -16,7 +16,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
 from gmvae.dataset import Dataset
-from gmvae.network import GMVAE
+from gmvae.network import VAE
 import gmvae.utils as ut
 from gmvae import loss
 
@@ -112,7 +112,7 @@ if __name__ == '__main__':
                                                   sample=sample,
                                                   min_cat=200)
     xlabels = np.array(train_set.get_labels()).astype(str)
-    ylabels = np.array(range(y_dim)).astype(str)
+
     train_loader = DataLoader(train_set,
                               batch_size=batch_size,
                               num_workers=num_workers,
