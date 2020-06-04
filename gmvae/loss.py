@@ -31,12 +31,12 @@ def conditional_kl(z_x, z_x_mean, z_x_var,
     return kl
 
 
-def w_prior_kl(w_mean, w_var):
+def gaussian_kl(mean, var):
     # input: μ_θ(w), (batch_size, w_dim)
     # input: σ_θ(w), (batch_size, w_dim)
     eps = 1e-10
-    kl = 0.5 * (w_var - 1 - torch.log(w_var + eps) +
-                torch.pow(w_mean, 2)).sum(-1)
+    kl = 0.5 * (var - 1 - torch.log(var + eps) +
+                torch.pow(mean, 2)).sum(-1)
     kl = kl.mean()
     return kl.mean()
 
