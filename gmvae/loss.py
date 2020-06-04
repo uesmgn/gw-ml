@@ -4,10 +4,11 @@ import numpy as np
 
 
 def reconstruction_loss(x, x_, sigma=1.):
+    # E_q(z|x)[p(x|z)] = -(loss)
     # Reconstruction loss
     # 1/2σ * Σ(x - x_)**2
     loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='mean')
-    return loss
+    return -loss
 
 
 def conditional_kl(z_x, z_x_mean, z_x_var,
@@ -26,7 +27,7 @@ def conditional_kl(z_x, z_x_mean, z_x_var,
     logp = -0.5 * (y_wz * torch.log(z_wy_vars + eps).sum(1)
                    + y_wz * (torch.pow(z_wy - z_wy_means, 2) / z_wy_vars).sum(1)).sum(1)
     kl = (logq - logp).mean()
-    return -kl
+    return kl
 
 
 def w_prior_kl(w_mean, w_var):
