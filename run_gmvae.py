@@ -147,8 +147,8 @@ if __name__ == '__main__':
     train_set, test_set = dataset.split_by_labels(['Helix', 'Scratchy'],
                                                   sample=sample,
                                                   min_cat=200)
-    xlabels = np.array(train_set.get_labels()).astype(str)
-    ylabels = np.array(range(y_dim)).astype(str)
+    xlabels = np.array(train_set.get_labels())
+    ylabels = np.array(range(y_dim))
     train_loader = DataLoader(train_set,
                               batch_size=batch_size,
                               num_workers=num_workers,
