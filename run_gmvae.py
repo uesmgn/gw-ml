@@ -75,7 +75,7 @@ def get_loss(params, args):
     gaussian_kl = loss.gaussian_kl(w_x_mean, w_x_var)
     # maximize y-prior kl divergence
     y_prior_kl = loss.y_prior_kl(y_wz, y_thres)
-    total = rec_loss + conditional_kl + w_prior_kl + y_prior_kl
+    total = rec_loss + conditional_kl + gaussian_kl + y_prior_kl
     return total, {'rec_loss': rec_loss,
                    'conditional_kl': conditional_kl,
                    'gaussian_kl': w_prior_kl,
