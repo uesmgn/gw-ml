@@ -33,7 +33,9 @@ def activation(type='ReLU'):
 
 def confution_matrix(xx, yy, xlabels=None, ylabels=None, normalize=True):
     xlabels = sorted(list(set(xx))) if xlabels is None else sorted(list(xlabels))
+    xlabels = [str(x) for x in xlabels]
     ylabels = sorted(list(set(yy))) if ylabels is None else sorted(list(ylabels))
+    ylabels = [str(y) for y in ylabels]
     cm = np.zeros([len(xlabels), len(ylabels)])
     for (x, y) in zip(xx, yy):
         cm[xlabels.index(x), ylabels.index(y)] += 1.
