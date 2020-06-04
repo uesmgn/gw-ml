@@ -72,13 +72,13 @@ def get_loss(params, args):
                                          z_wy_means, z_wy_vars,
                                          y_wz)
     # minimize w-prior kl divergence
-    w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_var)
+    gaussian_kl = loss.gaussian_kl(w_x_mean, w_x_var)
     # maximize y-prior kl divergence
     y_prior_kl = loss.y_prior_kl(y_wz, y_thres)
     total = rec_loss + conditional_kl + w_prior_kl + y_prior_kl
     return total, {'rec_loss': rec_loss,
                    'conditional_kl': conditional_kl,
-                   'w_prior_kl': w_prior_kl,
+                   'gaussian_kl': w_prior_kl,
                    'y_prior_kl': y_prior_kl }
 
 def update_loss(loss_dict, loss_latest):
