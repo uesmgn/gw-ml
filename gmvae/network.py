@@ -79,7 +79,7 @@ class ConvTransposeModule(nn.Module):
 
 
 class GlobalPool(nn.Module):
-    def __init__(self, pooling='max'):
+    def __init__(self, pooling='avg'):
         super().__init__()
         self.pooling = pooling
 
@@ -258,7 +258,7 @@ class GMVAE(nn.Module):
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
                        activation=activation),
-            GlobalPool(pooling),
+            GlobalPool(),
             DenseModule(conv_ch[2], z_dim * 2,
                         n_middle_layers=0,
                         act_out=activation),  # (batch_size, z_dim * 2)
@@ -281,7 +281,7 @@ class GMVAE(nn.Module):
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
                        activation=activation),
-            GlobalPool(pooling),
+            GlobalPool(),
             DenseModule(conv_ch[2], w_dim * 2,
                         n_middle_layers=0,
                         act_out=activation),  # (batch_size, z_dim * 2)
