@@ -78,7 +78,7 @@ def get_loss(params, args):
     total = rec_loss + conditional_kl + gaussian_kl + y_prior_kl
     return total, {'rec_loss': rec_loss,
                    'conditional_kl': conditional_kl,
-                   'gaussian_kl': w_prior_kl,
+                   'gaussian_kl': gaussian_kl,
                    'y_prior_kl': y_prior_kl }
 
 def update_loss(loss_dict, loss_latest):
