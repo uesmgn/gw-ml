@@ -51,4 +51,4 @@ def y_prior_kl(y_wz, thres=1.5):
     # output is E_q[KL]
     kl = kl.mean() # negative value minimize(kl)
     # kl = torch.max(kl, torch.ones_like(kl) * thres)
-    return kl
+    return -kl
