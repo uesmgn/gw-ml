@@ -4,10 +4,11 @@ import numpy as np
 
 
 def reconstruction_loss(x, x_, sigma=1.):
-    # E_q(z|x)[p(x|z)] = -(loss)
+    # E_q(z|x)[p(x|z)] = -(1/2σ^2*(x-x')^2)
     # Reconstruction loss
     # 1/2σ * Σ(x - x_)**2
-    loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='mean')
+    loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='none')
+    loss = loss.sum(-1).sum(-1).mean()
     return -loss
 
 
@@ -49,5 +50,5 @@ def y_prior_kl(y_wz, thres=1.5):
     kl = (pi * torch.log(y_wz / pi + eps)).sum(-1)
     # output is E_q[KL]
     kl = kl.mean() # negative value minimize(kl)
-    kl = torch.max(kl, torch.ones_like(kl) * thres)
+    # kl = torch.max(kl, torch.ones_like(kl) * thres)
     return kl
