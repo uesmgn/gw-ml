@@ -66,12 +66,12 @@ def get_loss(params, args):
     y_thres = args.get('y_thres') or 1.
 
     rec_loss = loss.reconstruction_loss(x, x_z, sigma)
-    conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_var,
+    conditional_kl = loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
                                          z_wy_means, z_wy_vars,
                                          y_wz)
-    w_prior_kl = loss.w_prior_kl(w_x_mean, w_x_var)
-    y_prior_kl = loss.y_prior_kl(y_wz, y_thres)
-    total = -(rec_loss - conditional_kl - w_prior_kl - y_prior_kl)
+    w_prior_kl = loss.w_prior_negative_kl(w_x_mean, w_x_var)
+    y_prior_kl = loss.y_prior_negative_kl(y_wz, y_thres)
+    total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
     return total, {'rec_loss': rec_loss,
                    'conditional_kl': conditional_kl,
                    'w_prior_kl': w_prior_kl,
