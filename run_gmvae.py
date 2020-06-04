@@ -71,7 +71,7 @@ def get_loss(params, args):
                                          y_wz)
     w_prior_kl = loss.w_prior_negative_kl(w_x_mean, w_x_var)
     y_prior_kl = loss.y_prior_negative_kl(y_wz, y_thres)
-    total = rec_loss - conditional_kl - w_prior_kl - y_prior_kl
+    total = rec_loss + conditional_kl + w_prior_kl + y_prior_kl
     return total, {'rec_loss': rec_loss,
                    'conditional_kl': conditional_kl,
                    'w_prior_kl': w_prior_kl,
