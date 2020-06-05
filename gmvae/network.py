@@ -125,11 +125,11 @@ class DownSample(nn.Module):
                  activation='ReLu'):
         super().__init__()
         self.features = nn.Sequential()
-        if pooling is 'avg':
+        if pooling in ('avg', 'AvgPool'):
             self.features.add_module(f'{pool_kernel}x{pool_kernel}AvgPool',
                                      nn.AvgPool2d(kernel_size=pool_kernel,
                                                   stride=pool_kernel))
-        elif pooling is 'max':
+        elif pooling in ('max', 'MaxPool'):
             self.features.add_module(f'{pool_kernel}x{pool_kernel}MaxPool',
                                      nn.MaxPool2d(kernel_size=pool_kernel,
                                                   stride=pool_kernel))
@@ -216,7 +216,7 @@ class DenseModule(nn.Module):
         return x
 
 
-class VAE(nn.Module):
+class VAE_F(nn.Module):
     def __init__(self,
                  x_shape,
                  z_dim,
@@ -303,7 +303,7 @@ class VAE(nn.Module):
             return x_z
 
 
-class VAE2(nn.Module):
+class VAE(nn.Module):
     def __init__(self,
                  x_shape,
                  z_dim,
@@ -332,14 +332,17 @@ class VAE2(nn.Module):
             DownSample(bottle_ch, conv_ch[0],
                        pool_kernel=pool_kernels[0],
                        pooling=pooling,
+                       conv_kernel=kernels[0],
                        activation=activation),
             DownSample(conv_ch[0], conv_ch[1],
                        pool_kernel=pool_kernels[1],
                        pooling=pooling,
+                       conv_kernel=kernels[1],
                        activation=activation),
             DownSample(conv_ch[1], conv_ch[2],
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
+                       conv_kernel=kernels[2],
                        activation=activation),
             GlobalPool(),
             DenseModule(conv_ch[2], z_dim * 2,
