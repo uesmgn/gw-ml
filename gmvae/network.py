@@ -152,13 +152,14 @@ class DownSample(nn.Module):
 class Upsample(nn.Module):
     def __init__(self, in_ch, out_ch,
                  pool_kernel=3,
+                 stride=3,
                  activation='ReLu'):
         super().__init__()
         self.features = nn.Sequential(
             ConvTransposeModule(in_ch,
                                 in_ch,
                                 kernel=pool_kernel,
-                                stride=pool_kernel,
+                                stride=stride,
                                 activation=activation),
             ConvTransposeModule(in_ch,
                                 out_ch,
@@ -232,6 +233,7 @@ class VAE_F(nn.Module):
         conv_ch = nargs.get('conv_channels') or [64, 128, 256]
         kernels = nargs.get('conv_kernels') or [3, 3, 3]
         pool_kernels = nargs.get('pool_kernels') or [3, 3, 3]
+        unpool_kernels = nargs.get('unpool_kernels') or [5, 5, 5]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
@@ -270,13 +272,16 @@ class VAE_F(nn.Module):
                         act_out=activation),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
             Upsample(conv_ch[-1], conv_ch[-2],
-                     pool_kernel=pool_kernels[-1],
+                     pool_kernel=unpool_kernels[-1],
+                     stride=pool_kernels[-1],
                      activation=activation),
             Upsample(conv_ch[-2], conv_ch[-3],
-                     pool_kernel=pool_kernels[-2],
+                     pool_kernel=unpool_kernels[-2],
+                     stride=pool_kernels[-2],
                      activation=activation),
             Upsample(conv_ch[-3], bottle_ch,
-                     pool_kernel=pool_kernels[-3],
+                     pool_kernel=unpool_kernels[-3],
+                     stride=pool_kernels[-3],
                      activation=activation),
             ConvTransposeModule(bottle_ch, in_ch,
                                 kernel=1,
@@ -319,6 +324,7 @@ class VAE(nn.Module):
         conv_ch = nargs.get('conv_channels') or [64, 128, 256]
         kernels = nargs.get('conv_kernels') or [3, 3, 3]
         pool_kernels = nargs.get('pool_kernels') or [3, 3, 3]
+        unpool_kernels = nargs.get('unpool_kernels') or [5, 5, 5]
         middle_size = nargs.get('middle_size') or 18
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
@@ -359,12 +365,15 @@ class VAE(nn.Module):
             nn.Upsample(scale_factor=middle_size),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
+                     stride=unpool_kernels[-1],
                      activation=activation),
             Upsample(conv_ch[-2], conv_ch[-3],
                      pool_kernel=pool_kernels[-2],
+                     stride=unpool_kernels[-2],
                      activation=activation),
             Upsample(conv_ch[-3], bottle_ch,
                      pool_kernel=pool_kernels[-3],
+                     stride=unpool_kernels[-3],
                      activation=activation),
             ConvTransposeModule(bottle_ch, in_ch,
                                 kernel=1,
