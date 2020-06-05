@@ -377,7 +377,7 @@ class VAE(nn.Module):
                      activation=activation),
             ConvTransposeModule(bottle_ch, in_ch,
                                 kernel=1,
-                                activation='Sigmoid'),
+                                activation='Sigmoid')
         )
 
         # weight initialization
@@ -437,14 +437,17 @@ class GMVAE(nn.Module):
             DownSample(bottle_ch, conv_ch[0],
                        pool_kernel=pool_kernels[0],
                        pooling=pooling,
+                       conv_kernel=kernels[0],
                        activation=activation),
             DownSample(conv_ch[0], conv_ch[1],
                        pool_kernel=pool_kernels[1],
                        pooling=pooling,
+                       conv_kernel=kernels[1],
                        activation=activation),
             DownSample(conv_ch[1], conv_ch[2],
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
+                       conv_kernel=kernels[2],
                        activation=activation),
             GlobalPool(),
             DenseModule(conv_ch[2], z_dim * 2,
@@ -459,14 +462,17 @@ class GMVAE(nn.Module):
             DownSample(bottle_ch, conv_ch[0],
                        pool_kernel=pool_kernels[0],
                        pooling=pooling,
+                       conv_kernel=kernels[0],
                        activation=activation),
             DownSample(conv_ch[0], conv_ch[1],
                        pool_kernel=pool_kernels[1],
                        pooling=pooling,
+                       conv_kernel=kernels[1],
                        activation=activation),
             DownSample(conv_ch[1], conv_ch[2],
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
+                       conv_kernel=kernels[2],
                        activation=activation),
             GlobalPool(),
             DenseModule(conv_ch[2], w_dim * 2,
@@ -501,16 +507,19 @@ class GMVAE(nn.Module):
             nn.Upsample(scale_factor=middle_size),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
+                     stride=unpool_kernels[-1],
                      activation=activation),
             Upsample(conv_ch[-2], conv_ch[-3],
                      pool_kernel=pool_kernels[-2],
+                     stride=unpool_kernels[-2],
                      activation=activation),
             Upsample(conv_ch[-3], bottle_ch,
                      pool_kernel=pool_kernels[-3],
+                     stride=unpool_kernels[-3],
                      activation=activation),
             ConvTransposeModule(bottle_ch, in_ch,
                                 kernel=1,
-                                activation='Sigmoid'),
+                                activation='Sigmoid')
         )
 
         # weight initialization
@@ -540,8 +549,8 @@ class GMVAE(nn.Module):
         z_wy_vars = torch.stack(z_wy_vars_stack, 2)
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
-        x_z_mean = self.x_z_graph(z_x) # EDIT
-        x_z = ut.reparameterize(x_z_mean, self.sigma)
+        x_z = self.x_z_graph(z_x) # EDIT
+        # x_z = ut.reparameterize(x_z_mean, self.sigma)
         if return_params:
             return {'x': x,
                     'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
