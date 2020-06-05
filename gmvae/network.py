@@ -254,19 +254,26 @@ class VAE(nn.Module):
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
                        activation=activation),
-            GlobalPool(),
-            DenseModule(conv_ch[2], z_dim * 2,
-                        n_middle_layers=0),  # (batch_size, z_dim * 2)
+            # GlobalPool(),
+            # DenseModule(conv_ch[2], z_dim * 2,
+            #             n_middle_layers=0),  # (batch_size, z_dim * 2)
+            nn.Flatten(),
+            DenseModule(middle_dim, z_dim * 2,
+                        n_middle_layers=0),
             Gaussian(in_dim=z_dim * 2,
                      out_dim=z_dim)
         )
 
         self.x_z_graph = nn.Sequential(
-            DenseModule(z_dim, conv_ch[-1],
+            # DenseModule(z_dim, conv_ch[-1],
+            #             n_middle_layers=0,
+            #             act_out=activation),
+            # cn.Reshape((conv_ch[-1], 1, 1)),
+            # nn.Upsample(scale_factor=middle_size),
+            DenseModule(z_dim, middle_dim,
                         n_middle_layers=0,
                         act_out=activation),
-            cn.Reshape((conv_ch[-1], 1, 1)),
-            nn.Upsample(scale_factor=middle_size),
+            cn.Reshape((conv_ch[-1], middle_size, middle_size)),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
                      activation=activation),
