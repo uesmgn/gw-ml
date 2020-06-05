@@ -527,9 +527,9 @@ class GMVAE(nn.Module):
 
     def forward(self, x, return_params=False):
         # Encoder
-        x = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
-        z_x, z_x_mean, z_x_var = self.z_x_graph(x) # (batch_size, 100*6*6) -> z_dim
-        w_x, w_x_mean, w_x_var = self.w_x_graph(x) # (batch_size, 100*6*6) -> w_dim
+        h = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
+        z_x, z_x_mean, z_x_var = self.z_x_graph(h) # (batch_size, 100*6*6) -> z_dim
+        w_x, w_x_mean, w_x_var = self.w_x_graph(h) # (batch_size, 100*6*6) -> w_dim
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1)) # z_dim+w_dim -> y_dim
         # Decoder
         z_wys_stack = []
