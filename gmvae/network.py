@@ -99,8 +99,8 @@ class Gaussian(nn.Module):
                  act_regur='Tanh'):
         super().__init__()
         self.dense = nn.Sequential(
-            nn.Linear(in_dim, out_dim * 2),
-            ut.activation(act_regur)
+            ut.activation(act_regur),
+            nn.Linear(in_dim, out_dim * 2)
         )
 
     def forward(self, x):
@@ -254,8 +254,7 @@ class VAE(nn.Module):
                        activation=activation),
             GlobalPool(),
             DenseModule(conv_ch[2], z_dim * 2,
-                        n_middle_layers=0,
-                        act_out=activation),  # (batch_size, z_dim * 2)
+                        n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=z_dim * 2,
                      out_dim=z_dim)
         )
@@ -348,8 +347,7 @@ class GMVAE(nn.Module):
                        activation=activation),
             GlobalPool(),
             DenseModule(conv_ch[2], z_dim * 2,
-                        n_middle_layers=0,
-                        act_out=activation),  # (batch_size, z_dim * 2)
+                        n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=z_dim * 2,
                      out_dim=z_dim)
         )
@@ -371,8 +369,7 @@ class GMVAE(nn.Module):
                        activation=activation),
             GlobalPool(),
             DenseModule(conv_ch[2], w_dim * 2,
-                        n_middle_layers=0,
-                        act_out=activation),  # (batch_size, z_dim * 2)
+                        n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=w_dim * 2,
                      out_dim=w_dim)
         )
@@ -388,8 +385,7 @@ class GMVAE(nn.Module):
         self.z_wy_graphs = nn.ModuleList([
             nn.Sequential(
                 DenseModule(w_dim, z_dim * 2,
-                            n_middle_layers=0,
-                            act_out=activation), # (batch_size, z_dim * 2)
+                            n_middle_layers=0), # (batch_size, z_dim * 2)
                 Gaussian(in_dim=z_dim * 2,
                          out_dim=z_dim)
             ) for _ in range(self.y_dim)
