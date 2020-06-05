@@ -473,7 +473,7 @@ class GMVAE(nn.Module):
         )
 
         self.w_x_graph = nn.Sequential(
-            DenseModule(middle_dim, z_dim * 2,
+            DenseModule(middle_dim, w_dim * 2,
                         n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=w_dim * 2,
                      out_dim=w_dim)
