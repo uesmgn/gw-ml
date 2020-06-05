@@ -34,7 +34,7 @@ def conditional_kl(z_x, z_x_mean, z_x_var,
     return kl
 
 
-def gaussian_kl(mean, var):
+def gaussian_negative_kl(mean, var):
     # input: μ_θ(w), (batch_size, w_dim)
     # input: σ_θ(w), (batch_size, w_dim)
     eps = 1e-10
