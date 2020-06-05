@@ -531,15 +531,15 @@ class GMVAE(nn.Module):
 
     def forward(self, x, return_params=False):
         # Encoder
-        x = self.zw_x_graph(x)
-        z_x, z_x_mean, z_x_var = self.z_x_graph(x)
-        w_x, w_x_mean, w_x_var = self.w_x_graph(x)
-        y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
+        x = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
+        z_x, z_x_mean, z_x_var = self.z_x_graph(x) # (batch_size, 100*6*6) -> z_dim
+        w_x, w_x_mean, w_x_var = self.w_x_graph(x) # (batch_size, 100*6*6) -> w_dim
+        y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1)) # z_dim+w_dim -> y_dim
         # Decoder
         z_wys_stack = []
         z_wy_means_stack = []
         z_wy_vars_stack = []
-        for graph in self.z_wy_graphs:
+        for graph in self.z_wy_graphs: 
             # (batch_size, z_dim)
             z_wy, z_wy_mean, z_wy_var = graph(w_x)
             z_wys_stack.append(z_wy)
