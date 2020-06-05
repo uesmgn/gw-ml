@@ -439,7 +439,7 @@ class GMVAE(nn.Module):
 
         self.sigma = nargs.get('sigma') or 0.01
 
-        self.z_x_graph = nn.Sequential(
+        self.zw_x_graph = nn.Sequential(
             ConvModule(in_ch, bottle_ch,
                        activation=activation),
             DownSample(bottle_ch, conv_ch[0],
@@ -462,7 +462,10 @@ class GMVAE(nn.Module):
                        pooling=pooling,
                        conv_kernel=kernels[3],
                        activation=activation),
-            nn.Flatten(),
+            nn.Flatten()
+        )
+
+        self.z_x_graph = nn.Sequential(
             DenseModule(middle_dim, z_dim * 2,
                         n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=z_dim * 2,
@@ -470,30 +473,7 @@ class GMVAE(nn.Module):
         )
 
         self.w_x_graph = nn.Sequential(
-            ConvModule(in_ch, bottle_ch,
-                       activation=activation),
-            DownSample(bottle_ch, conv_ch[0],
-                       pool_kernel=pool_kernels[0],
-                       pooling=pooling,
-                       conv_kernel=kernels[0],
-                       activation=activation),
-            DownSample(conv_ch[0], conv_ch[1],
-                       pool_kernel=pool_kernels[1],
-                       pooling=pooling,
-                       conv_kernel=kernels[1],
-                       activation=activation),
-            DownSample(conv_ch[1], conv_ch[2],
-                       pool_kernel=pool_kernels[2],
-                       pooling=pooling,
-                       conv_kernel=kernels[2],
-                       activation=activation),
-            DownSample(conv_ch[2], conv_ch[3],
-                       pool_kernel=pool_kernels[3],
-                       pooling=pooling,
-                       conv_kernel=kernels[3],
-                       activation=activation),
-            nn.Flatten(),
-            DenseModule(middle_dim, w_dim * 2,
+            DenseModule(middle_dim, z_dim * 2,
                         n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=w_dim * 2,
                      out_dim=w_dim)
@@ -551,6 +531,7 @@ class GMVAE(nn.Module):
 
     def forward(self, x, return_params=False):
         # Encoder
+        x = self.zw_x_graph(x)
         z_x, z_x_mean, z_x_var = self.z_x_graph(x)
         w_x, w_x_mean, w_x_var = self.w_x_graph(x)
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
