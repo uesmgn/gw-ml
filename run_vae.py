@@ -195,13 +195,19 @@ if __name__ == '__main__':
                 time_start = time.time()
                 z_x = torch.Tensor().to(device)
                 labels_true = []
-
-                for batch_idx, (x, l) in enumerate(train_loader):
+                n_samples = 0
+                loss_total = 0
+                for batch_idx, (x, l) in enumerate(test_loader):
                     x = x.to(device)
                     params = model(x, return_params=True)
+                    total, loss_latest = get_loss(params)
                     z_x = torch.cat((z_x, params['z_x']), 0)
                     labels_true += l
+                    loss_total += total.item()
+                    n_samples += 1
+                loss_total /= n_samples
                 time_elapse = time.time() - time_start
+                print(f'test loss = {loss_total:.3f} at epoch {epoch_idx+1}')
                 print(f"calc time = {time_elapse:.3f} sec")
 
                 # decompose...
