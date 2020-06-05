@@ -135,7 +135,8 @@ if __name__ == '__main__':
     model.to(device)
 
     model.eval()
-    summary(model, x_shape)
+    print(model)
+    # summary(model, x_shape)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     init_epoch = 0
