@@ -375,7 +375,7 @@ class VAE(nn.Module):
                      pool_kernel=pool_kernels[-2],
                      stride=unpool_kernels[-2],
                      activation=activation),
-            Upsample(conv_ch[-3], bottle_ch,
+            Upsample(conv_ch[-3], conv_ch[-4],
                      pool_kernel=pool_kernels[-3],
                      stride=unpool_kernels[-3],
                      activation=activation),
