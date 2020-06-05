@@ -96,7 +96,7 @@ class Gaussian(nn.Module):
     def __init__(self,
                  in_dim,
                  out_dim,
-                 act_regur=None):
+                 act_regur='Tanh'):
         super().__init__()
         self.features = nn.Sequential(
             nn.Linear(in_dim, out_dim * 2)
