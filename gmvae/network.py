@@ -320,12 +320,12 @@ class VAE(nn.Module):
         self.z_dim = z_dim
 
         nargs = nargs or dict()
-        bottle_ch = nargs.get('bottle_channel') or 32
-        conv_ch = nargs.get('conv_channels') or [64, 128, 256]
-        kernels = nargs.get('conv_kernels') or [3, 3, 3]
-        pool_kernels = nargs.get('pool_kernels') or [3, 3, 3]
-        unpool_kernels = nargs.get('unpool_kernels') or [5, 5, 5]
-        middle_size = nargs.get('middle_size') or 18
+        bottle_ch = nargs.get('bottle_channel') or 20
+        conv_ch = nargs.get('conv_channels') or [40, 60, 80, 100]
+        kernels = nargs.get('conv_kernels') or [3, 3, 3, 3]
+        pool_kernels = nargs.get('pool_kernels') or [3, 3, 3, 3]
+        unpool_kernels = nargs.get('unpool_kernels') or [3, 3, 3, 3]
+        middle_size = nargs.get('middle_size') or 6
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
         activation = nargs.get('activation') or 'ReLU'
@@ -350,19 +350,23 @@ class VAE(nn.Module):
                        pooling=pooling,
                        conv_kernel=kernels[2],
                        activation=activation),
-            GlobalPool(),
-            DenseModule(conv_ch[2], z_dim * 2,
+            DownSample(conv_ch[2], conv_ch[3],
+                       pool_kernel=pool_kernels[3],
+                       pooling=pooling,
+                       conv_kernel=kernels[3],
+                       activation=activation),
+            nn.Flatten(),
+            DenseModule(middle_dim, z_dim * 2,
                         n_middle_layers=0),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=z_dim * 2,
                      out_dim=z_dim)
         )
 
         self.x_z_graph = nn.Sequential(
-            DenseModule(z_dim, conv_ch[-1],
+            DenseModule(z_dim, middle_dim,
                         n_middle_layers=0,
                         act_out=activation),
-            cn.Reshape((conv_ch[-1], 1, 1)),
-            nn.Upsample(scale_factor=middle_size),
+            cn.Reshape((conv_ch[-1], middle_size, middle_size)),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
                      stride=unpool_kernels[-1],
@@ -374,6 +378,10 @@ class VAE(nn.Module):
             Upsample(conv_ch[-3], bottle_ch,
                      pool_kernel=pool_kernels[-3],
                      stride=unpool_kernels[-3],
+                     activation=activation),
+            Upsample(conv_ch[-4], bottle_ch,
+                     pool_kernel=pool_kernels[-4],
+                     stride=unpool_kernels[-4],
                      activation=activation),
             ConvTransposeModule(bottle_ch, in_ch,
                                 kernel=1,
