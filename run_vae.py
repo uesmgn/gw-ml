@@ -52,7 +52,7 @@ def get_loss(params):
     z_x = params['z_x']  # (batch_size, z_dim)
 
     # minimize reconstruction loss
-    rec_loss = loss.reconstruction_loss(x, x_z, sigma)
+    rec_loss = loss.reconstruction_loss(x, x_z, 'bce')
     gaussian_kl = loss.gaussian_kl(z_x_mean, z_x_var)
     total = rec_loss + gaussian_kl
     return total, {'rec_loss': rec_loss,
