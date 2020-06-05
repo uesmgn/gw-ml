@@ -254,9 +254,6 @@ class VAE(nn.Module):
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
                        activation=activation),
-            # GlobalPool(),
-            # DenseModule(conv_ch[2], z_dim * 2,
-            #             n_middle_layers=0),  # (batch_size, z_dim * 2)
             nn.Flatten(),
             DenseModule(middle_dim, z_dim * 2,
                         n_middle_layers=0),
@@ -265,15 +262,95 @@ class VAE(nn.Module):
         )
 
         self.x_z_graph = nn.Sequential(
-            # DenseModule(z_dim, conv_ch[-1],
-            #             n_middle_layers=0,
-            #             act_out=activation),
-            # cn.Reshape((conv_ch[-1], 1, 1)),
-            # nn.Upsample(scale_factor=middle_size),
             DenseModule(z_dim, middle_dim,
                         n_middle_layers=0,
                         act_out=activation),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
+            Upsample(conv_ch[-1], conv_ch[-2],
+                     pool_kernel=pool_kernels[-1],
+                     activation=activation),
+            Upsample(conv_ch[-2], conv_ch[-3],
+                     pool_kernel=pool_kernels[-2],
+                     activation=activation),
+            Upsample(conv_ch[-3], bottle_ch,
+                     pool_kernel=pool_kernels[-3],
+                     activation=activation),
+            ConvTransposeModule(bottle_ch, in_ch,
+                                kernel=1,
+                                activation='Sigmoid'),
+        )
+
+        # weight initialization
+        for m in self.modules():
+            if type(m) == nn.Linear or type(m) == nn.Conv2d or type(m) == nn.ConvTranspose2d:
+                nn.init.xavier_normal_(m.weight)
+                if m.bias.data is not None:
+                    nn.init.constant_(m.bias, 0)
+
+    def forward(self, x, return_params=False):
+        # Encoder
+        z_x, z_x_mean, z_x_var = self.z_x_graph(x)
+        # Decoder
+        x_z = self.x_z_graph(z_x) # EDIT
+        if return_params:
+            return {'x': x,
+                    'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
+                    'x_z': x_z}
+        else:
+            return x_z
+
+
+class VAE2(nn.Module):
+    def __init__(self,
+                 x_shape,
+                 z_dim,
+                 nargs=None):
+        super().__init__()
+        in_ch = x_shape[0]
+        self.in_width = x_shape[1]
+        self.in_height = x_shape[2]
+        self.z_dim = z_dim
+
+        nargs = nargs or dict()
+        bottle_ch = nargs.get('bottle_channel') or 32
+        conv_ch = nargs.get('conv_channels') or [64, 128, 256]
+        kernels = nargs.get('conv_kernels') or [3, 3, 3]
+        pool_kernels = nargs.get('pool_kernels') or [3, 3, 3]
+        middle_size = nargs.get('middle_size') or 18
+        middle_dim = conv_ch[-1] * middle_size * middle_size
+        dense_dim = nargs.get('dense_dim') or 1024
+        activation = nargs.get('activation') or 'ReLU'
+        drop_rate = nargs.get('drop_rate') or 0.5
+        pooling = nargs.get('pooling') or 'max'
+
+        self.z_x_graph = nn.Sequential(
+            ConvModule(in_ch, bottle_ch,
+                       activation=activation),
+            DownSample(bottle_ch, conv_ch[0],
+                       pool_kernel=pool_kernels[0],
+                       pooling=pooling,
+                       activation=activation),
+            DownSample(conv_ch[0], conv_ch[1],
+                       pool_kernel=pool_kernels[1],
+                       pooling=pooling,
+                       activation=activation),
+            DownSample(conv_ch[1], conv_ch[2],
+                       pool_kernel=pool_kernels[2],
+                       pooling=pooling,
+                       activation=activation),
+            GlobalPool(),
+            DenseModule(conv_ch[2], z_dim * 2,
+                        n_middle_layers=0),  # (batch_size, z_dim * 2)
+            Gaussian(in_dim=z_dim * 2,
+                     out_dim=z_dim)
+        )
+
+        self.x_z_graph = nn.Sequential(
+            DenseModule(z_dim, conv_ch[-1],
+                        n_middle_layers=0,
+                        act_out=activation),
+            cn.Reshape((conv_ch[-1], 1, 1)),
+            nn.Upsample(scale_factor=middle_size),
             Upsample(conv_ch[-1], conv_ch[-2],
                      pool_kernel=pool_kernels[-1],
                      activation=activation),
