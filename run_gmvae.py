@@ -68,18 +68,19 @@ def get_loss(params, args):
     # minimize reconstruction loss
     rec_loss = loss.reconstruction_loss(x, x_z, sigma)
     # minimize conditonal kl divergence
-    conditional_kl = loss.conditional_kl(z_x, z_x_mean, z_x_var,
+    conditional_negative_kl = loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
                                          z_wy_means, z_wy_vars,
                                          y_wz)
     # minimize w-prior kl divergence
     gaussian_negative_kl = loss.gaussian_negative_kl(w_x_mean, w_x_var)
     # maximize y-prior kl divergence
-    y_prior_kl = loss.y_prior_kl(y_wz, y_thres)
-    total = rec_loss - conditional_kl - gaussian_negative_kl - y_prior_kl
+    y_prior_negative_kl = loss.y_prior_negative_kl(y_wz, y_thres)
+    total = rec_loss - conditional_negative_kl \
+            - gaussian_negative_kl - y_prior_negative_kl
     return total, {'rec_loss': rec_loss,
-                   'conditional_kl': conditional_kl,
+                   'conditional_negative_kl': conditional_negative_kl,
                    'gaussian_negative_kl': gaussian_negative_kl,
-                   'y_prior_kl': y_prior_kl }
+                   'y_prior_negative_kl': y_prior_negative_kl }
 
 def update_loss(loss_dict, loss_latest):
     for k, v in loss_latest.items():
@@ -173,7 +174,8 @@ if __name__ == '__main__':
     model.to(device)
 
     model.eval()
-    summary(model, x_shape)
+    print(model)
+    # summary(model, x_shape)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     init_epoch = 0
