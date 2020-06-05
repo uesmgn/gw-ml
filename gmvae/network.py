@@ -96,15 +96,17 @@ class Gaussian(nn.Module):
     def __init__(self,
                  in_dim,
                  out_dim,
-                 act_regur='Tanh'):
+                 act_regur=None):
         super().__init__()
-        self.dense = nn.Sequential(
-            ut.activation(act_regur),
+        self.features = nn.Sequential(
             nn.Linear(in_dim, out_dim * 2)
         )
+        if act_regur is not None:
+            self.features.add_module('act_regur',
+                                     ut.activation(act_regur))
 
     def forward(self, x):
-        x = self.dense(x)
+        x = self.features(x)
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit) + 1e-8
         # if self.training:
