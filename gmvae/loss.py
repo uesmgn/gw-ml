@@ -8,10 +8,10 @@ def reconstruction_loss(x, x_, type='bce', sigma=1.):
     # Reconstruction loss
     # 1/2σ * Σ(x - x_)**2
     if type is 'bce':
-        loss = F.binary_cross_entropy(x_, x, reduction='sum')
+        loss = F.binary_cross_entropy(x_, x, reduction='mean')
     else:
         loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='sum')
-    loss /= x.shape[0]
+        loss /= x.shape[0]
     return loss
 
 
@@ -38,7 +38,7 @@ def gaussian_negative_kl(mean, var):
     # input: μ_θ(w), (batch_size, w_dim)
     # input: σ_θ(w), (batch_size, w_dim)
     eps = 1e-10
-    kl = 0.5 * (1 + torch.log(var + eps) -
+    kl = 0.5 * (1 + torch.log(var) -
                 torch.pow(mean, 2) - var).sum(-1)
     kl = kl.mean()
     return kl.mean()
