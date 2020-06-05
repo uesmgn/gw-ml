@@ -252,8 +252,8 @@ class VAE(nn.Module):
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
                        activation=activation),
-            nn.Flatten(),
-            DenseModule(middle_dim, z_dim * 2,
+            GlobalPool(),
+            DenseModule(conv_ch[2], z_dim * 2,
                         n_middle_layers=0,
                         act_out=activation),  # (batch_size, z_dim * 2)
             Gaussian(in_dim=z_dim * 2,
