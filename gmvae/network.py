@@ -10,7 +10,7 @@ class ConvModule(nn.Module):
     def __init__(self,
                  in_ch,
                  out_ch,
-                 kernel=3,
+                 kernel=1,
                  stride=1,
                  activation='ReLU',
                  dim=2):
@@ -46,7 +46,7 @@ class ConvTransposeModule(nn.Module):
     def __init__(self,
                  in_ch,
                  out_ch,
-                 kernel=3,
+                 kernel=1,
                  stride=1,
                  activation='ReLU',
                  dim=2):
@@ -119,29 +119,31 @@ class Gaussian(nn.Module):
 
 class DownSample(nn.Module):
     def __init__(self, in_ch, out_ch,
+                 kernel=3,
                  pool_kernel=3,
                  pooling='max',
-                 conv_kernel=1,
                  activation='ReLu'):
         super().__init__()
         self.features = nn.Sequential()
+        assert kernel >= pool_kernel
         if pooling in ('avg', 'AvgPool'):
-            self.features.add_module(f'{pool_kernel}x{pool_kernel}AvgPool',
-                                     nn.AvgPool2d(kernel_size=pool_kernel,
-                                                  stride=pool_kernel))
+            self.features.add_module(f'{kernel}x{kernel}AvgPool',
+                                     nn.AvgPool2d(kernel_size=kernel,
+                                                  stride=pool_kernel,
+                                                  padding=(kernel-pool_kernel) // 2))
         elif pooling in ('max', 'MaxPool'):
-            self.features.add_module(f'{pool_kernel}x{pool_kernel}MaxPool',
-                                     nn.MaxPool2d(kernel_size=pool_kernel,
-                                                  stride=pool_kernel))
+            self.features.add_module(f'{kernel}x{kernel}MaxPool',
+                                     nn.MaxPool2d(kernel_size=kernel,
+                                                  stride=pool_kernel,
+                                                  padding=(kernel-pool_kernel) // 2))
         else:
-            self.features.add_module(f'{pool_kernel}x{pool_kernel}conv',
+            self.features.add_module(f'{kernel}x{kernel}conv',
                                      ConvModule(in_ch, in_ch,
-                                                kernel=pool_kernel,
+                                                kernel=kernel,
                                                 stride=pool_kernel,
                                                 activation=activation))
-        self.features.add_module(f'{conv_kernel}x{conv_kernel}conv',
+        self.features.add_module(f'1x1conv',
                                  ConvModule(in_ch, out_ch,
-                                            kernel=conv_kernel,
                                             activation=activation))
 
     def forward(self, x):
@@ -151,19 +153,16 @@ class DownSample(nn.Module):
 
 class Upsample(nn.Module):
     def __init__(self, in_ch, out_ch,
-                 pool_kernel=3,
-                 stride=3,
+                 unpool_kernel=3,
                  activation='ReLu'):
         super().__init__()
         self.features = nn.Sequential(
             ConvTransposeModule(in_ch,
                                 in_ch,
-                                kernel=pool_kernel,
-                                stride=stride,
+                                kernel=unpool_kernel,
+                                stride=unpool_kernel,
                                 activation=activation),
-            ConvTransposeModule(in_ch,
-                                out_ch,
-                                kernel=1,
+            ConvTransposeModule(in_ch, out_ch,
                                 activation=activation))
 
     def forward(self, x):
@@ -322,7 +321,7 @@ class VAE(nn.Module):
         nargs = nargs or dict()
         bottle_ch = nargs.get('bottle_channel') or 20
         conv_ch = nargs.get('conv_channels') or [40, 60, 80, 100]
-        kernels = nargs.get('conv_kernels') or [3, 3, 3, 3]
+        kernels = nargs.get('conv_kernels') or [11, 5, 3, 3]
         pool_kernels = nargs.get('pool_kernels') or [3, 3, 3, 3]
         unpool_kernels = nargs.get('unpool_kernels') or [3, 3, 3, 3]
         middle_size = nargs.get('middle_size') or 6
@@ -336,9 +335,9 @@ class VAE(nn.Module):
             ConvModule(in_ch, bottle_ch,
                        activation=activation),
             DownSample(bottle_ch, conv_ch[0],
+                       kernel=kernels[0],
                        pool_kernel=pool_kernels[0],
                        pooling=pooling,
-                       conv_kernel=kernels[0],
                        activation=activation),
             DownSample(conv_ch[0], conv_ch[1],
                        pool_kernel=pool_kernels[1],
@@ -428,8 +427,9 @@ class GMVAE(nn.Module):
         nargs = nargs or dict()
         bottle_ch = nargs.get('bottle_channel') or 16
         conv_ch = nargs.get('conv_channels') or [32, 48, 64, 80]
-        kernels = nargs.get('conv_kernels') or [3, 3, 3, 3]
+        kernels = nargs.get('kernels') or [3, 3, 3, 3]
         pool_kernels = nargs.get('pool_kernels') or [3, 3, 3, 3]
+        unpool_kernels = nargs.get('unpool_kernels') or [3, 3, 3, 3]
         middle_size = nargs.get('middle_size') or 6
         middle_dim = conv_ch[-1] * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
@@ -443,24 +443,24 @@ class GMVAE(nn.Module):
             ConvModule(in_ch, bottle_ch,
                        activation=activation),
             DownSample(bottle_ch, conv_ch[0],
+                       kernel=kernels[0],
                        pool_kernel=pool_kernels[0],
                        pooling=pooling,
-                       conv_kernel=kernels[0],
                        activation=activation),
             DownSample(conv_ch[0], conv_ch[1],
+                       kernel=kernels[1],
                        pool_kernel=pool_kernels[1],
                        pooling=pooling,
-                       conv_kernel=kernels[1],
                        activation=activation),
             DownSample(conv_ch[1], conv_ch[2],
+                       kernel=kernels[2],
                        pool_kernel=pool_kernels[2],
                        pooling=pooling,
-                       conv_kernel=kernels[2],
                        activation=activation),
             DownSample(conv_ch[2], conv_ch[3],
+                       kernel=kernels[3],
                        pool_kernel=pool_kernels[3],
                        pooling=pooling,
-                       conv_kernel=kernels[3],
                        activation=activation),
             nn.Flatten()
         )
@@ -502,20 +502,16 @@ class GMVAE(nn.Module):
                         act_out=activation),
             cn.Reshape((conv_ch[-1], middle_size, middle_size)),
             Upsample(conv_ch[-1], conv_ch[-2],
-                     pool_kernel=pool_kernels[-1],
-                     stride=unpool_kernels[-1],
+                     unpool_kernel=unpool_kernels[-1],
                      activation=activation),
             Upsample(conv_ch[-2], conv_ch[-3],
-                     pool_kernel=pool_kernels[-2],
-                     stride=unpool_kernels[-2],
+                     unpool_kernel=unpool_kernels[-2],
                      activation=activation),
             Upsample(conv_ch[-3], conv_ch[-4],
-                     pool_kernel=pool_kernels[-3],
-                     stride=unpool_kernels[-3],
+                     unpool_kernel=unpool_kernels[-3],
                      activation=activation),
             Upsample(conv_ch[-4], bottle_ch,
-                     pool_kernel=pool_kernels[-4],
-                     stride=unpool_kernels[-4],
+                     unpool_kernel=unpool_kernels[-4],
                      activation=activation),
             ConvTransposeModule(bottle_ch, in_ch,
                                 kernel=1,
