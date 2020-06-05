@@ -66,7 +66,7 @@ def get_loss(params, args):
     y_thres = args.get('y_thres') or 1.
 
     # minimize reconstruction loss
-    rec_loss = loss.reconstruction_loss(x, x_z, sigma)
+    rec_loss = loss.reconstruction_loss(x, x_z, type='mse', sigma=sigma)
     # minimize conditonal kl divergence
     conditional_negative_kl = loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
                                          z_wy_means, z_wy_vars,
