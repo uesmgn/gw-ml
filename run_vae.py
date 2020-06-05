@@ -54,7 +54,7 @@ def get_loss(params):
     # minimize reconstruction loss
     rec_loss = loss.reconstruction_loss(x, x_z, 'bce')
     gaussian_kl = loss.gaussian_kl(z_x_mean, z_x_var)
-    total = rec_loss + gaussian_kl
+    total = rec_loss - gaussian_kl
     return total, {'rec_loss': rec_loss,
                    'gaussian_kl': gaussian_kl }
 
