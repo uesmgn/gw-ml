@@ -3,14 +3,15 @@ import torch.nn.functional as F
 import numpy as np
 
 
-def reconstruction_loss(x, x_, type='bce', sigma=1.):
-    # E_q(z|x)[p(x|z)] = -(1/2σ^2*(x-x')^2)
+def reconstruction_loss(x, x_):
     # Reconstruction loss
-    # 1/2σ * Σ(x - x_)**2
-    if type is 'bce':
-        loss = F.binary_cross_entropy(x_, x, reduction='sum')
-    else:
-        loss = 0.5 / sigma * F.mse_loss(x_, x, reduction='sum')
+    # https://arxiv.org/pdf/1312.6114.pdf -> C.1
+    # E_q[log p(x^(i)|z^(i))]=1/LΣ(log p(x_m^(i)|z_m^(i,l)))
+    # x, p ~ β(p, x)=p^x+(1-p)^(1-x)
+    # log p(x_m^(i)|z_m^(i,l) = log(p_i^x_i+(1-p_i)^(1-x_i))
+    #                         = x_i log(p_i)+(1-x_i) log(1-p_i)
+    weight = torch.ones_like(x)
+    loss = F.binary_cross_entropy(x_, x, weight=weight, reduction='sum')
     loss /= x.shape[0]
     return loss
 
