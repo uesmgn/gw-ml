@@ -206,7 +206,6 @@ if __name__ == '__main__':
         n_samples = 0
         loss_total = 0
         for batch_idx, (x, l) in enumerate(train_loader):
-            print(max(x), min(x))
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
