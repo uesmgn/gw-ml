@@ -48,7 +48,7 @@ class ConvTransposeModule(nn.Module):
                  out_ch,
                  kernel=1,
                  stride=1,
-                 activation='ReLU',
+                 activation=None,
                  dim=2):
         super().__init__()
 
@@ -70,8 +70,9 @@ class ConvTransposeModule(nn.Module):
                                                         padding=(kernel - stride) // 2))
             self.features.add_module('BatchNorm1d',
                                      nn.BatchNorm1d(out_ch))
-        self.features.add_module('activation',
-                                 ut.activation(activation))
+        if activation is not None:
+            self.features.add_module('activation',
+                                     ut.activation(activation))
 
     def forward(self, x):
         x = self.features(x)
@@ -515,7 +516,10 @@ class GMVAE(nn.Module):
                      activation=activation),
             ConvTransposeModule(bottle_ch, in_ch,
                                 kernel=1,
-                                activation='Sigmoid')
+                                activation=None),
+            nn.Flatten(),
+            nn.Softmax(dim=-1),
+            cn.Reshape(x_shape)
         )
 
         # weight initialization
