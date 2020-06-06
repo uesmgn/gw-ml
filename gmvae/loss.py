@@ -26,7 +26,7 @@ def conditional_negative_kl(z_x, z_x_mean, z_x_var,
     logq = -0.5 * (torch.log(z_x_var + eps).sum(1)
                   + (torch.pow(z_x - z_x_mean, 2) / z_x_var).sum(1))
     K = y_wz.shape[-1]
-    z_wy = z_x.repeat(1, K).view(z_x.shape[0], K, -1).transposed(1,2)  # (batch_size, z_dim, K)
+    z_wy = z_x.repeat(1, K).view(z_x.shape[0], K, -1).transpose(1,2)  # (batch_size, z_dim, K)
     logp = -0.5 * (y_wz * torch.log(z_wy_vars + eps).sum(1)
                    + y_wz * (torch.pow(z_wy - z_wy_means, 2) / z_wy_vars).sum(1)).sum(1)
     kl = (logq - logp).mean()
