@@ -59,7 +59,6 @@ def get_loss(params, args):
     z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
     z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
 
-    sigma = args.get('sigma') or 1.
     rec_wei = args.get('rec_wei') or 1.
     cond_wei = args.get('cond_wei') or 1.
     w_wei = args.get('w_wei') or 1.
@@ -93,7 +92,6 @@ if __name__ == '__main__':
 
     model_path = ini.get('net', 'model_path')
     load_model = args.load_model or False
-    sigma = ini.getfloat('net', 'sigma')
     verbose = args.verbose or False
 
     nargs = dict()
@@ -107,7 +105,6 @@ if __name__ == '__main__':
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
     nargs['pooling'] = ini.get('net', 'pooling')
-    nargs['sigma'] = sigma
     print(nargs)
 
     # test params
@@ -127,7 +124,6 @@ if __name__ == '__main__':
     sample = args.sample or False
 
     largs = dict()
-    largs['sigma'] = sigma
     largs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
     largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
     largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
@@ -281,15 +277,6 @@ if __name__ == '__main__':
                                                                  ylabels)).get()
 
                 # output plots
-                # ut.scatter(z_x_pca[:, 0], z_x_pca[:, 1],
-                #            labels_true, f'{outdir}/z_pca_{epoch}_t.png')
-                # ut.scatter(z_x_pca[:, 0], z_x_pca[:, 1],
-                #            labels_pred, f'{outdir}/z_pca_{epoch}_p.png')
-                # ut.scatter(w_x_pca[:, 0], w_x_pca[:, 1],
-                #            labels_true, f'{outdir}/w_pca_{epoch}_t.png')
-                # ut.scatter(w_x_pca[:, 0], w_x_pca[:, 1],
-                #            labels_pred, f'{outdir}/w_pca_{epoch}_p.png')
-
                 ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
                            labels_true, f'{outdir}/zx_tsne_{epoch}_t.png')
                 ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
