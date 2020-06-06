@@ -104,3 +104,17 @@ def cmshow(cm, index, columns, out, title=None):
     fig.tight_layout()
     fig.savefig(out)
     plt.close()
+
+def bar(xx, yy, out, reverse=False):
+    d = np.array(list(zip(xx, yy)))
+    d = np.array(sorted(d, key=lambda x: int(x[1]), reverse=reverse))
+    xx = d[:,0]
+    yy = d[:,1].astype(int)
+    x_position = np.arange(len(xx))
+    fig, ax = plt.subplots()
+    ax.bar(x_position, yy, tick_label=xx)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    fig.tight_layout()
+    fig.savefig(out)
+    plt.close()
