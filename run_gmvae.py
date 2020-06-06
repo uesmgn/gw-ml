@@ -12,6 +12,7 @@ from torchvision import transforms
 from torchsummary import summary
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
@@ -250,7 +251,7 @@ if __name__ == '__main__':
                     w_x = torch.cat((w_x, params['w_x']), 0)
                     p = params['y_pred']
                     labels_true += l
-                    labels_pred += list(p.cpu().numpy().astype(str))
+                    labels_pred += list(p.cpu().numpy().astype(int))
                 nmi = ut.nmi(labels_true, labels_pred)
                 nmis.append([epoch, nmi])
                 time_elapse = time.time() - time_start
@@ -302,6 +303,10 @@ if __name__ == '__main__':
                            labels_true, f'{outdir}/wx_tsne_{epoch}_t.png')
                 ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
                            labels_pred, f'{outdir}/wx_tsne_{epoch}_p.png')
+
+                counter = np.array(
+                    [[label, np.count_nonzero(labels_pred==label)] for label in ylabels])
+                ut.plt_bar(counter[:,0], counter[:,1], )
 
                 ut.cmshow(cm, cm_index, cm_columnns, f'{outdir}/cm_{epoch}.png')
 
