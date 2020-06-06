@@ -438,8 +438,6 @@ class GMVAE(nn.Module):
         drop_rate = nargs.get('drop_rate') or 0.5
         pooling = nargs.get('pooling') or 'max'
 
-        self.sigma = nargs.get('sigma') or 0.01
-
         self.zw_x_graph = nn.Sequential(
             ConvModule(in_ch, bottle_ch,
                        activation=activation),
@@ -547,7 +545,7 @@ class GMVAE(nn.Module):
         z_wy_vars = torch.stack(z_wy_vars_stack, 2)
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
-        x_z = self.x_z_graph(z_x) # EDIT
+        x_z = self.x_z_graph(z_x) 
         if return_params:
             return {'x': x,
                     'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
