@@ -516,10 +516,7 @@ class GMVAE(nn.Module):
                      activation=activation),
             ConvTransposeModule(bottle_ch, in_ch,
                                 kernel=1,
-                                activation=None),
-            nn.Flatten(),
-            nn.Softmax(dim=-1),
-            cn.Reshape(x_shape)
+                                activation='Sigmoid')
         )
 
         # weight initialization
