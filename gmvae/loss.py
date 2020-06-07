@@ -10,7 +10,8 @@ def reconstruction_loss(x, x_):
     # x, p ~ β(p, x)=p^x+(1-p)^(1-x)
     # log p(x_m^(i)|z_m^(i,l) = log(p_i^x_i+(1-p_i)^(1-x_i))
     #                         = x_i log(p_i)+(1-x_i) log(1-p_i)
-    loss = F.binary_cross_entropy(x_, x, reduction='mean')
+    loss = F.binary_cross_entropy(x_, x, reduction='sum')
+    loss /= x.shape[0]
     return loss
 
 
