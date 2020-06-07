@@ -42,14 +42,13 @@ def gaussian_negative_kl(mean, var):
     return -kl
 
 
-def y_prior_negative_kl(y_wz):
-    # input: p_θ(y=1|w,z), (batch_size, K)
-    # KL(p_θ(y=1|w,z)||p(y)) = Σ{p(y=1)log[p_θ(y=1|w,z)/p(y=1)]} < 0
+def y_prior_negative_kl(y_wz, pi=None):
     k = y_wz.shape[-1]
-    eps = 1e-10
-    pi = 1 / k
-    kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(-1)
-    # output is E_q[KL]
+    if torch.is_tensor(pi):
+        assert pi.shape[0] == k and pi.sum() == 1.
+        pi = pi.repeat(1, y_wz.shape[0]).view(y_wz.shape[0], -1)
+        kl = (pi*torch.log(pi/y_wz)).sum(-1)
+    else:
+        kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(-1)
     kl = kl.mean() # negative value minimize(kl)
-    # kl = torch.max(kl, torch.ones_like(kl) * thres)
     return -kl
