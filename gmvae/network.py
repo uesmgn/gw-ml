@@ -4,7 +4,7 @@ import torch.nn as nn
 from .utils import nn as cn
 from . import utils as ut
 import torch.nn.functional as F
-
+from . import loss
 
 class ConvModule(nn.Module):
     def __init__(self,
@@ -419,11 +419,6 @@ class GMVAE(nn.Module):
                  nargs=None):
         super().__init__()
         in_ch = x_shape[0]
-        self.in_width = x_shape[1]
-        self.in_height = x_shape[2]
-        self.y_dim = y_dim
-        self.z_dim = z_dim
-        self.w_dim = w_dim
 
         nargs = nargs or dict()
         bottle_ch = nargs.get('bottle_channel') or 16
@@ -437,6 +432,11 @@ class GMVAE(nn.Module):
         activation = nargs.get('activation') or 'ReLU'
         drop_rate = nargs.get('drop_rate') or 0.5
         pooling = nargs.get('pooling') or 'max'
+
+        self.rec_wei = nargs.get('rec_wei') or 1.
+        self.cond_wei = nargs.get('cond_wei') or 1.
+        self.w_wei = nargs.get('w_wei') or 1.
+        self.y_wei = nargs.get('y_wei') or 1.
 
         self.zw_x_graph = nn.Sequential(
             ConvModule(in_ch, bottle_ch,
@@ -491,7 +491,7 @@ class GMVAE(nn.Module):
                             n_middle_layers=0), # (batch_size, z_dim * 2)
                 Gaussian(in_dim=z_dim * 2,
                          out_dim=z_dim)
-            ) for _ in range(self.y_dim)
+            ) for _ in range(y_dim)
         ])
 
 
@@ -524,12 +524,69 @@ class GMVAE(nn.Module):
                 if m.bias.data is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def forward(self, x, return_params=False):
+    def forward(self, x, return_loss=False, L=1):
+        # Encoder
+        h = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
+        reconst_loss = 0
+        cond_kl = 0
+        gauss_kl = 0
+        y_kl = 0
+        x_z = torch.zeros_like(x)
+        for l in range(L):
+            # x -> Encoder -> Decoder -> x'
+            z_x, z_x_mean, z_x_var = self.z_x_graph(h) # (batch_size, 100*6*6) -> z_dim
+            w_x, w_x_mean, w_x_var = self.w_x_graph(h) # (batch_size, 100*6*6) -> w_dim
+            y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1)) # z_dim+w_dim -> y_dim
+            x_z_l = self.x_z_graph(z_x)
+            x_z += x_z_l
+
+            # Decoder
+            z_wys_stack = []
+            z_wy_means_stack = []
+            z_wy_vars_stack = []
+            for graph in self.z_wy_graphs:
+                # (batch_size, z_dim)
+                z_wy, z_wy_mean, z_wy_var = graph(w_x)
+                z_wys_stack.append(z_wy)
+                z_wy_means_stack.append(z_wy_mean)
+                z_wy_vars_stack.append(z_wy_var)
+            z_wys = torch.stack(z_wys_stack, 2)
+            z_wy_means = torch.stack(z_wy_means_stack, 2)
+            z_wy_vars = torch.stack(z_wy_vars_stack, 2)
+            _, p = torch.max(y_wz, dim=1)  # (batch_size, )
+            z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
+
+            if return_loss:
+                recon_loss += loss.reconstruction_loss(x, x_z_l)
+                cond_kl += loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
+                                                        z_wy_means, z_wy_vars, y_wz)
+                # maximize w-prior term
+                gauss_kl += loss.gaussian_negative_kl(w_x_mean, w_x_var)
+                # maximize y-prior term
+                y_kl += loss.y_prior_negative_kl(y_wz)
+
+        if return_loss:
+            reconst_loss /= L
+            cond_kl /= L
+            gauss_kl /= L
+            y_kl /= L
+            total = self.rec_wei * reconst_loss - self.cond_wei * cond_kl \
+                    - self.w_wei * gauss_kl - self.y_wei * y_kl
+            return total, {'reconstruction_loss': self.rec_wei * reconst_loss,
+                           'conditional_negative_kl': self.cond_wei * cond_kl,
+                           'gaussian_negative_kl': self.w_wei * gauss_kl,
+                           'y_prior_negative_kl': self.y_wei * y_kl }
+        else:
+            x_z /= L
+            return x_z
+
+    def sampling(self, x):
         # Encoder
         h = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
         z_x, z_x_mean, z_x_var = self.z_x_graph(h) # (batch_size, 100*6*6) -> z_dim
         w_x, w_x_mean, w_x_var = self.w_x_graph(h) # (batch_size, 100*6*6) -> w_dim
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1)) # z_dim+w_dim -> y_dim
+        x_z = self.x_z_graph(z_x)
         # Decoder
         z_wys_stack = []
         z_wy_means_stack = []
@@ -545,17 +602,11 @@ class GMVAE(nn.Module):
         z_wy_vars = torch.stack(z_wy_vars_stack, 2)
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
-        x_z = self.x_z_graph(z_x) 
-        if return_params:
-            return {'x': x,
-                    'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
-                    'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
-                    'y_wz': y_wz,
-                    'y_pred': p,
-                    'z_wy': z_wy,  # (batch_size, z_dim, K)
-                    'z_wys': z_wys,
-                    'z_wy_means': z_wy_means,
-                    'z_wy_vars': z_wy_vars,
-                    'x_z': x_z}
-        else:
-            return x_z
+
+        return {'x': x,
+                'z_x': z_x,
+                'w_x': w_x,
+                'y_wz': y_wz,
+                'y_pred': p,
+                'z_wy': z_wy,  # (batch_size, z_dim, K)
+                'x_z': x_z }
