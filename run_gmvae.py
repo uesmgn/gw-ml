@@ -178,6 +178,7 @@ if __name__ == '__main__':
     init_epoch = 0
     loss_cum = defaultdict(list)
     nmis = []
+    aris = []
     times = []
 
     if load_model and type(model_path) is str:
@@ -188,6 +189,7 @@ if __name__ == '__main__':
         init_epoch = checkpoint['epoch']
         loss_cum = checkpoint['loss_cum']
         nmis = checkpoint['nmis']
+        aris = checkpoint['aris']
         times = checkpoint['times']
         print(f'load model from epoch {init_epoch}')
 
@@ -248,11 +250,14 @@ if __name__ == '__main__':
                     labels_true += l
                     labels_pred += list(p.cpu().numpy().astype(int))
                 nmi = ut.nmi(labels_true, labels_pred)
+                ari = ut.ari(labels_true, labels_pred)
                 nmis.append([epoch, nmi])
+                aris.append([epoch, ari])
                 time_elapse = time.time() - time_start
                 print(f"calc time = {time_elapse:.3f} sec")
                 print(f'# classes predicted: {len(set(labels_pred))}')
                 print(f'NMI: {nmi:.3f}')
+                print(f'ARI: {ari:.3f}')
 
                 # decompose...
                 print(f'----- decomposing and plotting... -----')
@@ -298,7 +303,9 @@ if __name__ == '__main__':
 
                 for k, v in loss_cum.items():
                     ut.plot(v, f'{outdir}/{k}_{epoch}.png', 'epoch', k)
-                ut.plot(nmis, f'{outdir}/nmi_{epoch}.png', 'epoch', 'normalized mutual information',
+                ut.plot(nmis, f'{outdir}/nmi_{epoch}.png', 'epoch', 'adjusted mutual info score',
+                        ylim=(-0.1,1))
+                ut.plot(aris, f'{outdir}/ari_{epoch}.png', 'epoch', 'adjusted rand score',
                         ylim=(-0.1,1))
 
                 time_elapse = time.time() - time_start
