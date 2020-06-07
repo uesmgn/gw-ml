@@ -42,7 +42,7 @@ def gaussian_negative_kl(mean, var):
     return -kl
 
 
-def y_prior_negative_kl(y_wz, thres=1.5):
+def y_prior_negative_kl(y_wz):
     # input: p_θ(y=1|w,z), (batch_size, K)
     # KL(p_θ(y=1|w,z)||p(y)) = Σ{p(y=1)log[p_θ(y=1|w,z)/p(y=1)]} < 0
     k = y_wz.shape[-1]
