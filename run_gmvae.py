@@ -63,19 +63,18 @@ def get_loss(params, args):
     cond_wei = args.get('cond_wei') or 1.
     w_wei = args.get('w_wei') or 1.
     y_wei = args.get('y_wei') or 1.
-    y_thres = args.get('y_thres') or 1.
 
     # minimize reconstruction loss
     rec_loss = loss.reconstruction_loss(x, x_z)
     # maximize conditonal term
     conditional_negative_kl = loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
-                                         z_wy_means, z_wy_vars, y_wz)
+                                                           z_wy_means, z_wy_vars, y_wz)
     # maximize w-prior term
     gaussian_negative_kl = loss.gaussian_negative_kl(w_x_mean, w_x_var)
     # maximize y-prior term
     y_prior_negative_kl = loss.y_prior_negative_kl(y_wz, y_thres)
-    total = rec_loss - conditional_negative_kl \
-            - gaussian_negative_kl - y_prior_negative_kl
+    total = rec_wei * rec_loss - cond_wei * conditional_negative_kl \
+            - w_wei * gaussian_negative_kl - y_wei * y_prior_negative_kl
     return total, {'rec_loss': rec_loss,
                    'conditional_negative_kl': conditional_negative_kl,
                    'gaussian_negative_kl': gaussian_negative_kl,
@@ -128,7 +127,6 @@ if __name__ == '__main__':
     largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
     largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
     largs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
-    largs['y_thres'] = ini.getfloat('loss', 'y_thres') or 1000.
     print(largs)
 
     outdir = 'result_gmvae'
