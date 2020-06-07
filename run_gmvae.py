@@ -72,7 +72,7 @@ def get_loss(params, args):
     # maximize w-prior term
     gaussian_negative_kl = loss.gaussian_negative_kl(w_x_mean, w_x_var)
     # maximize y-prior term
-    y_prior_negative_kl = loss.y_prior_negative_kl(y_wz, y_thres)
+    y_prior_negative_kl = loss.y_prior_negative_kl(y_wz)
     total = rec_wei * rec_loss - cond_wei * conditional_negative_kl \
             - w_wei * gaussian_negative_kl - y_wei * y_prior_negative_kl
     return total, {'rec_loss': rec_loss,
