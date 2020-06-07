@@ -568,10 +568,10 @@ class GMVAE(nn.Module):
                 y_kl += loss.y_prior_negative_kl(y_wz)
 
         if return_loss:
-            reconst_loss /= L
-            cond_kl /= L
-            gauss_kl /= L
-            y_kl /= L
+            reconst_loss /= self.L
+            cond_kl /= self.L
+            gauss_kl /= self.L
+            y_kl /= self.L
             total = self.rec_wei * reconst_loss - self.cond_wei * cond_kl \
                     - self.w_wei * gauss_kl - self.y_wei * y_kl
             return total, {'reconstruction_loss': self.rec_wei * reconst_loss,
@@ -579,7 +579,7 @@ class GMVAE(nn.Module):
                            'gaussian_negative_kl': self.w_wei * gauss_kl,
                            'y_prior_negative_kl': self.y_wei * y_kl }
         else:
-            x_z /= L
+            x_z /= self.L
             return x_z
 
     def sampling(self, x):
