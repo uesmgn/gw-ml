@@ -489,9 +489,9 @@ class GMVAE(nn.Module):
 
         self.z_wy_graphs = nn.ModuleList([
             nn.Sequential(
-                DenseModule(w_dim, z_dim * 2,
+                DenseModule(w_dim, dense_dim,
                             n_middle_layers=0), # (batch_size, z_dim * 2)
-                Gaussian(in_dim=z_dim * 2,
+                Gaussian(in_dim=dense_dim,
                          out_dim=z_dim)
             ) for _ in range(y_dim)
         ])
