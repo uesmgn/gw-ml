@@ -62,6 +62,7 @@ def get_loss(params, args):
     cond_wei = args.get('cond_wei') or 1.
     w_wei = args.get('w_wei') or 1.
     y_wei = args.get('y_wei') or 1.
+    pi = args.get('pi')
 
     # minimize reconstruction loss
     rec_loss = loss.reconstruction_loss(x, x_z)
@@ -71,7 +72,7 @@ def get_loss(params, args):
     # maximize w-prior term
     gaussian_negative_kl = loss.gaussian_negative_kl(w_x_mean, w_x_var)
     # maximize y-prior term
-    y_prior_negative_kl = loss.y_prior_negative_kl(y_wz)
+    y_prior_negative_kl = loss.y_prior_negative_kl(y_wz, pi)
     total = rec_wei * rec_loss - cond_wei * conditional_negative_kl \
             - w_wei * gaussian_negative_kl - y_wei * y_prior_negative_kl
     return total
@@ -88,6 +89,15 @@ if __name__ == '__main__':
     model_path = ini.get('net', 'model_path')
     load_model = args.load_model or False
     verbose = args.verbose or False
+
+    # test params
+    x_shape = (1, 486, 486)
+    y_dim = args.y_dim or ini.getint('net', 'y_dim')
+    z_dim = args.z_dim or ini.getint('net', 'z_dim')
+    w_dim = args.w_dim or ini.getint('net', 'w_dim')
+    L = ini.getint('net', 'L')
+    pi = torch.nn.functional.gumbel_softmax(torch.ones(y_dim))
+    pi, _ = torch.sort(pi, descending=True)
 
     nargs = dict()
     nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
@@ -107,14 +117,8 @@ if __name__ == '__main__':
     largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
     largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
     largs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
+    largs['pi'] = pi
     print(largs)
-
-    # test params
-    x_shape = (1, 486, 486)
-    y_dim = args.y_dim or ini.getint('net', 'y_dim')
-    z_dim = args.z_dim or ini.getint('net', 'z_dim')
-    w_dim = args.w_dim or ini.getint('net', 'w_dim')
-    L = ini.getint('net', 'L')
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
