@@ -529,7 +529,7 @@ class GMVAE(nn.Module):
     def forward(self, x, return_loss=False):
         # Encoder
         h = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
-        reconst_loss = 0
+        recon_loss = 0
         cond_kl = 0
         gauss_kl = 0
         y_kl = 0
@@ -568,11 +568,11 @@ class GMVAE(nn.Module):
                 y_kl += loss.y_prior_negative_kl(y_wz)
 
         if return_loss:
-            reconst_loss /= self.L
+            recon_loss /= self.L
             cond_kl /= self.L
             gauss_kl /= self.L
             y_kl /= self.L
-            total = self.rec_wei * reconst_loss - self.cond_wei * cond_kl \
+            total = self.rec_wei * recon_loss - self.cond_wei * cond_kl \
                     - self.w_wei * gauss_kl - self.y_wei * y_kl
             return total, {'reconstruction_loss': self.rec_wei * reconst_loss,
                            'conditional_negative_kl': self.cond_wei * cond_kl,
