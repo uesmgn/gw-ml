@@ -73,6 +73,7 @@ if __name__ == '__main__':
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
     nargs['pooling'] = ini.get('net', 'pooling')
+    nargs['L'] = ini.get('net', 'L')
 
     nargs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
     nargs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
