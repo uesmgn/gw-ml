@@ -574,7 +574,7 @@ class GMVAE(nn.Module):
             y_kl /= self.L
             total = self.rec_wei * recon_loss - self.cond_wei * cond_kl \
                     - self.w_wei * gauss_kl - self.y_wei * y_kl
-            return total, {'reconstruction_loss': self.rec_wei * reconst_loss,
+            return total, {'reconstruction_loss': self.rec_wei * recon_loss,
                            'conditional_negative_kl': self.cond_wei * cond_kl,
                            'gaussian_negative_kl': self.w_wei * gauss_kl,
                            'y_prior_negative_kl': self.y_wei * y_kl }
