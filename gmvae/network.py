@@ -550,7 +550,7 @@ class GMVAE(nn.Module):
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
 
-        recon_loss = self.rec_wei * loss.reconstruction_loss(x, x_z_l)
+        recon_loss = self.rec_wei * loss.reconstruction_loss(x, x_z)
         cond_kl = self.cond_wei * loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
                                                 z_wy_means, z_wy_vars, y_wz)
         # maximize w-prior term
