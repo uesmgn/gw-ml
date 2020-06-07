@@ -532,8 +532,7 @@ class GMVAE(nn.Module):
         z_x, z_x_mean, z_x_var = self.z_x_graph(h) # (batch_size, 100*6*6) -> z_dim
         w_x, w_x_mean, w_x_var = self.w_x_graph(h) # (batch_size, 100*6*6) -> w_dim
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1)) # z_dim+w_dim -> y_dim
-        x_z_l = self.x_z_graph(z_x)
-        x_z += x_z_l
+        x_z = self.x_z_graph(z_x)
 
         # Decoder
         z_wys_stack = []
