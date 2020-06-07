@@ -292,7 +292,7 @@ if __name__ == '__main__':
 
                 counter = np.array(
                     [[label, np.count_nonzero(labels_pred==label)] for label in ylabels])
-                ut.bar(counter[:,0], counter[:,1], )
+                ut.bar(counter[:,0], counter[:,1], f'{outdir}/bar_{epoch}.png')
 
                 ut.cmshow(cm, cm_index, cm_columnns, f'{outdir}/cm_{epoch}.png')
 
