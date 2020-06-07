@@ -73,8 +73,10 @@ def get_loss(params, args):
     gaussian_negative_kl = loss.gaussian_negative_kl(w_x_mean, w_x_var)
     # maximize y-prior term
     y_prior_negative_kl = loss.y_prior_negative_kl(y_wz, pi)
-    total = rec_wei * rec_loss - cond_wei * conditional_negative_kl \
-            - w_wei * gaussian_negative_kl - y_wei * y_prior_negative_kl
+    total = torch.cat([rec_wei * rec_loss,
+                       cond_wei * -conditional_negative_kl,
+                       w_wei * -gaussian_negative_kl,
+                       y_wei * -y_prior_negative_kl])
     return total
 
 def update_loss(loss_dict, loss_latest):
@@ -210,6 +212,8 @@ if __name__ == '__main__':
                 params = model(x, return_params=True)
                 total_l = get_loss(params, largs)
                 total += total_l
+            print(total.shape)
+            exit()
             total = total.mean()
             total.backward()
             optimizer.step()
@@ -222,6 +226,8 @@ if __name__ == '__main__':
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(times).mean():.3f} sec")
+
+        ut.bar(list(range(y_dim)), pi.numpy(), f'{outdir}/pi.png', reverse=True)
 
         # eval...
         if epoch % eval_itvl == 0:
@@ -292,7 +298,7 @@ if __name__ == '__main__':
 
                 counter = np.array(
                     [[label, np.count_nonzero(labels_pred==label)] for label in ylabels])
-                ut.bar(counter[:,0], counter[:,1], f'{outdir}/bar_{epoch}.png')
+                ut.bar(counter[:,0], counter[:,1], f'{outdir}/bar_{epoch}.png', reverse=True)
 
                 ut.cmshow(cm, cm_index, cm_columnns, f'{outdir}/cm_{epoch}.png')
 
