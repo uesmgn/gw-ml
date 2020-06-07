@@ -49,6 +49,33 @@ parser.add_argument('-l', '--load_model', action='store_true',
                     help='load saved model')
 args = parser.parse_args()
 
+def get_loss(params, args):
+    x = params['x']
+    x_z = params['x_z']
+    w_x_mean, w_x_var = params['w_x_mean'], params['w_x_var']
+    y_wz = params['y_wz']
+    z_x = params['z_x']  # (batch_size, z_dim)
+    z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
+    z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
+
+    rec_wei = args.get('rec_wei') or 1.
+    cond_wei = args.get('cond_wei') or 1.
+    w_wei = args.get('w_wei') or 1.
+    y_wei = args.get('y_wei') or 1.
+
+    # minimize reconstruction loss
+    rec_loss = loss.reconstruction_loss(x, x_z)
+    # maximize conditonal term
+    conditional_negative_kl = loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
+                                                           z_wy_means, z_wy_vars, y_wz)
+    # maximize w-prior term
+    gaussian_negative_kl = loss.gaussian_negative_kl(w_x_mean, w_x_var)
+    # maximize y-prior term
+    y_prior_negative_kl = loss.y_prior_negative_kl(y_wz)
+    total = rec_wei * rec_loss - cond_wei * conditional_negative_kl \
+            - w_wei * gaussian_negative_kl - y_wei * y_prior_negative_kl
+    return total
+
 def update_loss(loss_dict, loss_latest):
     for k, v in loss_latest.items():
         loss_dict[k] += v.item()
@@ -73,13 +100,14 @@ if __name__ == '__main__':
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
     nargs['pooling'] = ini.get('net', 'pooling')
-
-    nargs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
-    nargs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
-    nargs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
-    nargs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
-
     print(nargs)
+
+    largs = dict()
+    largs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
+    largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
+    largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
+    largs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
+    print(largs)
 
     # test params
     x_shape = (1, 486, 486)
@@ -172,10 +200,13 @@ if __name__ == '__main__':
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
-            total = model(x, return_loss=True)
+            params = model(x, return_params=True)
+            total = get_loss(params, largs)
             for l in range(1, L):
-                total += model(x, return_loss=True)
-            total /= L
+                params = model(x, return_params=True)
+                total_l = get_loss(params, largs)
+                total += total_l
+            total = total.mean()
             total.backward()
             optimizer.step()
             loss_total += total.item()
