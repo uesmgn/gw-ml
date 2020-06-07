@@ -46,7 +46,5 @@ def y_prior_negative_kl(y_wz, pi=None, thres=0.):
     eps = 1e-10
     k = y_wz.shape[-1]
     kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(-1)
-    thres = torch.ones_like(kl) * thres
-    kl = torch.max(kl, thres)
     kl = kl.mean() # negative value minimize(kl)
     return -kl
