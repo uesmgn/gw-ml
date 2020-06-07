@@ -7,18 +7,17 @@ import re
 import pandas as pd
 
 
-DATASET_DIR = '../H1L1'
+def init_dataset():
 
-if __name__ == '__main__':
+    base_dir = os.path.dirname(os.path.abspath(__file__))
 
     ini = configparser.ConfigParser()
-    ini.read('./config.ini', 'utf-8')
+    ini.read(f'{base_dir}/config.ini', 'utf-8')
 
     dataset_dir = ini.get('dataset','dataset_dir')
     filter_str = ini.get('dataset','filter_str') or '*_1.0.png'
     subsets = json.loads(ini.get('dataset', 'subsets')) or ['test', 'train', 'validation']
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
     dataset_path = f'{base_dir}/{DATASET_DIR}'
     assert os.path.exists(dataset_path)
 
