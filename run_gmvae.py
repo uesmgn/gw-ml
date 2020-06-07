@@ -49,37 +49,6 @@ parser.add_argument('-l', '--load_model', action='store_true',
                     help='load saved model')
 args = parser.parse_args()
 
-
-def get_loss(params, args):
-    x = params['x']
-    x_z = params['x_z']
-    w_x_mean, w_x_var = params['w_x_mean'], params['w_x_var']
-    y_wz = params['y_wz']
-    z_x = params['z_x']  # (batch_size, z_dim)
-    z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
-    z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
-
-    rec_wei = args.get('rec_wei') or 1.
-    cond_wei = args.get('cond_wei') or 1.
-    w_wei = args.get('w_wei') or 1.
-    y_wei = args.get('y_wei') or 1.
-
-    # minimize reconstruction loss
-    rec_loss = loss.reconstruction_loss(x, x_z)
-    # maximize conditonal term
-    conditional_negative_kl = loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
-                                                           z_wy_means, z_wy_vars, y_wz)
-    # maximize w-prior term
-    gaussian_negative_kl = loss.gaussian_negative_kl(w_x_mean, w_x_var)
-    # maximize y-prior term
-    y_prior_negative_kl = loss.y_prior_negative_kl(y_wz)
-    total = rec_wei * rec_loss - cond_wei * conditional_negative_kl \
-            - w_wei * gaussian_negative_kl - y_wei * y_prior_negative_kl
-    return total, {'rec_loss': rec_loss,
-                   'conditional_negative_kl': conditional_negative_kl,
-                   'gaussian_negative_kl': gaussian_negative_kl,
-                   'y_prior_negative_kl': y_prior_negative_kl }
-
 def update_loss(loss_dict, loss_latest):
     for k, v in loss_latest.items():
         loss_dict[k] += v.item()
@@ -104,6 +73,12 @@ if __name__ == '__main__':
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
     nargs['pooling'] = ini.get('net', 'pooling')
+
+    nargs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
+    nargs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
+    nargs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
+    nargs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
+
     print(nargs)
 
     # test params
@@ -121,13 +96,6 @@ if __name__ == '__main__':
     save_itvl = ini.getint('conf', 'save_itvl')
     lr = args.lr or ini.getfloat('conf', 'lr')
     sample = args.sample or False
-
-    largs = dict()
-    largs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
-    largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
-    largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
-    largs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
-    print(largs)
 
     outdir = 'result_gmvae'
     if not os.path.exists(outdir):
@@ -203,8 +171,7 @@ if __name__ == '__main__':
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
-            params = model(x, return_params=True)
-            total, loss_latest = get_loss(params, largs)
+            total, loss_latest = model(x, return_loss=True)
             if verbose:
                 loss_info = ', '.join([f'{k}: {v.item():.3f}' for k, v in loss_latest.items()])
                 print(f'{total.item():.3f},', loss_info)
@@ -240,7 +207,7 @@ if __name__ == '__main__':
 
                 for batch_idx, (x, l) in enumerate(train_loader):
                     x = x.to(device)
-                    params = model(x, return_params=True)
+                    params = model.sampling(x)
                     z_x = torch.cat((z_x, params['z_x']), 0)
                     z_wy = torch.cat((z_wy, params['z_wy']), 0)
                     w_x = torch.cat((w_x, params['w_x']), 0)
