@@ -526,14 +526,16 @@ class GMVAE(nn.Module):
                 if m.bias.data is not None:
                     nn.init.constant_(m.bias, 0)
 
+
     def forward(self, x, return_loss=False):
+        recon_loss = torch.nn.Parameter(torch.zeros(1))
+        cond_kl = torch.nn.Parameter(torch.zeros(1))
+        gauss_kl = torch.nn.Parameter(torch.zeros(1))
+        y_kl = torch.nn.Parameter(torch.zeros(1))
+        x_z = torch.zeros_like(x)
+
         # Encoder
         h = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
-        recon_loss = 0
-        cond_kl = 0
-        gauss_kl = 0
-        y_kl = 0
-        x_z = torch.zeros_like(x)
         for l in range(self.L):
             # x -> Encoder -> Decoder -> x'
             z_x, z_x_mean, z_x_var = self.z_x_graph(h) # (batch_size, 100*6*6) -> z_dim
@@ -558,28 +560,27 @@ class GMVAE(nn.Module):
             _, p = torch.max(y_wz, dim=1)  # (batch_size, )
             z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
 
-            if return_loss:
-                recon_loss += loss.reconstruction_loss(x, x_z_l)
-                cond_kl += loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
-                                                        z_wy_means, z_wy_vars, y_wz)
-                # maximize w-prior term
-                gauss_kl += loss.gaussian_negative_kl(w_x_mean, w_x_var)
-                # maximize y-prior term
-                y_kl += loss.y_prior_negative_kl(y_wz)
+            recon_loss += loss.reconstruction_loss(x, x_z_l)
+            cond_kl += loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
+                                                    z_wy_means, z_wy_vars, y_wz)
+            # maximize w-prior term
+            gauss_kl += loss.gaussian_negative_kl(w_x_mean, w_x_var)
+            # maximize y-prior term
+            y_kl += loss.y_prior_negative_kl(y_wz)
 
+        recon_loss /= self.L
+        cond_kl /= self.L
+        gauss_kl /= self.L
+        y_kl /= self.L
+        x_z /= self.L
+        total = self.rec_wei * recon_loss - self.cond_wei * cond_kl \
+                - self.w_wei * gauss_kl - self.y_wei * y_kl
         if return_loss:
-            recon_loss /= self.L
-            cond_kl /= self.L
-            gauss_kl /= self.L
-            y_kl /= self.L
-            total = self.rec_wei * recon_loss - self.cond_wei * cond_kl \
-                    - self.w_wei * gauss_kl - self.y_wei * y_kl
             return total, {'reconstruction_loss': self.rec_wei * recon_loss,
                            'conditional_negative_kl': self.cond_wei * cond_kl,
                            'gaussian_negative_kl': self.w_wei * gauss_kl,
                            'y_prior_negative_kl': self.y_wei * y_kl }
         else:
-            x_z /= self.L
             return x_z
 
     def sampling(self, x):
