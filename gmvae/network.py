@@ -530,6 +530,12 @@ class GMVAE(nn.Module):
 
 
     def forward(self, x, return_params=False):
+        if self.training:
+            return self.fit_train(x, return_params)
+        else:
+            return self.sampling(x, return_params)
+
+    def fit_train(self, x, return_params=False):
         # Encoder
         h = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
         # x -> Encoder -> Decoder -> x'
@@ -567,7 +573,7 @@ class GMVAE(nn.Module):
         else:
             return x_z
 
-    def sampling(self, x):
+    def sampling(self, x, return_params=False):
         # Encoder
         h = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
         z_x, z_x_mean, z_x_var = self.z_x_graph(h) # (batch_size, 100*6*6) -> z_dim
@@ -590,10 +596,13 @@ class GMVAE(nn.Module):
         _, p = torch.max(y_wz, dim=1)  # (batch_size, )
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]  # (batch_size, z_dim)
 
-        return {'x': x,
-                'z_x': z_x,
-                'w_x': w_x,
-                'y_wz': y_wz,
-                'y_pred': p,
-                'z_wy': z_wy,  # (batch_size, z_dim, K)
-                'x_z': x_z }
+        if return_params:
+            return {'x': x,
+                    'z_x': z_x,
+                    'w_x': w_x,
+                    'y_wz': y_wz,
+                    'y_pred': p,
+                    'z_wy': z_wy,  # (batch_size, z_dim, K)
+                    'x_z': x_z }
+        else:
+            return x_z
