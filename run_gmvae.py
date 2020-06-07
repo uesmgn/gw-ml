@@ -73,7 +73,6 @@ if __name__ == '__main__':
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
     nargs['pooling'] = ini.get('net', 'pooling')
-    nargs['L'] = ini.getint('net', 'L')
 
     nargs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
     nargs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
@@ -87,6 +86,7 @@ if __name__ == '__main__':
     y_dim = args.y_dim or ini.getint('net', 'y_dim')
     z_dim = args.z_dim or ini.getint('net', 'z_dim')
     w_dim = args.w_dim or ini.getint('net', 'w_dim')
+    L = ini.getint('net', 'L')
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
@@ -172,25 +172,19 @@ if __name__ == '__main__':
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
-            total, loss_latest = model(x, return_loss=True)
-            if verbose:
-                loss_info = ', '.join([f'{k}: {v.item():.3f}' for k, v in loss_latest.items()])
-                print(f'{total.item():.3f},', loss_info)
+            total = model(x, return_loss=True)
+            for l in range(1, L):
+                total += model(x, return_loss=True)
+            total /= L
             total.backward()
             optimizer.step()
             loss_total += total.item()
-            update_loss(loss_dict, loss_latest)
             n_samples += 1
         loss_total /= n_samples
         loss_cum['total_loss'].append([epoch, loss_total])
-        for k, v in loss_dict.items():
-            loss_dict[k] /= n_samples
-            loss_cum[k].append([epoch, loss_dict[k]])
         time_elapse = time.time() - time_start
         times.append(time_elapse)
         print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
-        loss_info = ', '.join([f'{k}: {v:.3f}' for k, v in loss_dict.items()])
-        print(loss_info)
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(times).mean():.3f} sec")
 
