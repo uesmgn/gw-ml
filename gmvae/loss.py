@@ -15,7 +15,7 @@ def reconstruction_loss(x, x_):
 
 
 def conditional_negative_kl(z_x, z_x_mean, z_x_var,
-                   z_wy_means, z_wy_vars, y_wz):
+                            z_wy_means, z_wy_vars, y_wz):
     # Conditional loss
     # q(z|x)=N(μ_x,σ_x)
     # logp = −0.5 * { log(det(σ_x^2)) + (z − μ_x)^2 / σ_x^2 }
@@ -36,10 +36,9 @@ def gaussian_negative_kl(mean, var):
     # input: μ_θ(w), (batch_size, w_dim)
     # input: σ_θ(w), (batch_size, w_dim)
     eps = 1e-10
-    kl = 0.5 * (1 + torch.log(var) -
-                torch.pow(mean, 2) - var).sum(-1)
+    kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).sum(-1)
     kl = kl.mean()
-    return kl
+    return -kl
 
 
 def y_prior_negative_kl(y_wz, thres=1.5):
@@ -48,8 +47,8 @@ def y_prior_negative_kl(y_wz, thres=1.5):
     k = y_wz.shape[-1]
     eps = 1e-10
     pi = 1 / k
-    kl = (pi * torch.log(y_wz / pi + eps)).sum(-1)
+    kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(-1)
     # output is E_q[KL]
     kl = kl.mean() # negative value minimize(kl)
     # kl = torch.max(kl, torch.ones_like(kl) * thres)
-    return kl
+    return -kl
