@@ -1,91 +1,145 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
+import torch.nn.functional as F
+
+
+def get_activation(activation='Relu'):
+    if activation in ('Sigmoid', 'sigmoid'):
+        return nn.Sigmoid()
+    elif activation in ('Tanh', 'tanh'):
+        return nn.Tanh()
+    elif activation in ('ELU', 'elu'):
+        return nn.ELU()
+    else:
+        return nn.ReLU(inplace=True)
 
 
 class ConvModule(nn.Module):
-
-    def __init__(self, in_channel, out_channel,
-                 kernel=3, activation='ReLu'):
+    def __init__(self, in_channel, out_channel=None,
+                 kernel_size=3, stride=1, activation='ReLu'):
         super().__init__()
+        out_channel = out_channel or in_channel
         self.conv = nn.Conv2d(in_channel,
                               out_channel,
-                              kernel_size=kernel,
-                              stride=1,
-                              padding=(kernel-1)//2)
+                              kernel_size=kernel_size,
+                              stride=stride,
+                              padding=(kernel_size - stride) // 2)
         self.bn = nn.BatchNorm2d(out_channel)
-        if activation == 'Sigmoid':
-            self.activation = nn.Sigmoid()
-        else:
-            self.activation = nn.ReLU(inplace=True)
+        self.activation = get_activation(activation)
 
     def forward(self, x):
         x = self.activation(self.bn(self.conv(x)))
         return x
 
-# Flatten layer
-class Flatten(nn.Module):
-  def forward(self, x):
-    return x.view(x.size(0), -1)
 
-# Reshape layer
+class ConvtModule(nn.Module):
+    def __init__(self, in_channel, out_channel=None,
+                 kernel_size=3, stride=1, activation='ReLu'):
+        super().__init__()
+        out_channel = out_channel or in_channel
+        self.convt = nn.ConvTranspose2d(
+            in_channel, out_channel,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=(kernel_size - stride) // 2)
+        self.bn = nn.BatchNorm2d(out_channel)
+        self.activation = get_activation(activation)
+
+    def forward(self, x):
+        x = self.activation(self.bn(self.convt(x)))
+        return x
+
+
+class DownSample(nn.Module):
+    def __init__(self, in_channel, out_channel,
+                 kernel_size=3, stride=3, activation='ReLu'):
+        super().__init__()
+        self.maxpool = nn.MaxPool2d(kernel_size=kernel_size,
+                                    stride=stride,
+                                    padding=(kernel_size - stride) // 2)
+        self.conv = ConvModule(in_channel,
+                               out_channel,
+                               kernel_size=1,
+                               stride=1,
+                               activation=activation)
+
+    def forward(self, x):
+        x = self.conv(self.maxpool(x))
+        return x
+
+
+class Upsample(nn.Module):
+    def __init__(self, in_channel, out_channel,
+                 kernel_size=3, stride=3, activation='ReLu'):
+        super().__init__()
+        self.convt = ConvtModule(in_channel,
+                                 out_channel,
+                                 kernel_size=kernel_size,
+                                 stride=stride,
+                                 activation=activation)
+
+    def forward(self, x):
+        x = self.convt(x)
+        return x
+
+
 class Reshape(nn.Module):
-  def __init__(self, outer_shape):
-    super(Reshape, self).__init__()
-    self.outer_shape = outer_shape
-  def forward(self, x):
-    return x.view(x.size(0), *self.outer_shape)
+    def __init__(self, outer_shape):
+        super().__init__()
+        self.outer_shape = outer_shape
 
-# Sample from the Gumbel-Softmax distribution and optionally discretize.
-class GumbelSoftmax(nn.Module):
-
-    def __init__(self, f_dim, c_dim):
-        super(GumbelSoftmax, self).__init__()
-        # p(c|f)
-        self.logits = nn.Linear(f_dim, c_dim)
-        self.f_dim = f_dim
-        self.c_dim = c_dim
-
-    def _sample_gumbel(self, shape, eps=1e-20, is_cuda=False):
-        u = torch.rand(shape)
-        if is_cuda:
-            u = u.cuda()
-        return -torch.log(-torch.log(u + eps) + eps)
-
-    def _gumbel_softmax_sample(self, logits, temperature):
-        y = logits + self._sample_gumbel(logits.size(), is_cuda=logits.is_cuda)
-        return F.softmax(y / temperature, dim=-1)
-
-    def gumbel_softmax(self, logits, temperature):
-        y = self._gumbel_softmax_sample(logits, temperature)
-        return y
-
-    def forward(self, x, temperature=1.0):
-        logits = self.logits(x).view(-1, self.c_dim)
-        prob = F.softmax(logits, dim=-1)
-        y = self.gumbel_softmax(logits, temperature)
-        return logits, prob, y
+    def forward(self, x):
+        return x.view(x.size(0), *self.outer_shape)
 
 
 class Gaussian(nn.Module):
-    def __init__(self, in_dim, z_dim):
-        super(Gaussian, self).__init__()
-        # make ``z_dim``-D means and vars of ``z_dim``-D gaussian distribution
-        # from ``in_dim``-D features
-        self.mu = nn.Linear(in_dim, z_dim)
-        self.var = nn.Linear(in_dim, z_dim)
+    def __init__(self, in_dim, z_dim,
+                 middle_dim=None,
+                 activation='ReLu'):
+        super().__init__()
+        middle_dim = middle_dim or z_dim
+        self.h = nn.Sequential(
+            nn.Linear(in_dim, middle_dim),
+            get_activation(activation=activation)
+        )
+        self.mu = nn.Linear(middle_dim, z_dim)
+        self.logvar = nn.Linear(middle_dim, z_dim)
 
-    def reparameterize(self, mu, var):
-        # reparameterize trick:
-        # sample ``z`` from N(``mu``, ``var``) differentiable
-        std = torch.sqrt(var + 1e-10)
-        noise = torch.randn_like(std)
-        z = mu + noise * std
-        return z
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        x = mu + eps * std
+        return x
 
     def forward(self, x):
-        mu = self.mu(x)
-        # var is non-zero
-        var = F.softplus(self.var(x))
-        z = self.reparameterize(mu, var)
-        return mu, var, z
+        h = self.h(x)
+        z_mu = self.mu(h)
+        z_logvar = self.logvar(h)
+        z = self.reparameterize(z_mu, z_logvar)
+        return z, z_mu, z_logvar
+
+
+class GumbelSoftmax(nn.Module):
+
+    eps = 1e-8
+
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.logits = nn.Sequential(
+            nn.Linear(in_dim, out_dim),
+            nn.Flatten()
+        )
+
+    def gumbel_softmax(self, logits, temp):
+        u = torch.rand(logits.size())
+        if logits.is_cuda:
+            u = u.to(logits.device)
+        g = -torch.log(-torch.log(u + self.eps) + self.eps)
+        y = logits + g
+        return F.softmax(y / temp, dim=-1)
+
+    def forward(self, x, temp=1.0):
+        logits = self.logits(x)
+        prob = F.softmax(logits, dim=-1)
+        y = self.gumbel_softmax(logits, temp)
+        return logits, prob, y

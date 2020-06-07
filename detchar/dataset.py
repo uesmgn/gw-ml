@@ -1,5 +1,3 @@
-import torch
-from torch import nn
 from torch.utils import data
 from PIL import Image
 import pandas as pd
@@ -25,30 +23,42 @@ class Dataset(data.Dataset):
         labels = self.df.iloc[:, 0].unique().astype(dtype)
         return sorted(labels)
 
-    def split_by_labels(self, new_labels, n_cat=200):
+    def split_by_labels(self, new_labels, n_cat=None, min_cat=200):
         df = self.df
         columns = self.df.columns
 
         old_df = df[~df['label'].isin(new_labels)]
         old_labels = old_df['label'].unique()
         old_dict = {c: len(old_df[old_df['label'] == c]) for c in old_labels}
-        old_labels = [k for k, v in old_dict.items() if v >= n_cat]
+        old_labels = [k for k, v in old_dict.items() if v >= min_cat]
 
         old_df_ = pd.DataFrame(columns=columns)
-        for c in old_labels:
-            old_df_ = old_df_.append(
-                old_df[old_df['label'] == c].sample(n=n_cat, random_state=123)
-            )
+        if n_cat:
+            for c in old_labels:
+                old_df_ = old_df_.append(
+                    old_df[old_df['label'] == c].sample(n=n_cat, random_state=123)
+                )
+        else:
+            for c in old_labels:
+                old_df_ = old_df_.append(
+                    old_df[old_df['label'] == c]
+                )
         print(f"# of old classes: {len(old_labels)}")
         print(f"{old_labels}")
         print(f"# of old data: {len(old_df_)}")
 
         new_df = df[df['label'].isin(new_labels)]
         new_df_ = pd.DataFrame(columns=columns)
-        for c in new_labels:
-            new_df_ = new_df_.append(
-                new_df[new_df['label'] == c].sample(n=n_cat, random_state=123)
-            )
+        if n_cat:
+            for c in new_labels:
+                new_df_ = new_df_.append(
+                    new_df[new_df['label'] == c].sample(n=n_cat, random_state=123)
+                )
+        else:
+            for c in new_labels:
+                new_df_ = new_df_.append(
+                    new_df[new_df['label'] == c]
+                )
 
         print(f"# of new classes: {len(new_labels)}")
         print(f"{new_labels}")
