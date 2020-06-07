@@ -433,6 +433,8 @@ class GMVAE(nn.Module):
         drop_rate = nargs.get('drop_rate') or 0.5
         pooling = nargs.get('pooling') or 'max'
 
+        self.L = nargs.get('L') or 10
+
         self.rec_wei = nargs.get('rec_wei') or 1.
         self.cond_wei = nargs.get('cond_wei') or 1.
         self.w_wei = nargs.get('w_wei') or 1.
@@ -524,7 +526,7 @@ class GMVAE(nn.Module):
                 if m.bias.data is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def forward(self, x, return_loss=False, L=1):
+    def forward(self, x, return_loss=False):
         # Encoder
         h = self.zw_x_graph(x) # (batch_size, 1, 486, 486) -> 100*6*6
         reconst_loss = 0
@@ -532,7 +534,7 @@ class GMVAE(nn.Module):
         gauss_kl = 0
         y_kl = 0
         x_z = torch.zeros_like(x)
-        for l in range(L):
+        for l in range(self.L):
             # x -> Encoder -> Decoder -> x'
             z_x, z_x_mean, z_x_var = self.z_x_graph(h) # (batch_size, 100*6*6) -> z_dim
             w_x, w_x_mean, w_x_var = self.w_x_graph(h) # (batch_size, 100*6*6) -> w_dim
