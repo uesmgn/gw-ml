@@ -427,7 +427,7 @@ class GMVAE(nn.Module):
         pool_kernels = nargs.get('pool_kernels') or [3, 3, 3, 3]
         unpool_kernels = nargs.get('unpool_kernels') or [3, 3, 3, 3]
         middle_size = nargs.get('middle_size') or 6
-        middle_dim = conv_ch[-1] * middle_size * middle_size
+        middle_dim = bottle_ch * middle_size * middle_size
         dense_dim = nargs.get('dense_dim') or 1024
         activation = nargs.get('activation') or 'ReLU'
         drop_rate = nargs.get('drop_rate') or 0.5
@@ -460,6 +460,8 @@ class GMVAE(nn.Module):
                        kernel=kernels[3],
                        pool_kernel=pool_kernels[3],
                        pooling=pooling,
+                       activation=activation),
+            ConvModule(conv_ch[3], bottle_ch,
                        activation=activation),
             nn.Flatten()
         )
@@ -499,7 +501,9 @@ class GMVAE(nn.Module):
             DenseModule(z_dim, middle_dim,
                         n_middle_layers=0,
                         act_out=activation),
-            cn.Reshape((conv_ch[-1], middle_size, middle_size)),
+            cn.Reshape((bottle_ch, middle_size, middle_size)),
+            ConvTransposeModule(bottle_ch, conv_ch[-1],
+                                activation=activation),
             Upsample(conv_ch[-1], conv_ch[-2],
                      unpool_kernel=unpool_kernels[-1],
                      activation=activation),
