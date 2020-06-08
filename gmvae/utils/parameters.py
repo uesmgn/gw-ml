@@ -19,12 +19,12 @@ def get_optimizer(trial, model):
     optimizer = optim.Adam(model.parameters(), lr=adam_lr, weight_decay=weight_decay)
     return optimizer
 
-def get_kernels(trial, size=4):
-    kernels = [int(trial.suggest_discrete_uniform(f'kernel_{i}', 3, 7, 2))
+def get_kernels(trial, low=3, high=7, q=2, size=4):
+    kernels = [int(trial.suggest_discrete_uniform(f'kernel_{i}', low, high, q))
                for i in range(size)]
     return kernels
 
-def get_channels(trial, size=4):
+def get_channels(trial, low=32, high=192, q=16, size=4):
     channels = [int(trial.suggest_discrete_uniform(f'channel_{i}', 32, 192, 16))
                 for i in range(size)]
     return channels
