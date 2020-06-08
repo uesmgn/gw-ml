@@ -366,14 +366,14 @@ class GMVAE(nn.Module):
         # (batch_size, z_dim, y_dim) -> (batch_size, z_dim)
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, p]
 
-        if return_loss:
-            params = {'x': x, 'x_z': x_z,
-                      'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
-                      'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
-                      'y_wz': y_wz,
-                      'z_wy': z_wy,
-                      'z_wys': z_wys,
-                      'z_wy_means': z_wy_means, 'z_wy_vars': z_wy_vars }
+        if return_params:
+            return  {'x': x, 'x_z': x_z,
+                     'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
+                     'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
+                     'y_wz': y_wz,
+                     'z_wy': z_wy,
+                     'z_wys': z_wys,
+                     'z_wy_means': z_wy_means, 'z_wy_vars': z_wy_vars }
         else:
             return x_z
 
