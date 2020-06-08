@@ -1,13 +1,15 @@
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
-
+from pprint import pprint
 import pandas as pd
 import  optuna
+
 from gmvae.utils import parameters
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
 from gmvae import loss_function
+
 
 n_epoch = 30
 batch_size = 32
@@ -48,6 +50,8 @@ def objective(trial):
     nargs['activation'] = parameters.get_activation(trial)
     nargs['pooling'] = parameters.get_pooling(trial)
 
+    pprint(nargs)
+
     largs = dict()
     largs['rec_wei'] = 1.
     largs['cond_wei'] = 1.
@@ -85,6 +89,5 @@ def objective(trial):
 if __name__ == '__main__':
     trial_size = 4
     study = optuna.create_study()
-    study.optimize(objective, n_trials=trial_size,
-                   show_progress_bar=True)
+    study.optimize(objective, n_trials=trial_size)
     print(study.best_params)
