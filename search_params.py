@@ -86,13 +86,13 @@ def objective(trial):
                 n_samples += x.shape[0]
             total_loss /= n_samples
             print(f'\repoch: {i+1}, loss: {total_loss:.3f}', end="")
-        print('\r')
+        print(f'\rloss: {total_loss:.3f}')
         return total_loss
     except:
         return 1e10
 
 if __name__ == '__main__':
-    trial_size = 4
+    trial_size = 100
     study = optuna.create_study()
     study.optimize(objective, n_trials=trial_size)
     print(study.best_params)
