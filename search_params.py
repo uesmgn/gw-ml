@@ -24,6 +24,7 @@ data_transform = transforms.Compose([
     transforms.ToTensor()
 ])
 dataset = Dataset(df, data_transform)
+dataset.sample('label', min_value_count=200, n_sample=200)
 loader = DataLoader(dataset,
                     batch_size=batch_size,
                     num_workers=num_workers,
