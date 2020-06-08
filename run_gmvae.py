@@ -156,7 +156,12 @@ if __name__ == '__main__':
         summary(model, x_shape)
 
     init_epoch = 0
-    loss_cum = defaultdict(list)
+    loss_stats = None
+    loss_labels = ['total',
+                   'reconstruction loss',
+                   'conditional loss',
+                   'w-prior loss',
+                   'y-prior loss']
     nmis = []
     aris = []
     times = []
@@ -179,25 +184,30 @@ if __name__ == '__main__':
         model.train()
         print(f'----- training at epoch {epoch} -----')
         time_start = time.time()
-        loss_dict = defaultdict(lambda: 0)
+
         n_samples = 0
-        loss_epoch = 0
+        total_loss_epoch = 0
+        gmvae_loss_epoch = torch.zeros(len(loss_labels)).to(device)
 
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
             gmvae_loss = criterion.gmvae_loss(params, largs, reduction='none')
-            total = gmvae_loss.sum()
-            print(gmvae_loss)
-            print(total)
-            exit()
-            total.backward()
+            gmvae_loss_total = gmvae_loss.sum()
+            gmvae_loss_total.backward()
             optimizer.step()
-            loss_epoch += total.item()
+            gmvae_loss_epoch += torch.cat([gmvae_loss_total.view(-1),
+                                           gmvae_loss.view(-1)])
+            total_loss_epoch += gmvae_loss_total.item()
             n_samples += 1
-        loss_epoch /= n_samples
-        loss_cum['total_loss'].append([epoch, loss_epoch])
+        gmvae_loss_epoch /= n_samples
+        gmvae_loss_epoch = gmvae_loss_epoch.detach().cpu().numpy()
+        # initialize or append
+        if loss_stats is None:
+            loss_stats = gmvae_loss_epoch
+        else:
+            loss_stats = np.stack([loss_stats, gmvae_loss_epoch])
         time_elapse = time.time() - time_start
         times.append(time_elapse)
         print(f'train loss = {loss_epoch:.3f} at epoch {epoch_idx+1}')
