@@ -71,10 +71,11 @@ def objective(trial):
     criterion = loss_function.Criterion()
 
     try:
-        for _ in range(n_epoch):
+        for i in range(n_epoch):
             model.train()
             n_samples = 0
             total_loss = 0
+            print(f'\repoch-{i+1}', end="")
             for _, (x, l) in enumerate(loader):
                 x = x.to(device)
                 optimizer.zero_grad()
@@ -85,6 +86,7 @@ def objective(trial):
                 total_loss += gmvae_loss.item()
                 n_samples += x.shape[0]
             total_loss /= n_samples
+        print('')
         return total_loss
     except:
         return 1e10
