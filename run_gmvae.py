@@ -72,8 +72,9 @@ if __name__ == '__main__':
     # model params
     nargs = dict()
     x_size = ini.getint('net', 'x_size')
+    y_dim = ini.getint('net', 'y_dim')
     nargs['x_shape'] = (1, x_size, x_size)
-    nargs['y_dim'] = ini.getint('net', 'y_dim')
+    nargs['y_dim'] = y_dim
     nargs['z_dim'] = ini.getint('net', 'z_dim')
     nargs['w_dim'] = ini.getint('net', 'w_dim')
     nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
