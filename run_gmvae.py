@@ -2,11 +2,11 @@ import argparse
 import configparser
 import json
 import time
-from datetime import datetime
 import os
 import multiprocessing as mp
 from collections import defaultdict
 from pprint import  pprint
+from lal import gpstime
 
 import torch
 from torch.utils.data import DataLoader
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
 
-    time_exec = datetime.now().strftime('%Y%m%d-%H:%M')
+    time_exec = gpstime.gps_time_now()
     model_path = ini.get('conf', 'model_path')
     outdir = ini.get('conf', 'outdir') + f'_{time_exec}'
     print(outdir)
@@ -142,7 +142,7 @@ if __name__ == '__main__':
         os.mkdir(outdir)
 
     exit()
-    
+
     df = pd.read_json('dataset.json')
     data_transform = transforms.Compose([
         transforms.CenterCrop((x_shape[1], x_shape[2])),
