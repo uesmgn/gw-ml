@@ -2,9 +2,11 @@ import argparse
 import configparser
 import json
 import time
+from datetime import datetime
 import os
 import multiprocessing as mp
 from collections import defaultdict
+from pprint import  pprint
 
 import torch
 from torch.utils.data import DataLoader
@@ -34,11 +36,13 @@ parser.add_argument('--num_workers', type=int,
                     help='num_workers of DataLoader')
 parser.add_argument('--eval_itvl', type=int,
                     help='eval interval')
+parser.add_argument('--save_itvl', type=int,
+                    help='save interval')
 
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='verbose')
-parser.add_argument('-s', '--sample', action='store_true',
-                    help='sample dataset into minimum N of each class')
+parser.add_argument('-s', '--n_sample', type=int,
+                    help='N of sampling data of each class')
 parser.add_argument('-l', '--load_model', action='store_true',
                     help='load saved model')
 
@@ -89,18 +93,23 @@ if __name__ == '__main__':
     ini = configparser.ConfigParser()
     ini.read(f'{basedir}/{config_ini}', 'utf-8')
 
-    model_path = ini.get('net', 'model_path')
     load_model = args.load_model or False
     verbose = args.verbose or False
+    n_epoch = args.n_epoch or ini.getint('conf', 'n_epoch')
+    batch_size = args.batch_size or ini.getint('conf', 'batch_size')
+    num_workers = args.num_workers or ini.getint('conf', 'num_workers')
+    eval_itvl = args.eval_itvl or ini.getint('conf', 'eval_itvl')
+    save_itvl = args.save_itvl or ini.getint('conf', 'save_itvl')
+    lr = args.lr or ini.getfloat('conf', 'lr')
+    n_sample = args.n_sample or 0
 
-    # test params
-    x_size = ini.getint('net', 'x_size')
-    x_shape = (1, x_size, x_size)
-    y_dim = ini.getint('net', 'y_dim')
-    z_dim = ini.getint('net', 'z_dim')
-    w_dim = ini.getint('net', 'w_dim')
-
+    # model params
     nargs = dict()
+    x_size = ini.getint('net', 'x_size')
+    nargs['x_shape'] = (1, x_size, x_size)
+    nargs['y_dim'] = ini.getint('net', 'y_dim')
+    nargs['z_dim'] = ini.getint('net', 'z_dim')
+    nargs['w_dim'] = ini.getint('net', 'w_dim')
     nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
     nargs['conv_channels'] = json.loads(ini.get('net', 'conv_channels'))
     nargs['kernels'] = json.loads(ini.get('net', 'kernels'))
@@ -111,7 +120,7 @@ if __name__ == '__main__':
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
     nargs['pooling'] = ini.get('net', 'pooling')
-    vars(nargs)
+    pprint(nargs)
 
     largs = dict()
     largs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
@@ -119,21 +128,18 @@ if __name__ == '__main__':
     largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
     largs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
     largs['y_thres'] = ini.getfloat('loss', 'y_thres') or 0.
-    vars(largs)
-
-    exit()
+    pprint(largs)
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
-    n_epoch = args.n_epoch or ini.getint('conf', 'n_epoch')
-    batch_size = args.batch_size or ini.getint('conf', 'batch_size')
-    num_workers = args.num_workers or ini.getint('conf', 'num_workers')
-    eval_itvl = args.eval_itvl or ini.getint('conf', 'eval_itvl')
-    save_itvl = ini.getint('conf', 'save_itvl')
-    lr = args.lr or ini.getfloat('conf', 'lr')
-    sample = args.sample or False
 
-    outdir = 'result_gmvae'
+    time_exec = datetime.now().strftime('%Y-%m-%d-%H-%M')
+    model_path = ini.get('conf', 'model_path')
+    outdir = ini.get('conf', 'outdir') + f'_{time_exec}'
+    print(outdir)
+    
+    exit()
+
     if not os.path.exists(outdir):
         os.mkdir(outdir)
 
