@@ -43,11 +43,11 @@ def objective(trial):
     nargs['pool_kernels'] = [3, 3, 3, 3]
     nargs['middle_size'] = 6
 
-    nargs['bottle_channel'] = parameters.get_dim(trial, 'bottle', 16, 64, 16)
+    nargs['bottle_channel'] = 16
     nargs['z_dim'] = parameters.get_dim(trial, 'z', 32, 512, 32)
     nargs['w_dim'] = parameters.get_dim(trial, 'w', 2, 32, 2)
-    nargs['conv_channels'] = parameters.get_channels(trial, size=4)
-    nargs['kernels'] = parameters.get_kernels(trial, size=4)
+    nargs['conv_channels'] = parameters.get_channels(trial, 32, 128, 32, 4)
+    nargs['kernels'] = parameters.get_kernels(trial, 3, 7, 2, 4)
     nargs['dense_dim'] = parameters.get_dim(trial, 'dense', 64, 128, 32)
     nargs['activation'] = parameters.get_activation(trial)
     nargs['pooling'] = parameters.get_pooling(trial)
