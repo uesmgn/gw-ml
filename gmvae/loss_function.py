@@ -30,10 +30,10 @@ class Criterion:
         w_prior_negative_kl = w_wei * self.gaussian_negative_kl(w_x_mean, w_x_var)
         y_prior_negative_kl = y_wei * self.y_prior_negative_kl(y_wz, thres=y_thres)
 
-        total = torch.cat([rec_loss,
-                           conditional_negative_kl,
-                           w_prior_negative_kl,
-                           y_prior_negative_kl])
+        total = torch.cat([rec_loss.view(-1),
+                           conditional_negative_kl.view(-1),
+                           w_prior_negative_kl.view(-1),
+                           y_prior_negative_kl.view(-1)])
 
         if reduction is 'sum':
             return total.sum()
@@ -77,9 +77,10 @@ class Criterion:
         return kl
 
     def y_prior_negative_kl(self, y_wz, pi=None, thres=0.):
+        eps = 1e-10
         k = y_wz.shape[-1]
         kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(-1)
         thres = torch.ones_like(kl) * thres
-        kl, _ = torch.max(kl, thres)
+        kl = torch.max(kl, thres)
         kl = kl.mean() # negative value minimize(kl)
         return kl
