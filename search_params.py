@@ -11,7 +11,7 @@ from gmvae.network import GMVAE
 from gmvae import loss_function
 
 
-n_epoch = 30
+n_epoch = 10
 batch_size = 32
 num_workers = 4
 x_size = 486
@@ -70,21 +70,24 @@ def objective(trial):
     optimizer = parameters.get_optimizer(trial, model)
     criterion = loss_function.Criterion()
 
-    for _ in range(n_epoch):
-        model.train()
-        n_samples = 0
-        total_loss = 0
-        for _, (x, l) in enumerate(loader):
-            x = x.to(device)
-            optimizer.zero_grad()
-            params = model(x, return_params=True)
-            gmvae_loss = criterion.gmvae_loss(params, largs, reduction='sum')
-            gmvae_loss.backward()
-            optimizer.step()
-            total_loss += gmvae_loss.item()
-            n_samples += x.shape[0]
-        total_loss /= n_samples
-    return total_loss
+    try:
+        for _ in range(n_epoch):
+            model.train()
+            n_samples = 0
+            total_loss = 0
+            for _, (x, l) in enumerate(loader):
+                x = x.to(device)
+                optimizer.zero_grad()
+                params = model(x, return_params=True)
+                gmvae_loss = criterion.gmvae_loss(params, largs, reduction='sum')
+                gmvae_loss.backward()
+                optimizer.step()
+                total_loss += gmvae_loss.item()
+                n_samples += x.shape[0]
+            total_loss /= n_samples
+        return total_loss
+    except:
+        return 1e10
 
 if __name__ == '__main__':
     trial_size = 4
