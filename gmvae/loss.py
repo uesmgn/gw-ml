@@ -30,7 +30,7 @@ def conditional_negative_kl(z_x, z_x_mean, z_x_var,
     logp = -0.5 * (y_wz * torch.log(z_wy_vars + eps).sum(1)
                    + y_wz * (torch.pow(z_wy - z_wy_means, 2) / z_wy_vars).sum(1)).sum(1)
     kl = (logq - logp).mean()
-    return -kl
+    return kl
 
 
 def gaussian_negative_kl(mean, var):
@@ -39,7 +39,7 @@ def gaussian_negative_kl(mean, var):
     eps = 1e-10
     kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).sum(-1)
     kl = kl.mean()
-    return -kl
+    return kl
 
 
 def y_prior_negative_kl(y_wz, pi=None, thres=0.):
@@ -48,4 +48,4 @@ def y_prior_negative_kl(y_wz, pi=None, thres=0.):
     thres = torch.ones_like(kl) * thres
     kl, _ = torch.max(kl, thres)
     kl = kl.mean() # negative value minimize(kl)
-    return -kl
+    return kl

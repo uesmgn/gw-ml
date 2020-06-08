@@ -22,105 +22,106 @@ import gmvae.utils as ut
 from gmvae import loss
 
 parser = argparse.ArgumentParser(
-    description='PyTorch Implementation of GMVAE Clustering')
+    description='PyTorch Implementation of GMVAE Unsupervised Clustering')
 
-# NN Architecture
-parser.add_argument('-y', '--y_dim', type=int,
-                    help='number of classes')
-parser.add_argument('-z', '--z_dim', type=int,
-                    help='gaussian size')
-parser.add_argument('-w', '--w_dim', type=int,
-                    help='w dim')
 parser.add_argument('-e', '--n_epoch', type=int,
                     help='number of epochs')
 parser.add_argument('-b', '--batch_size', type=int,
                     help='batch size')
-parser.add_argument('-n', '--num_workers', type=int,
-                    help='num_workers of DataLoader')
-parser.add_argument('-i', '--eval_itvl', type=int,
-                    help='eval interval')
 parser.add_argument('-lr', '--lr', type=float,
                     help='learning rate')
+parser.add_argument('--num_workers', type=int,
+                    help='num_workers of DataLoader')
+parser.add_argument('--eval_itvl', type=int,
+                    help='eval interval')
+
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='verbose')
 parser.add_argument('-s', '--sample', action='store_true',
                     help='sample dataset into minimum N of each class')
 parser.add_argument('-l', '--load_model', action='store_true',
                     help='load saved model')
+
 args = parser.parse_args()
 
-def get_loss(params, args):
+
+def get_loss(params, weights, reduction='none'):
+    # get parameters from model
     x = params['x']
     x_z = params['x_z']
     w_x_mean, w_x_var = params['w_x_mean'], params['w_x_var']
     y_wz = params['y_wz']
-    z_x = params['z_x']  # (batch_size, z_dim)
+    z_x = params['z_x']
     z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
     z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
 
-    rec_wei = args.get('rec_wei') or 1.
-    cond_wei = args.get('cond_wei') or 1.
-    w_wei = args.get('w_wei') or 1.
-    y_wei = args.get('y_wei') or 1.
-    pi = args.get('pi')
+    # get loss weights from arguments
+    rec_wei = weights.get('rec_wei') or 1.
+    cond_wei = weights.get('cond_wei') or 1.
+    w_wei = weights.get('w_wei') or 1.
+    y_wei = weights.get('y_wei') or 1.
+    y_thres = weights.get('y_thres') or 0.
 
-    # minimize reconstruction loss
-    rec_loss = loss.reconstruction_loss(x, x_z)
-    # maximize conditonal term
-    conditional_negative_kl = loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
-                                                           z_wy_means, z_wy_vars, y_wz)
-    # maximize w-prior term
-    gaussian_negative_kl = loss.gaussian_negative_kl(w_x_mean, w_x_var)
-    # maximize y-prior term
-    y_prior_negative_kl = loss.y_prior_negative_kl(y_wz, pi)
-    total = torch.cat([rec_wei * rec_loss,
-                       cond_wei * -conditional_negative_kl,
-                       w_wei * -gaussian_negative_kl,
-                       y_wei * -y_prior_negative_kl])
+    rec_loss = rec_wei * loss.reconstruction_loss(x, x_z)
+    conditional_negative_kl = \
+        cond_wei * loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
+                                                z_wy_means, z_wy_vars, y_wz)
+    w_prior_negative_kl = w_wei * loss.gaussian_negative_kl(w_x_mean, w_x_var)
+    y_prior_negative_kl = y_wei * loss.y_prior_negative_kl(y_wz, thres=y_thres)
+
+    total = torch.cat([rec_loss,
+                       conditional_negative_kl,
+                       w_prior_negative_kl,
+                       y_prior_negative_kl])
+
+    if reduction is 'sum':
+        return total.sum()
     return total
 
-def update_loss(loss_dict, loss_latest):
-    for k, v in loss_latest.items():
-        loss_dict[k] += v.item()
-
 if __name__ == '__main__':
-    # network params
+
+    config_ini = 'config.ini'
+
+    # import parameters from config.ini files
+    assert os.path.exists(config_ini)
+    basedir = os.path.dirname(os.path.abspath(__file__))
+
     ini = configparser.ConfigParser()
-    ini.read('./config.ini', 'utf-8')
+    ini.read(f'{basedir}/{config_ini}', 'utf-8')
 
     model_path = ini.get('net', 'model_path')
     load_model = args.load_model or False
     verbose = args.verbose or False
 
     # test params
-    x_shape = (1, 486, 486)
-    y_dim = args.y_dim or ini.getint('net', 'y_dim')
-    z_dim = args.z_dim or ini.getint('net', 'z_dim')
-    w_dim = args.w_dim or ini.getint('net', 'w_dim')
-    L = ini.getint('net', 'L')
-    pi = torch.nn.functional.gumbel_softmax(torch.ones(y_dim))
-    pi, _ = torch.sort(pi, descending=True)
+    x_size = ini.getint('net', 'x_size')
+    x_shape = (1, x_size, x_size)
+    y_dim = ini.getint('net', 'y_dim')
+    z_dim = ini.getint('net', 'z_dim')
+    w_dim = ini.getint('net', 'w_dim')
 
     nargs = dict()
     nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
-    nargs['conv_channels'] = json.loads(ini['net']['conv_channels'])
-    nargs['kernels'] = json.loads(ini['net']['kernels'])
-    nargs['pool_kernels'] = json.loads(ini['net']['pool_kernels'])
-    nargs['unpool_kernels'] = json.loads(ini['net']['unpool_kernels'])
+    nargs['conv_channels'] = json.loads(ini.get('net', 'conv_channels'))
+    nargs['kernels'] = json.loads(ini.get('net', 'kernels'))
+    nargs['pool_kernels'] = json.loads(ini.get('net', 'pool_kernels'))
+    nargs['unpool_kernels'] = json.loads(ini.get('net', 'unpool_kernels'))
     nargs['middle_size'] = ini.getint('net', 'middle_size')
     nargs['dense_dim'] = ini.getint('net', 'dense_dim')
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
     nargs['pooling'] = ini.get('net', 'pooling')
-    print(nargs)
+    vars(nargs)
 
     largs = dict()
     largs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
     largs['cond_wei'] = ini.getfloat('loss', 'cond_wei') or 1.
     largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
     largs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
-    largs['pi'] = pi
-    print(largs)
+    largs['y_thres'] = ini.getfloat('loss', 'y_thres') or 0.
+    vars(largs)
+
+    exit()
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
@@ -208,12 +209,6 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             params = model(x, return_params=True)
             total = get_loss(params, largs)
-            for l in range(1, L):
-                params = model(x, return_params=True)
-                total_l = get_loss(params, largs)
-                total += total_l
-            print(total.shape)
-            exit()
             total = total.mean()
             total.backward()
             optimizer.step()
