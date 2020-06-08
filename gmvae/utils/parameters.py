@@ -24,7 +24,7 @@ def get_kernels(trial, size=4):
                for i in range(size)]
     return kernels
 
-def get_chanels(trial, size=4):
+def get_channels(trial, size=4):
     channels = [int(trial.suggest_discrete_uniform(f'channel_{i}', 32, 192, 16))
                 for i in range(size)]
     return channels
