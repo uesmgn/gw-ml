@@ -46,7 +46,7 @@ def objective(trial):
     nargs['kernels'] = parameters.get_kernels(trial, size=4)
     nargs['dense_dim'] = parameters.get_dim(trial, 'dense', 64, 512, 64)
     nargs['activation'] = parameters.get_activation(trial)
-    nargs['pooling'] = ini.get_pooling(trial)
+    nargs['pooling'] = parameters.get_pooling(trial)
 
     largs = dict()
     largs['rec_wei'] = 1.
@@ -78,11 +78,13 @@ def objective(trial):
             gmvae_loss.backward()
             optimizer.step()
             total_loss += gmvae_loss.item()
+            n_samples += x.shape[0]
         total_loss /= n_samples
     return total_loss
 
 if __name__ == '__main__':
     trial_size = 4
     study = optuna.create_study()
-    study.optimize(objective, n_trials=trial_size)
+    study.optimize(objective, n_trials=trial_size,
+                   show_progress_bar=True)
     print(study.best_params)
