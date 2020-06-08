@@ -103,8 +103,8 @@ if __name__ == '__main__':
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
 
     time_exec = gpstime.gps_time_now()
-    model_path = ini.get('conf', 'model_path')
     outdir = ini.get('conf', 'outdir') + f'_{time_exec}'
+    model_path = f'{outdir}/' + ini.get('conf', 'model_path')
     dataset_json = ini.get('conf', 'dataset_json')
 
     if not os.path.exists(outdir):
@@ -156,15 +156,15 @@ if __name__ == '__main__':
         summary(model, x_shape)
 
     init_epoch = 0
-    loss_stats = None
     loss_labels = ['total',
                    'reconstruction loss',
                    'conditional loss',
                    'w-prior loss',
                    'y-prior loss']
-    nmis = []
-    aris = []
-    times = []
+    loss_stats = None
+    nmi_stats = []
+    ari_stats = []
+    time_stats = []
 
     if load_model and type(model_path) is str:
         assert os.path.exists(model_path)
@@ -172,10 +172,10 @@ if __name__ == '__main__':
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         init_epoch = checkpoint['epoch']
-        loss_cum = checkpoint['loss_cum']
-        nmis = checkpoint['nmis']
-        aris = checkpoint['aris']
-        times = checkpoint['times']
+        loss_stats = checkpoint['loss_stats']
+        nmi_stats = checkpoint['nmi_stats']
+        ari_stats = checkpoint['ari_stats']
+        time_stats = checkpoint['time_stats']
         print(f'load model from epoch {init_epoch}')
 
     for epoch_idx in range(init_epoch, n_epoch):
@@ -203,26 +203,22 @@ if __name__ == '__main__':
             n_samples += 1
         gmvae_loss_epoch /= n_samples
         gmvae_loss_epoch = gmvae_loss_epoch.detach().cpu().numpy()
-        # initialize or append
+        # initialize or append loss
         if loss_stats is None:
             loss_stats = gmvae_loss_epoch
         else:
-            loss_stats = np.stack([loss_stats, gmvae_loss_epoch])
+            loss_stats = np.vstack([loss_stats, gmvae_loss_epoch])
         time_elapse = time.time() - time_start
-        times.append(time_elapse)
-        print(f'train loss = {loss_epoch:.3f} at epoch {epoch_idx+1}')
+        time_stats.append(time_elapse)
+        print(f'train loss = {gmvae_loss_epoch[0]:.3f} at epoch {epoch_idx+1}')
         print(f"calc time = {time_elapse:.3f} sec")
-        print(f"average calc time = {np.array(times).mean():.3f} sec")
-
-        exit()
-
-        ut.bar(list(range(y_dim)), pi.numpy(), f'{outdir}/pi.png', reverse=True)
+        print(f"average calc time = {np.array(time_stats).mean():.3f} sec")
 
         # eval...
         if epoch % eval_itvl == 0:
             with torch.no_grad():
                 model.eval()
-                print(f'----- evaluating at epoch {epoch}... -----')
+                print(f'----- evaluating at epoch {epoch} -----')
                 time_start = time.time()
                 z_x = torch.Tensor().to(device)
                 z_wy = torch.Tensor().to(device)
@@ -236,13 +232,13 @@ if __name__ == '__main__':
                     z_x = torch.cat((z_x, params['z_x']), 0)
                     z_wy = torch.cat((z_wy, params['z_wy']), 0)
                     w_x = torch.cat((w_x, params['w_x']), 0)
-                    p = params['y_pred']
+                    y_pred = params['y_pred']
                     labels_true += l
-                    labels_pred += list(p.cpu().numpy().astype(int))
+                    labels_pred += list(y_pred.cpu().numpy().astype(int))
                 nmi = ut.nmi(labels_true, labels_pred)
+                nmi_stats.append([epoch, nmi])
                 ari = ut.ari(labels_true, labels_pred)
-                nmis.append([epoch, nmi])
-                aris.append([epoch, ari])
+                ari_stats.append([epoch, ari])
                 time_elapse = time.time() - time_start
                 print(f"calc time = {time_elapse:.3f} sec")
                 print(f'# classes predicted: {len(set(labels_pred))}')
@@ -250,7 +246,7 @@ if __name__ == '__main__':
                 print(f'ARI: {ari:.3f}')
 
                 # decompose...
-                print(f'----- decomposing and plotting... -----')
+                print(f'----- decomposing and plotting -----')
                 time_start = time.time()
                 pca = PCA(n_components=2)
                 tsne = TSNE(n_components=2)
@@ -291,11 +287,12 @@ if __name__ == '__main__':
 
                 ut.cmshow(cm, cm_index, cm_columnns, f'{outdir}/cm_{epoch}.png')
 
-                for k, v in loss_cum.items():
-                    ut.plot(v, f'{outdir}/{k}_{epoch}.png', 'epoch', k)
-                ut.plot(nmis, f'{outdir}/nmi_{epoch}.png', 'epoch', 'adjusted mutual info score',
+                for i, yy in enumerate(loss_stats[0,:]):
+                    loss_label = loss_labels[i]
+                    ut.plot(yy, f'{outdir}/{loss_label}_{epoch}.png', 'epoch', k)
+                ut.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png', 'epoch', 'adjusted mutual info score',
                         ylim=(-0.1,1))
-                ut.plot(aris, f'{outdir}/ari_{epoch}.png', 'epoch', 'adjusted rand score',
+                ut.plot(ari_stats, f'{outdir}/ari_{epoch}.png', 'epoch', 'adjusted rand score',
                         ylim=(-0.1,1))
 
                 time_elapse = time.time() - time_start
@@ -304,9 +301,10 @@ if __name__ == '__main__':
         if epoch % save_itvl == 0:
             torch.save({
             'epoch': epoch,
-            'loss_cum': loss_cum,
-            'nmis': nmis,
-            'times': times,
+            'loss_stats': loss_stats,
+            'ari_stats': ari_stats,
+            'nmi_stats': nmi_stats,
+            'time_stats': time_stats,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             }, model_path )
