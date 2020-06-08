@@ -21,7 +21,7 @@ from sklearn.manifold import TSNE
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
 import gmvae.utils as ut
-from gmvae import loss
+from gmvae import loss_function
 
 parser = argparse.ArgumentParser(
     description='PyTorch Implementation of GMVAE Unsupervised Clustering')
@@ -47,40 +47,6 @@ parser.add_argument('-l', '--load_model', action='store_true',
                     help='load saved model')
 
 args = parser.parse_args()
-
-
-def get_loss(params, weights, reduction='none'):
-    # get parameters from model
-    x = params['x']
-    x_z = params['x_z']
-    w_x_mean, w_x_var = params['w_x_mean'], params['w_x_var']
-    y_wz = params['y_wz']
-    z_x = params['z_x']
-    z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
-    z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
-
-    # get loss weights from arguments
-    rec_wei = weights.get('rec_wei') or 1.
-    cond_wei = weights.get('cond_wei') or 1.
-    w_wei = weights.get('w_wei') or 1.
-    y_wei = weights.get('y_wei') or 1.
-    y_thres = weights.get('y_thres') or 0.
-
-    rec_loss = rec_wei * loss.reconstruction_loss(x, x_z)
-    conditional_negative_kl = \
-        cond_wei * loss.conditional_negative_kl(z_x, z_x_mean, z_x_var,
-                                                z_wy_means, z_wy_vars, y_wz)
-    w_prior_negative_kl = w_wei * loss.gaussian_negative_kl(w_x_mean, w_x_var)
-    y_prior_negative_kl = y_wei * loss.y_prior_negative_kl(y_wz, thres=y_thres)
-
-    total = torch.cat([rec_loss,
-                       conditional_negative_kl,
-                       w_prior_negative_kl,
-                       y_prior_negative_kl])
-
-    if reduction is 'sum':
-        return total.sum()
-    return total
 
 if __name__ == '__main__':
 
@@ -120,7 +86,8 @@ if __name__ == '__main__':
     nargs['activation'] = ini.get('net', 'activation')
     nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
     nargs['pooling'] = ini.get('net', 'pooling')
-    pprint(nargs)
+    if verbose:
+        pprint(nargs)
 
     largs = dict()
     largs['rec_wei'] = ini.getfloat('loss', 'rec_wei') or 1.
@@ -128,7 +95,8 @@ if __name__ == '__main__':
     largs['w_wei'] = ini.getfloat('loss', 'w_wei') or 1.
     largs['y_wei'] = ini.getfloat('loss', 'y_wei') or 1.
     largs['y_thres'] = ini.getfloat('loss', 'y_thres') or 0.
-    pprint(largs)
+    if verbose:
+        pprint(largs)
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
@@ -136,25 +104,30 @@ if __name__ == '__main__':
     time_exec = gpstime.gps_time_now()
     model_path = ini.get('conf', 'model_path')
     outdir = ini.get('conf', 'outdir') + f'_{time_exec}'
-    print(outdir)
+    dataset_json = ini.get('conf', 'dataset_json')
 
     if not os.path.exists(outdir):
         os.mkdir(outdir)
 
-    exit()
-
-    df = pd.read_json('dataset.json')
     data_transform = transforms.Compose([
-        transforms.CenterCrop((x_shape[1], x_shape[2])),
+        transforms.CenterCrop((x_size, x_size)),
         transforms.Grayscale(),
         transforms.ToTensor()
     ])
+
+    df = pd.read_json(dataset_json)
     dataset = Dataset(df, data_transform)
-    train_set, test_set = dataset.split_by_labels(['Helix', 'Scratchy'],
-                                                  sample=sample,
-                                                  min_cat=200)
-    xlabels = np.array(train_set.get_labels())
+    # dataset.sample('label', min_value_count=200, n_sample=200)
+    # new_set = dataset.get_by_keys('label', new_labels)
+    # dataset = dataset.get_by_keys('label', labels)
+    train_set, test_set = dataset.random_split()
+    if verbose:
+        print(f'length of training set: ', len(train_set))
+        print(f'length of test set: ', len(test_set))
+
+    xlabels = dataset.unique_column('label')
     ylabels = np.array(range(y_dim))
+
     train_loader = DataLoader(train_set,
                               batch_size=batch_size,
                               num_workers=num_workers,
@@ -166,11 +139,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              drop_last=True)
 
-    model = GMVAE(x_shape,
-                  y_dim,
-                  z_dim,
-                  w_dim,
-                  nargs)
+    model = GMVAE(nargs)
 
     # GPU Parallelize
     if torch.cuda.is_available():
@@ -178,11 +147,13 @@ if __name__ == '__main__':
         torch.backends.cudnn.benchmark = True
     model.to(device)
 
-    model.eval()
-    print(model)
-    summary(model, x_shape)
-
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    criterion = loss_function.Criterion()
+
+    model.eval()
+    if verbose:
+        summary(model, x_shape)
+
     init_epoch = 0
     loss_cum = defaultdict(list)
     nmis = []
@@ -203,30 +174,36 @@ if __name__ == '__main__':
 
     for epoch_idx in range(init_epoch, n_epoch):
         epoch = epoch_idx + 1
-        # train...
+        # training
         model.train()
-        print(f'----- training at epoch {epoch}... -----')
+        print(f'----- training at epoch {epoch} -----')
         time_start = time.time()
         loss_dict = defaultdict(lambda: 0)
         n_samples = 0
-        loss_total = 0
+        loss_epoch = 0
+
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
-            total = get_loss(params, largs)
-            total = total.mean()
+            gmvae_loss = criterion.gmvae_loss(params, largs, reduction='none')
+            total = gmvae_loss.sum()
+            print(gmvae_loss)
+            print(total)
+            exit()
             total.backward()
             optimizer.step()
-            loss_total += total.item()
+            loss_epoch += total.item()
             n_samples += 1
-        loss_total /= n_samples
-        loss_cum['total_loss'].append([epoch, loss_total])
+        loss_epoch /= n_samples
+        loss_cum['total_loss'].append([epoch, loss_epoch])
         time_elapse = time.time() - time_start
         times.append(time_elapse)
-        print(f'train loss = {loss_total:.3f} at epoch {epoch_idx+1}')
+        print(f'train loss = {loss_epoch:.3f} at epoch {epoch_idx+1}')
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(times).mean():.3f} sec")
+
+        exit()
 
         ut.bar(list(range(y_dim)), pi.numpy(), f'{outdir}/pi.png', reverse=True)
 

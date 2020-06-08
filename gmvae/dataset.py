@@ -1,12 +1,16 @@
 from torch.utils import data
 from PIL import Image
 import pandas as pd
+import numpy  as  np
 
 
 class Dataset(data.Dataset):
 
-    def __init__(self, df, transform=None):
+    def __init__(self, df, transform=None, columns=('label', 'path')):
         self.df = df
+        for column in columns:
+            assert column in df.columns
+        self.columns = columns
         self.transform = transform
 
     def __len__(self):
@@ -19,48 +23,37 @@ class Dataset(data.Dataset):
             img = self.transform(img)
         return (img, label)
 
-    def get_labels(self, dtype=str):
-        labels = self.df.iloc[:, 0].unique().astype(dtype)
-        return sorted(labels)
+    def unique_column(self, column, dtype=str, sort=True):
+        arr = self.df[column].unique().astype(dtype)
+        arr =  np.array(arr)
+        return np.sort(arr) if sort else arr
 
-    def split_by_labels(self, new_labels, n_sample=None):
+    def get_by_keys(self, column, keys):
         df = self.df
-        columns = self.df.columns
+        assert column in df.columns
+        df = df[df[column].isin(keys)]
+        return Dataset(df, self.transform)
 
-        old_df = df[~df['label'].isin(new_labels)]
-        old_labels = old_df['label'].unique()
-        old_dict = {c: len(old_df[old_df['label'] == c]) for c in old_labels}
-        old_labels = [k for k, v in old_dict.items() if v >= (n_sample or 0)]
-        old_df_ = pd.DataFrame(columns=columns)
-        if n_sample is not None:
-            for c in old_labels:
-                old_df_ = old_df_.append(
-                    old_df[old_df['label'] == c].sample(n=n_sample, random_state=123)
-                )
-        else:
-            for c in old_labels:
-                old_df_ = old_df_.append(
-                    old_df[old_df['label'] == c]
-                )
+    def sample(self, column, min_value_count=0,
+               n_sample=1, random_state=0, copy=False):
+        df = self.df
+        assert column in df.columns
+        assert min_value_count <= n_sample
+        if n_sample > 0:
+            value_count = df[column].value_counts()
+            idx = value_count[value_count > min_value_count].index
+            df = df[df[column].isin(idx)]
+            gp = df.groupby(column)
+            df = gp.apply(lambda x: x.sample(n=n_sample))
+        if copy:
+            return Dataset(df, self.transform)
+        self.df = df
 
-        new_df = df[df['label'].isin(new_labels)]
-        new_dict = {c: len(new_df[new_df['label'] == c]) for c in new_labels}
-        new_labels = [k for k, v in new_dict.items() if v >= (n_sample or 0)]
-        new_df_ = pd.DataFrame(columns=columns)
-        if n_sample is not None:
-            for c in new_labels:
-                new_df_ = new_df_.append(
-                    new_df[new_df['label'] == c].sample(n=n_sample, random_state=123)
-                )
-        else:
-            for c in new_labels:
-                new_df_ = new_df_.append(
-                    new_df[new_df['label'] == c]
-                )
-
-        return Dataset(new_df_, self.transform), Dataset(old_df_, self.transform)
-
-    def split_dataset(self, alpha=0.8):
-        N_train = int(self.__len__() * alpha)
-        N_test = self.__len__() - N_train
-        return data.random_split(self, [N_train, N_test])
+    def random_split(self, alpha=0.8, random_state=0):
+        df = self.df
+        n = int(len(df) * alpha)
+        # shuffle DataFrame
+        df = df.sample(frac=1, random_state=random_state)
+        split_df = (df.iloc[:n, :], df.iloc[n:, :])
+        return (Dataset(split_df[0], self.transform),
+                Dataset(split_df[1], self.transform))
