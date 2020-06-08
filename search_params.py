@@ -25,6 +25,7 @@ data_transform = transforms.Compose([
 ])
 dataset = Dataset(df, data_transform)
 dataset.sample('label', min_value_count=200, n_sample=200)
+xlabels = dataset.unique_column('label')
 loader = DataLoader(dataset,
                     batch_size=batch_size,
                     num_workers=num_workers,
@@ -38,7 +39,7 @@ def objective(trial):
     nargs = dict()
 
     nargs['x_shape'] = (1, x_size, x_size)
-    nargs['y_dim'] = 20
+    nargs['y_dim'] = xlabels.size()
     nargs['pool_kernels'] = [3, 3, 3, 3]
     nargs['middle_size'] = 6
 
@@ -47,7 +48,7 @@ def objective(trial):
     nargs['w_dim'] = parameters.get_dim(trial, 'w', 2, 32, 2)
     nargs['conv_channels'] = parameters.get_channels(trial, size=4)
     nargs['kernels'] = parameters.get_kernels(trial, size=4)
-    nargs['dense_dim'] = parameters.get_dim(trial, 'dense', 64, 512, 64)
+    nargs['dense_dim'] = parameters.get_dim(trial, 'dense', 64, 128, 32)
     nargs['activation'] = parameters.get_activation(trial)
     nargs['pooling'] = parameters.get_pooling(trial)
 
