@@ -4,7 +4,7 @@ import torch.nn as nn
 from .utils import nn as cn
 from . import utils as ut
 import torch.nn.functional as F
-from . import loss
+
 
 class ConvModule(nn.Module):
     def __init__(self,
