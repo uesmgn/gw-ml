@@ -1,7 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from pprint import pprint
 import pandas as pd
 import  optuna
 
@@ -11,7 +10,7 @@ from gmvae.network import GMVAE
 from gmvae import loss_function
 
 
-n_epoch = 10
+n_epoch = 20
 batch_size = 32
 num_workers = 4
 x_size = 486
@@ -39,7 +38,7 @@ def objective(trial):
     nargs = dict()
 
     nargs['x_shape'] = (1, x_size, x_size)
-    nargs['y_dim'] = xlabels.size()
+    nargs['y_dim'] = xlabels.size
     nargs['pool_kernels'] = [3, 3, 3, 3]
     nargs['middle_size'] = 6
 
@@ -51,8 +50,6 @@ def objective(trial):
     nargs['dense_dim'] = parameters.get_dim(trial, 'dense', 64, 128, 32)
     nargs['activation'] = parameters.get_activation(trial)
     nargs['pooling'] = parameters.get_pooling(trial)
-
-    pprint(nargs)
 
     largs = dict()
     largs['rec_wei'] = 1.
@@ -87,8 +84,6 @@ def objective(trial):
                 total_loss += gmvae_loss.item()
                 n_samples += x.shape[0]
             total_loss /= n_samples
-            print(f'\repoch: {i+1}, loss: {total_loss:.3f}', end="")
-        print(f'\rloss: {total_loss:.3f}')
         return total_loss
     except:
         return 1e10
