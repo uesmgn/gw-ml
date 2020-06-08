@@ -133,16 +133,16 @@ if __name__ == '__main__':
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
 
-    time_exec = datetime.now().strftime('%Y-%m-%d-%H-%M')
+    time_exec = datetime.now().strftime('%Y%m%d-%H:%M')
     model_path = ini.get('conf', 'model_path')
     outdir = ini.get('conf', 'outdir') + f'_{time_exec}'
     print(outdir)
-    
-    exit()
 
     if not os.path.exists(outdir):
         os.mkdir(outdir)
 
+    exit()
+    
     df = pd.read_json('dataset.json')
     data_transform = transforms.Compose([
         transforms.CenterCrop((x_shape[1], x_shape[2])),
