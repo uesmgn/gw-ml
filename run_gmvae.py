@@ -289,7 +289,7 @@ if __name__ == '__main__':
 
                 for i, yy in enumerate(loss_stats[0,:]):
                     loss_label = loss_labels[i]
-                    ut.plot(yy, f'{outdir}/{loss_label}_{epoch}.png', 'epoch', k)
+                    ut.plot(yy, f'{outdir}/{loss_label}_{epoch}.png', 'epoch', loss_label)
                 ut.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png', 'epoch', 'adjusted mutual info score',
                         ylim=(-0.1,1))
                 ut.plot(ari_stats, f'{outdir}/ari_{epoch}.png', 'epoch', 'adjusted rand score',
