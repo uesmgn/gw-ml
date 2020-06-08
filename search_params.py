@@ -2,8 +2,8 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import pandas as pd
-import  optuna
-
+import optuna
+import time
 from gmvae.utils import parameters
 from gmvae.dataset import Dataset
 from gmvae.network import GMVAE
@@ -70,6 +70,7 @@ def objective(trial):
     criterion = loss_function.Criterion()
 
     try:
+        time_start = time.time()
         for i in range(n_epoch):
             model.train()
             n_samples = 0
@@ -84,6 +85,8 @@ def objective(trial):
                 total_loss += gmvae_loss.item()
                 n_samples += x.shape[0]
             total_loss /= n_samples
+        time_elapse = time.time() - time_start
+        print(f'calc time: {time_elapse:.3f} sec')
         return total_loss
     except:
         return 1e10
