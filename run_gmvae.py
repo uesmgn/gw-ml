@@ -192,10 +192,18 @@ if __name__ == '__main__':
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
+
             params = model(x, return_params=True)
+            y_wz_1 = params['y_wz']
             gmvae_loss = criterion.gmvae_loss(params, largs, reduction='none')
             gmvae_loss_total = gmvae_loss.sum()
             gmvae_loss_total.backward()
+
+            params = model(x, clustering=True)
+            y_wz_2 = params['y_wz']
+            cross_entropy = criterion.cross_entropy(y_wz_1, y_wz_2, reduction='sum')
+            cross_entropy.backward()
+
             optimizer.step()
             gmvae_loss_epoch += torch.cat([gmvae_loss_total.view(-1),
                                            gmvae_loss.view(-1)])
