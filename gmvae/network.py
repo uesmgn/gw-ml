@@ -393,13 +393,10 @@ class GMVAE(nn.Module):
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
         _, y_pred = torch.max(y_wz, dim=1)
 
-        if return_params:
-            return  {'y_wz': y_wz,
-                     'y_pred': y_pred }
-        else:
-            return y_wz
+        return  {'y_wz': y_wz,
+                 'y_pred': y_pred }
 
-
+        
     def sampling(self, x, return_params=False):
         # Encoder
         h = self.zw_x_graph(x)
