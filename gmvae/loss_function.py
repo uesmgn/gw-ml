@@ -39,6 +39,11 @@ class Criterion:
             return total.sum()
         return total
 
+    def cross_entropy(self, input, target):
+        loss = F.cross_entropy(input, target, reduction='sum')
+        loss /= input.shape[0]
+        return loss
+
     def reconstruction_loss(self, x, x_):
         # Reconstruction loss
         # https://arxiv.org/pdf/1312.6114.pdf -> C.1
