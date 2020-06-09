@@ -81,11 +81,9 @@ if __name__ == '__main__':
     nargs['conv_channels'] = json.loads(ini.get('net', 'conv_channels'))
     nargs['kernels'] = json.loads(ini.get('net', 'kernels'))
     nargs['pool_kernels'] = json.loads(ini.get('net', 'pool_kernels'))
-    nargs['unpool_kernels'] = json.loads(ini.get('net', 'unpool_kernels'))
     nargs['middle_size'] = ini.getint('net', 'middle_size')
     nargs['dense_dim'] = ini.getint('net', 'dense_dim')
     nargs['activation'] = ini.get('net', 'activation')
-    nargs['drop_rate'] = ini.getfloat('net', 'drop_rate')
     nargs['pooling'] = ini.get('net', 'pooling')
     if verbose:
         pprint(nargs)
