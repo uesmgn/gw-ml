@@ -31,7 +31,6 @@ class Criterion:
         # log p(x_m^(i)|z_m^(i,l) = log(p_i^x_i+(1-p_i)^(1-x_i))
         #                         = x_i log(p_i)+(1-x_i) log(1-p_i)
         loss = F.binary_cross_entropy(x_, x, reduction='sum')
-        loss /= x.shape[0]
         return loss
 
     def gaussian_negative_kl(self, mean, var):
