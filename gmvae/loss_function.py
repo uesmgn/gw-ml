@@ -23,7 +23,7 @@ class Criterion:
         y_wei = weights.get('y_wei') or 1.
         y_thres = weights.get('y_thres') or 0.
 
-        rec_loss = rec_wei * self.reconstruction_loss(x, x_z)
+        rec_loss = rec_wei * self.binary_cross_entropy(x, x_z)
         conditional_negative_kl = \
             cond_wei * self.conditional_negative_kl(z_x, z_x_mean, z_x_var,
                                                     z_wy_means, z_wy_vars, y_wz)
@@ -44,7 +44,7 @@ class Criterion:
         loss /= input.shape[0]
         return loss
 
-    def reconstruction_loss(self, x, x_):
+    def binary_cross_entropy(self, x, x_):
         # Reconstruction loss
         # https://arxiv.org/pdf/1312.6114.pdf -> C.1
         # E_q[log p(x^(i)|z^(i))]=1/LΣ(log p(x_m^(i)|z_m^(i,l)))
