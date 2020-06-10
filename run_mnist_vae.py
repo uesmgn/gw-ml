@@ -91,14 +91,14 @@ if __name__ == '__main__':
             optimizer.step()
             vae_loss_epoch += torch.cat([vae_loss_total.view(-1),
                                          vae_loss.view(-1)])
-            n_samples += 1
+            n_samples += x.shape[0]
         vae_loss_epoch /= n_samples
         vae_loss_epoch = vae_loss_epoch.detach().cpu().numpy()
         if loss_stats is None:
             loss_stats = vae_loss_epoch
         else:
             loss_stats = np.vstack([loss_stats, vae_loss_epoch])
-        print(f'train loss = {vae_loss_epoch[0]:.3f} at epoch {epoch + 1}')
+        print(f'train loss = {vae_loss_epoch[0]:.3f} at epoch {epoch + 1}, n_samples {n_samples}')
 
         if (epoch + 1) % eval_itvl == 0:
             with torch.no_grad():
@@ -106,12 +106,15 @@ if __name__ == '__main__':
                 print(f'----- evaluating at epoch {epoch} -----')
                 z_x = torch.Tensor().to(device)
                 labels_true = []
+                n_samples = 0
 
                 for batch, (x, l) in enumerate(test_loader):
                     x = x.to(device)
                     params = model(x, return_params=True)
                     z_x = torch.cat((z_x, params['z_x']), 0)
                     labels_true += l
+                    n_samples += x.shape[0]
+                print(f'test epoch {epoch + 1}, n_samples {n_samples}')
 
                 # decompose...
                 print(f'----- decomposing and plotting -----')
