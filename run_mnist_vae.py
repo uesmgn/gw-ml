@@ -72,6 +72,7 @@ if __name__ == '__main__':
     criterion = loss_function.Criterion()
 
     loss_stats = None
+    beta_rate = 0.05
 
     for epoch in range(1, n_epoch + 1):
         # training
@@ -80,12 +81,13 @@ if __name__ == '__main__':
         n_samples = 0
         vae_loss_epoch = torch.zeros(len(LOSS_LABELS)).to(device)
 
+        beta = min(1., epoch * beta_rate)
+
         for batch, (x, _) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
-            vae_loss = criterion.vae_loss(params, reduction='none')
-            vae_loss_total = vae_loss.sum()
+            vae_loss_total, vae_loss = criterion.vae_loss(params, beta=beta, reduction='none')
             vae_loss_total.backward()
             optimizer.step()
             vae_loss_epoch += torch.cat([vae_loss_total.view(-1),
