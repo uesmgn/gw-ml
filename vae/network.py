@@ -111,7 +111,7 @@ class VAE(nn.Module):
             nn.Linear(x_dim, 200),
             nn.ReLU(inplace=True),
             nn.Linear(200, z_dim*2),
-            Gaussian(z_dim*2, z_dim)
+            Gaussian(z_dim*2, z_dim, act_regur=None)
         )
 
         self.decoder = nn.Sequential(
