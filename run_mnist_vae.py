@@ -105,14 +105,14 @@ if __name__ == '__main__':
                 model.eval()
                 print(f'----- evaluating at epoch {epoch} -----')
                 z_x = torch.Tensor().to(device)
-                labels_true = []
+                labels_true = torch.Tensor([])
                 n_samples = 0
 
                 for batch, (x, l) in enumerate(test_loader):
                     x = x.to(device)
                     params = model(x, return_params=True)
                     z_x = torch.cat((z_x, params['z_x']), 0)
-                    labels_true += l
+                    labels_true = torch.cat([labels_true, l])
                     n_samples += x.shape[0]
                     if batch > 50:
                         break
@@ -122,6 +122,7 @@ if __name__ == '__main__':
                 print(f'----- decomposing and plotting -----')
                 tsne = TSNE(n_jobs=4)
                 z_x = z_x.cpu().numpy()
+                labels_true = labels_true.cpu().numpy()
 
                 z_x_tsne = tsne.fit_transform(z_x)
 
