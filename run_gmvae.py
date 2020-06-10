@@ -155,10 +155,10 @@ if __name__ == '__main__':
 
     init_epoch = 0
     loss_labels = ['total',
-                   'reconstruction loss',
-                   'conditional loss',
-                   'w-prior loss',
-                   'y-prior loss']
+                   'reconstruction_loss',
+                   'conditional_loss',
+                   'w-prior_loss',
+                   'y-prior_loss']
     loss_stats = None
     nmi_stats = []
     ari_stats = []
