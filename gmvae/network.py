@@ -282,8 +282,7 @@ class GMVAE(nn.Module):
         self.y_wz_graph = DenseModule(w_dim + z_dim,
                                       y_dim,
                                       n_middle_layers=1,
-                                      act_trans=activation,
-                                      act_out='Softmax')
+                                      act_trans=activation)
 
 
         self.z_wy_graphs = nn.ModuleList([
@@ -346,7 +345,8 @@ class GMVAE(nn.Module):
         # (batch_size, 100*6*6) -> (batch_size, w_dim)
         w_x, w_x_mean, w_x_var = self.w_x_graph(h)
         # (batch_size, z_dim+w_dim) -> (batch_size, y_dim)
-        y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
+        y_wz_logits = self.y_wz_graph(torch.cat((w_x, z_x), 1))
+        y_wz = F.softmax(y_wz_logits)
         # (batch_size, z_dim) -> (batch_size, x_shape)
         x_z = self.x_z_graph(z_x)
 
@@ -374,6 +374,7 @@ class GMVAE(nn.Module):
             return  {'x': x, 'x_z': x_z,
                      'z_x': z_x, 'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
                      'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
+                     'y_wz_logits': y_wz_logits,
                      'y_wz': y_wz,
                      'y_pred': y_pred,
                      'y_pred_onehot': y_pred_onehot,
@@ -392,11 +393,13 @@ class GMVAE(nn.Module):
         # (batch_size, 100*6*6) -> (batch_size, w_dim)
         w_x, w_x_mean, w_x_var = self.w_x_graph(h)
         # (batch_size, z_dim+w_dim) -> (batch_size, y_dim)
-        y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
+        y_wz_logits = self.y_wz_graph(torch.cat((w_x, z_x), 1))
+        y_wz = F.softmax(y_wz_logits)
         _, y_pred = torch.max(y_wz, dim=1).to(int)
         y_pred_onehot = F.one_hot(y_pred, num_classes=y_wz.shape[-1])
 
-        return  {'y_wz': y_wz,
+        return  {'y_wz_logits': y_wz_logits,
+                 'y_wz': y_wz,
                  'y_pred': y_pred,
                  'y_pred_onehot': y_pred_onehot }
 
