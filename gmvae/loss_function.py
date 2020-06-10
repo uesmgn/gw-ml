@@ -41,7 +41,7 @@ class Criterion:
 
     def cross_entropy(self, output, target):
         loss = F.cross_entropy(output, target, reduction='sum')
-        loss /= input.shape[0]
+        loss /= output.shape[0]
         return loss
 
     def binary_cross_entropy(self, x, x_):
