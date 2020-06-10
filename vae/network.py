@@ -131,7 +131,7 @@ class VAE(nn.Module):
 
     def forward(self, x, return_params=False):
         z_x, z_x_mean, z_x_var = self.encoder(x)
-        x_z = self.decoder(z)
+        x_z = self.decoder(z_x)
         if return_params:
             return { 'x': x, 'x_z': x_z,
                      'z_x': z_x,
