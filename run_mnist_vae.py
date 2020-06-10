@@ -1,7 +1,7 @@
 import configparser
 import os
 import torch
-from torchvision import transforms
+from torchvision import datasets, transforms
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
@@ -30,6 +30,7 @@ if __name__ == '__main__':
     num_workers = ini.getint('conf', 'num_workers')
     batch_size = ini.getint('conf', 'batch_size')
     n_epoch = ini.getint('conf', 'n_epoch')
+    lr = ini.getfloat('conf', 'lr')
 
     data_transform = transforms.Compose([
         transforms.Grayscale(),
@@ -57,6 +58,9 @@ if __name__ == '__main__':
         model = torch.nn.DataParallel(model)
         torch.backends.cudnn.benchmark = True
     model.to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    criterion = loss_function.Criterion()
 
     loss_stats = None
 
