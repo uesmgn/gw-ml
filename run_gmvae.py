@@ -19,7 +19,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
 from gmvae.dataset import Dataset
-from gmvae.network import GMVAE
+from gmvae.network import *
 import gmvae.utils as ut
 from gmvae import loss_function
 
