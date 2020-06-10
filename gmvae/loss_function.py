@@ -39,6 +39,35 @@ class Criterion:
             return total.sum()
         return total
 
+    def gmvae_m2_loss(self, params, weights, reduction='none'):
+        x = params['x']
+        x_z = params['x_z']
+        z_y_mean, z_y_var = params['z_y_mean'], params['z_y_var']
+        y_x = params['y_x']
+        y_x_prob = params['y_x_prob']
+        z_xy = params['z_xy']
+        z_xy_mean, z_xy_var = params['z_xy_mean'], params['z_xy_var'],
+
+        # get loss weights from arguments
+        rec_wei = weights.get('rec_wei') or 1.
+        cond_wei = weights.get('cond_wei') or 1.
+        y_wei = weights.get('y_wei') or 1.
+        y_thres = weights.get('y_thres') or 0.
+
+        rec_loss = rec_wei * self.binary_cross_entropy(x, x_z)
+        conditional_negative_kl = \
+            cond_wei * self.gaussian_loss(z_xy, z_xy_mean, z_xy_var,
+                                          z_y_mean, z_y_var)
+        y_prior_negative_kl = y_wei * self.y_prior_negative_kl(y_x_prob, thres=y_thres)
+
+        total = torch.cat([rec_loss.view(-1),
+                           conditional_negative_kl.view(-1),
+                           y_prior_negative_kl.view(-1)])
+
+        if reduction is 'sum':
+            return total.sum()
+        return total
+
     def cross_entropy(self, output, target):
         loss = F.cross_entropy(output, target, reduction='sum')
         loss /= output.shape[0]
@@ -70,6 +99,16 @@ class Criterion:
         z_wy = z_x.repeat(1, K).view(z_x.shape[0], K, -1).transpose(1,2)  # (batch_size, z_dim, K)
         logp = -0.5 * (y_wz * torch.log(z_wy_vars + eps).sum(1)
                        + y_wz * (torch.pow(z_wy - z_wy_means, 2) / z_wy_vars).sum(1)).sum(1)
+        kl = (logq - logp).mean()
+        return kl
+
+    def gaussian_loss(self, z_xy, z_xy_mean, z_xy_var,
+                      z_y_mean, z_y_var):
+        eps = 1e-10
+        logq = -0.5 * (torch.log(z_xy_var + eps).sum(1)
+                      + (torch.pow(z_xy - z_xy_mean, 2) / z_xy_var).sum(1))
+        logp = -0.5 * (torch.log(z_y_var + eps).sum(1)
+                      + (torch.pow(z_xy - z_y_mean, 2) / z_y_var).sum(1))
         kl = (logq - logp).mean()
         return kl
 
