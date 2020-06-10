@@ -138,7 +138,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              drop_last=True)
 
-    model = GMVAE(nargs)
+    model = GMVAE_mult(nargs)
 
     # GPU Parallelize
     if torch.cuda.is_available():
