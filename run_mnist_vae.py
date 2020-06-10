@@ -105,7 +105,7 @@ if __name__ == '__main__':
                 model.eval()
                 print(f'----- evaluating at epoch {epoch} -----')
                 z_x = torch.Tensor().to(device)
-                labels_true = torch.Tensor([])
+                labels_true = torch.empty(0, dtype=torch.long)
                 n_samples = 0
 
                 for batch, (x, l) in enumerate(test_loader):
