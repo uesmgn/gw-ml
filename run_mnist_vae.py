@@ -5,8 +5,7 @@ import torch
 from torchvision import datasets, transforms
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
+from MulticoreTSNE import MulticoreTSNE as TSNE
 
 from vae import loss_function
 from vae.network import *
@@ -108,7 +107,7 @@ if __name__ == '__main__':
                 z_x = torch.Tensor().to(device)
                 labels_true = []
 
-                for batch, (x, l) in enumerate(train_loader):
+                for batch, (x, l) in enumerate(test_loader):
                     x = x.to(device)
                     params = model(x, return_params=True)
                     z_x = torch.cat((z_x, params['z_x']), 0)
@@ -116,8 +115,7 @@ if __name__ == '__main__':
 
                 # decompose...
                 print(f'----- decomposing and plotting -----')
-                pca = PCA(n_components=2)
-                tsne = TSNE(n_components=2)
+                tsne = TSNE(n_jobs=4)
                 z_x = z_x.cpu().numpy()
 
                 z_x_tsne = tsne.fit_transform(z_x)
