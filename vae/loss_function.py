@@ -14,10 +14,10 @@ class Criterion:
         z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
 
         rec_loss = self.binary_cross_entropy(x, x_z)
-        gaussian_negative_kl = self.gaussian_negative_kl(z_x_mean, z_x_var)
+        gaussian_kl = self.gaussian_kl(z_x_mean, z_x_var)
 
         total = torch.cat([rec_loss.view(-1),
-                           gaussian_negative_kl.view(-1)])
+                           gaussian_kl.view(-1)])
 
         if reduction is 'sum':
             return total.sum()
@@ -25,9 +25,10 @@ class Criterion:
 
     def binary_cross_entropy(self, x, x_):
         loss = F.binary_cross_entropy(x_, x, reduction='sum')
+        loss = loss.sum()
         return loss
 
-    def gaussian_negative_kl(self, mean, var):
+    def gaussian_kl(self, mean, var):
         eps = 1e-10
-        kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).sum()
+        kl = -0.5 * (1 + torch.log(var) - torch.pow(mean, 2) - var).sum()
         return kl
