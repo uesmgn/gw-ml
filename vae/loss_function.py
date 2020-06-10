@@ -6,7 +6,7 @@ class Criterion:
     def __init__(self):
         pass
 
-    def vae_loss(self, params, reduction='none'):
+    def vae_loss(self, params, beta=1.0):
         # get parameters from model
         x = params['x']
         x_z = params['x_z']
@@ -16,12 +16,10 @@ class Criterion:
         rec_loss = self.binary_cross_entropy(x, x_z)
         gaussian_kl = self.gaussian_kl(z_x_mean, z_x_var)
 
-        total = torch.cat([rec_loss.view(-1),
-                           gaussian_kl.view(-1)])
+        total = rec_loss + beta * gaussian_kl
+        losses = torch.cat([rec_loss.view(-1), gaussian_kl.view(-1)])
 
-        if reduction is 'sum':
-            return total.sum()
-        return total
+        return total, losses
 
     def binary_cross_entropy(self, x, x_):
         loss = F.binary_cross_entropy(x_, x, reduction='sum')
