@@ -366,6 +366,7 @@ class GMVAE(nn.Module):
         z_wy_vars = torch.stack(z_wy_vars_stack, 2)
         # (batch_size, y_dim) -> (batch_size, )
         _, y_pred = torch.max(y_wz, dim=1)
+        y_pred_onehot = F.one_hot(y_pred.to(int), num_classes=y_wz.shape[-1])
         # (batch_size, z_dim, y_dim) -> (batch_size, z_dim)
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, y_pred]
 
@@ -375,6 +376,7 @@ class GMVAE(nn.Module):
                      'w_x': w_x, 'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
                      'y_wz': y_wz,
                      'y_pred': y_pred,
+                     'y_pred_onehot', y_pred_onehot,
                      'z_wy': z_wy,
                      'z_wys': z_wys,
                      'z_wy_means': z_wy_means, 'z_wy_vars': z_wy_vars }
@@ -392,11 +394,13 @@ class GMVAE(nn.Module):
         # (batch_size, z_dim+w_dim) -> (batch_size, y_dim)
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
         _, y_pred = torch.max(y_wz, dim=1)
+        y_pred_onehot = F.one_hot(y_pred.to(int), num_classes=y_wz.shape[-1])
 
         return  {'y_wz': y_wz,
-                 'y_pred': y_pred }
+                 'y_pred': y_pred,
+                 'y_pred_onehot', y_pred_onehot }
 
-        
+
     def sampling(self, x, return_params=False):
         # Encoder
         h = self.zw_x_graph(x)
