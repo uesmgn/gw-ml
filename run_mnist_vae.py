@@ -17,9 +17,9 @@ LOSS_LABELS = ['total_loss', 'reconstruction_loss', 'kl_divergence']
 
 parser = argparse.ArgumentParser(
     description='PyTorch Implementation of VAE')
-
 parser.add_argument('--eval_itvl', type=int,
                     help='evaluationn interval')
+args = parser.parse_args()
 
 if __name__ == '__main__':
 
