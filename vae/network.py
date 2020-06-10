@@ -86,9 +86,10 @@ class Gaussian(nn.Module):
                                      cn.activation(act_regur))
 
     def forward(self, x):
+        eps = 1e-10
         x = self.features(x)
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
-        var = F.softplus(logit) + 1e-8
+        var = F.softplus(logit) + eps
         if self.training:
             x = cn.reparameterize(mean, var)
         else:
