@@ -192,14 +192,14 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             params = model(x, return_params=True)
-            y_wz_1 = params['y_wz']
+            y_pred_onehot = params['y_pred_onehot']
             gmvae_loss = criterion.gmvae_loss(params, largs, reduction='none')
             gmvae_loss_total = gmvae_loss.sum()
             gmvae_loss_total.backward()
 
             params = model(x, clustering=True)
-            y_wz_2 = params['y_wz']
-            cross_entropy = criterion.cross_entropy(y_wz_1, y_wz_2, reduction='sum')
+            y_wz = params['y_wz']
+            cross_entropy = criterion.cross_entropy(y_pred_onehot.detach(), y_wz)
             cross_entropy.backward()
 
             optimizer.step()
@@ -242,9 +242,9 @@ if __name__ == '__main__':
                     labels_true += l
                     labels_pred += list(y_pred.cpu().numpy().astype(int))
                 nmi = ut.nmi(labels_true, labels_pred)
-                nmi_stats.append([epoch, nmi])
+                nmi_stats.append(nmi)
                 ari = ut.ari(labels_true, labels_pred)
-                ari_stats.append([epoch, ari])
+                ari_stats.append(ari)
                 time_elapse = time.time() - time_start
                 print(f"calc time = {time_elapse:.3f} sec")
                 print(f'# classes predicted: {len(set(labels_pred))}')
@@ -293,8 +293,9 @@ if __name__ == '__main__':
 
                 ut.cmshow(cm, cm_index, cm_columnns, f'{outdir}/cm_{epoch}.png')
 
-                for i, yy in enumerate(loss_stats[0,:]):
+                for i in range(loss_stats.shape[1]):
                     loss_label = loss_labels[i]
+                    yy = loss_stats[:,i]
                     ut.plot(yy, f'{outdir}/{loss_label}_{epoch}.png', 'epoch', loss_label)
                 ut.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png', 'epoch', 'adjusted mutual info score',
                         ylim=(-0.1,1))
