@@ -39,8 +39,8 @@ class Criterion:
             return total.sum()
         return total
 
-    def cross_entropy(self, input, target):
-        loss = F.cross_entropy(input, target, reduction='sum')
+    def cross_entropy(self, output, target):
+        loss = F.cross_entropy(output, target, reduction='sum')
         loss /= input.shape[0]
         return loss
 
