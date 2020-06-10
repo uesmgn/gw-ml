@@ -114,6 +114,8 @@ if __name__ == '__main__':
                     z_x = torch.cat((z_x, params['z_x']), 0)
                     labels_true += l
                     n_samples += x.shape[0]
+                    if batch > 50:
+                        break
                 print(f'test epoch {epoch + 1}, n_samples {n_samples}')
 
                 # decompose...
