@@ -549,13 +549,10 @@ class GMVAE_cat(nn.Module):
 
 
     def forward(self, x, clustering=False, return_params=False):
-        if self.training:
-            if clustering:
-                return self.clustering(x)
-            else:
-                return self.fit_train(x, return_params)
+        if clustering:
+            return self.clustering(x)
         else:
-            return self.sampling(x, return_params)
+            return self.fit_train(x, return_params)
 
     def fit_train(self, x, return_params=False):
         # Encoder
