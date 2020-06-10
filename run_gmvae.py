@@ -198,8 +198,8 @@ if __name__ == '__main__':
             gmvae_loss_total.backward()
 
             params = model(x, clustering=True)
-            y_wz_logits = params['y_wz_logits']
-            cross_entropy = criterion.cross_entropy(y_pred.detach(), y_wz_logits)
+            y_wz = params['y_wz']
+            cross_entropy = criterion.cross_entropy(y_wz_logits, y_pred.detach())
             cross_entropy.backward()
 
             optimizer.step()
