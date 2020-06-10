@@ -43,7 +43,6 @@ if __name__ == '__main__':
     eval_itvl = args.eval_itvl or 10
 
     data_transform = transforms.Compose([
-        transforms.Grayscale(),
         transforms.ToTensor()
     ])
 
