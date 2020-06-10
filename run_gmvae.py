@@ -192,14 +192,14 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             params = model(x, return_params=True)
-            y_pred = params['y_pred']
+            y_pred = params['y_pred'].to(int)
             gmvae_loss = criterion.gmvae_loss(params, largs, reduction='none')
             gmvae_loss_total = gmvae_loss.sum()
             gmvae_loss_total.backward()
 
             params = model(x, clustering=True)
             y_wz = params['y_wz']
-            cross_entropy = criterion.cross_entropy(y_wz_logits, y_pred.detach())
+            cross_entropy = criterion.cross_entropy(y_wz, y_pred.detach())
             cross_entropy.backward()
 
             optimizer.step()
