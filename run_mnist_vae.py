@@ -126,3 +126,7 @@ if __name__ == '__main__':
                     os.mkdir(outdir)
                 ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
                            labels_true, f'{outdir}/zx_tsne_{epoch}.png')
+                for i in range(loss_stats.shape[1]):
+                    loss_label = LOSS_LABELS[i]
+                    yy = loss_stats[:,i]
+                    ut.plot(yy, f'{outdir}/{loss_label}_{epoch}.png', 'epoch', loss_label)
