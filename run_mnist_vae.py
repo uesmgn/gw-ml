@@ -73,10 +73,10 @@ if __name__ == '__main__':
 
     loss_stats = None
 
-    for epoch in range(n_epoch):
+    for epoch in range(1, n_epoch + 1):
         # training
         model.train()
-        print(f'----- training at epoch {epoch + 1} -----')
+        print(f'----- training at epoch {epoch} -----')
         n_samples = 0
         vae_loss_epoch = torch.zeros(len(LOSS_LABELS)).to(device)
 
@@ -97,9 +97,9 @@ if __name__ == '__main__':
             loss_stats = vae_loss_epoch
         else:
             loss_stats = np.vstack([loss_stats, vae_loss_epoch])
-        print(f'train loss = {vae_loss_epoch[0]:.3f} at epoch {epoch + 1}, n_samples {n_samples}')
+        print(f'train loss = {vae_loss_epoch[0]:.3f} at epoch {epoch}, n_samples {n_samples}')
 
-        if (epoch + 1) % eval_itvl == 0:
+        if (epoch) % eval_itvl == 0:
             with torch.no_grad():
                 model.eval()
                 print(f'----- evaluating at epoch {epoch} -----')
@@ -113,7 +113,7 @@ if __name__ == '__main__':
                     z_x = torch.cat((z_x, params['z_x']), 0)
                     labels_true = torch.cat([labels_true, l])
                     n_samples += x.shape[0]
-                print(f'test epoch {epoch + 1}, n_samples {n_samples}')
+                print(f'test epoch {epoch}, n_samples {n_samples}')
 
                 # decompose...
                 print(f'----- decomposing and plotting -----')
