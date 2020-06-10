@@ -40,4 +40,4 @@ class Criterion:
         eps = 1e-10
         kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).sum(-1)
         kl = kl.mean()
-        return kl
+        return -kl
