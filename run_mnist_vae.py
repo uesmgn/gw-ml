@@ -27,8 +27,8 @@ if __name__ == '__main__':
     x_shape = (1, x_size, x_size)
     z_dim = ini.getint('conf', 'z_dim')
     num_workers = ini.getint('conf', 'num_workers')
-    batch_size =  ini.getint('conf', 'batch_size')
-    n_epoch =  ini.getint('conf', 'n_epoch')
+    batch_size = ini.getint('conf', 'batch_size')
+    n_epoch = ini.getint('conf', 'n_epoch')
 
     data_transform = transforms.Compose([
         transforms.Grayscale(),
