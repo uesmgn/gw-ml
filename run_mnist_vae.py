@@ -16,6 +16,7 @@ LOSS_LABELS = ['total_loss', 'reconstruction_loss', 'kl_divergence']
 
 if __name__ == '__main__':
 
+    ini = configparser.ConfigParser()
     config_ini = 'config_mnist.ini'
     ini.read(config_ini, 'utf-8')
 
