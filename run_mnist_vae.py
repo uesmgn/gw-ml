@@ -41,8 +41,9 @@ if __name__ == '__main__':
         batch_size=batch_size, shuffle=True,
         **kwargs )
     test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('../data', train=False, transform=data_transform)),
-        batch_size=batch_size, shuffle=True,
+        datasets.MNIST('../data', train=False, transform=data_transform),
+        batch_size = batch_size,
+        shuffle=True,
         **kwargs )
 
     nargs = {}

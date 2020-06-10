@@ -3,11 +3,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..utils import nn as cn
-from .. import utils as ut
+from . import nn as cn
 
 
 ACTIVATION_NAMES = ['ReLU', 'ELU', 'Tanh']
+
 
 class Conv2dModule(nn.Module):
     def __init__(self,
@@ -28,7 +28,7 @@ class Conv2dModule(nn.Module):
                                  nn.BatchNorm2d(out_ch))
         if activation in ACTIVATION_NAMES:
             self.features.add_module(f'{activation}',
-                                     ut.activation(activation))
+                                     cn.activation(activation))
 
     def forward(self, x):
         x = self.features(x)
@@ -54,7 +54,7 @@ class ConvTranspose2dModule(nn.Module):
                                  nn.BatchNorm2d(out_ch))
         if activation in ACTIVATION_NAMES:
             self.features.add_module('activation',
-                                     ut.activation(activation))
+                                     cn.activation(activation))
 
     def forward(self, x):
         x = self.features(x)
@@ -83,14 +83,14 @@ class Gaussian(nn.Module):
         )
         if act_regur in ACTIVATION_NAMES:
             self.features.add_module('act_regur',
-                                     ut.activation(act_regur))
+                                     cn.activation(act_regur))
 
     def forward(self, x):
         x = self.features(x)
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit) + 1e-8
         if self.training:
-            x = ut.reparameterize(mean, var)
+            x = cn.reparameterize(mean, var)
         else:
             x = mean
         return x, mean, var
