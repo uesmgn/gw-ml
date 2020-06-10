@@ -94,10 +94,7 @@ class GlobalPool(nn.Module):
 
 
 class Gaussian(nn.Module):
-    def __init__(self,
-                 in_dim,
-                 out_dim,
-                 act_regur='Tanh'):
+    def __init__(self, in_dim, out_dim, act_regur='Tanh'):
         super().__init__()
         self.features = nn.Sequential(
             nn.Linear(in_dim, out_dim * 2)
@@ -116,6 +113,19 @@ class Gaussian(nn.Module):
         #     x = mean
         x = ut.reparameterize(mean, var)
         return x, mean, var
+
+class GumbelSoftmax(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.logits = nn.Sequential(
+            nn.Linear(in_dim, out_dim)
+        )
+
+    def forward(self, x):
+        logits = self.logits(x)
+        y_prob = F.softmax(logits)
+        y = F.gumbel_softmax(logits)
+        return y_prob, y
 
 
 class DownSample(nn.Module):
@@ -217,7 +227,7 @@ class DenseModule(nn.Module):
         return x
 
 
-class GMVAE(nn.Module):
+class GMVAE_mult(nn.Module):
     def __init__(self, nargs=None):
         super().__init__()
 
@@ -434,3 +444,152 @@ class GMVAE(nn.Module):
                     'x_z': x_z }
         else:
             return x_z
+
+
+
+class GMVAE_cat(nn.Module):
+    def __init__(self, nargs=None):
+        super().__init__()
+
+        nargs = nargs or dict()
+        x_shape = nargs.get('x_shape') or (1, 486, 486)
+        in_ch = x_shape[0]
+        y_dim = nargs.get('y_dim') or 10
+        z_dim = nargs.get('z_dim') or 20
+        bottle_ch = nargs.get('bottle_channel') or 16
+        conv_ch = nargs.get('conv_channels') or [32, 48, 64, 32]
+        kernels = nargs.get('kernels') or [3, 3, 3, 3]
+        pool_kernels = nargs.get('pool_kernels') or [3, 3, 3, 3]
+        middle_size = nargs.get('middle_size') or 6
+        middle_dim = bottle_ch * middle_size * middle_size
+        dense_dim = nargs.get('dense_dim') or 256
+        activation = nargs.get('activation') or 'ReLU'
+        pooling = nargs.get('pooling') or 'max'
+
+        self.zy_x_graph = nn.Sequential(
+            ConvModule(in_ch, bottle_ch,
+                       activation=activation),
+            DownSample(bottle_ch, conv_ch[0],
+                       kernel=kernels[0],
+                       pool_kernel=pool_kernels[0],
+                       pooling=pooling,
+                       activation=activation),
+            DownSample(conv_ch[0], conv_ch[1],
+                       kernel=kernels[1],
+                       pool_kernel=pool_kernels[1],
+                       pooling=pooling,
+                       activation=activation),
+            DownSample(conv_ch[1], conv_ch[2],
+                       kernel=kernels[2],
+                       pool_kernel=pool_kernels[2],
+                       pooling=pooling,
+                       activation=activation),
+            DownSample(conv_ch[2], conv_ch[3],
+                       kernel=kernels[3],
+                       pool_kernel=pool_kernels[3],
+                       pooling=pooling,
+                       activation=activation),
+            ConvModule(conv_ch[3], bottle_ch,
+                       activation=activation),
+            nn.Flatten()
+        )
+
+        self.y_x_graph = nn.Sequential(
+            DenseModule(middle_dim, dense_dim,
+                        n_middle_layers=0),  # (batch_size, z_dim * 2)
+            GumbelSoftmax(in_dim=dense_dim,
+                          out_dim=y_dim)
+        )
+
+
+        self.z_xy_graph = nn.Sequential(
+            DenseModule(middle_dim + y_dim, z_dim * 2,
+                        n_middle_layers=0),  # (batch_size, z_dim * 2)
+            Gaussian(in_dim=z_dim * 2,
+                     out_dim=z_dim)
+        )
+
+        self.z_y_graph = nn.Sequential(
+            DenseModule(y_dim, z_dim * 2,
+                        n_middle_layers=0),  # (batch_size, z_dim * 2)
+            Gaussian(in_dim=z_dim * 2,
+                     out_dim=z_dim)
+        )
+
+        self.x_z_graph = nn.Sequential(
+            DenseModule(z_dim, middle_dim,
+                        n_middle_layers=0,
+                        act_out=activation),
+            cn.Reshape((bottle_ch, middle_size, middle_size)),
+            ConvTransposeModule(bottle_ch, conv_ch[-1],
+                                activation=activation),
+            Upsample(conv_ch[-1], conv_ch[-2],
+                     unpool_kernel=pool_kernels[-1],
+                     activation=activation),
+            Upsample(conv_ch[-2], conv_ch[-3],
+                     unpool_kernel=pool_kernels[-2],
+                     activation=activation),
+            Upsample(conv_ch[-3], conv_ch[-4],
+                     unpool_kernel=pool_kernels[-3],
+                     activation=activation),
+            Upsample(conv_ch[-4], bottle_ch,
+                     unpool_kernel=pool_kernels[-4],
+                     activation=activation),
+            ConvTransposeModule(bottle_ch, in_ch,
+                                kernel=1,
+                                activation='Sigmoid')
+        )
+
+        # weight initialization
+        for m in self.modules():
+            if type(m) == nn.Linear or type(m) == nn.Conv2d or type(m) == nn.ConvTranspose2d:
+                nn.init.xavier_normal_(m.weight)
+                if m.bias.data is not None:
+                    nn.init.constant_(m.bias, 0)
+
+
+    def forward(self, x, clustering=False, return_params=False):
+        if self.training:
+            if clustering:
+                return self.clustering(x)
+            else:
+                return self.fit_train(x, return_params)
+        else:
+            return self.sampling(x, return_params)
+
+    def fit_train(self, x, return_params=False):
+        # Encoder
+        # (batch_size, 1, 486, 486) -> (batch_size, 100*6*6)
+        h = self.zy_x_graph(x)
+        # (batch_size, 100*6*6) -> (batch_size, z_dim)
+        y_x, y_x_prob = self.y_x_graph(h)
+        _, y_pred = torch.max(y_x_prob, dim=1)
+        z_y, z_y_mean, z_y_var = self.z_y_graph(y_x)
+        # (batch_size, 100*6*6) -> (batch_size, w_dim)
+        z_xy, z_xy_mean, z_xy_var = self.z_xy_graph(torch.cat([h, y_x], dim=-1))
+        # (batch_size, z_dim) -> (batch_size, x_shape)
+        x_z = self.x_z_graph(z_xy)
+
+        if return_params:
+            return  {'x': x, 'x_z': x_z,
+                     'y_x': y_x,
+                     'y_x_prob': y_x_prob,
+                     'y_pred': y_pred,
+                     'z_y': z_y,
+                     'z_y_mean': z_y_mean,
+                     'z_y_var': z_y_var,
+                     'z_xy': z_xy,
+                     'z_xy_mean': z_xy_mean,
+                     'z_xy_var': z_xy_var }
+        else:
+            return x_z
+
+    def clustering(self, x):
+        h = self.zy_x_graph(x)
+        y_x = self.y_x_graph(h)
+        _, y_pred = torch.max(y_x, dim=1)
+        y_pred_onehot = F.one_hot(y_pred.to(int), num_classes=y_x.shape[-1])
+
+        return  {'y_x': y_x,
+                 'y_pred': y_pred,
+                 'y_pred_onehot': y_pred_onehot }
