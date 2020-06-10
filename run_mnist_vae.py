@@ -1,3 +1,4 @@
+import argparse
 import configparser
 import os
 import torch
@@ -14,7 +15,15 @@ import utils as ut
 
 LOSS_LABELS = ['total_loss', 'reconstruction_loss', 'kl_divergence']
 
+parser = argparse.ArgumentParser(
+    description='PyTorch Implementation of VAE')
+
+parser.add_argument('--eval_itvl', type=int,
+                    help='evaluationn interval')
+
 if __name__ == '__main__':
+
+    outdir = 'result_vae'
 
     ini = configparser.ConfigParser()
     config_ini = 'config_mnist.ini'
@@ -31,6 +40,8 @@ if __name__ == '__main__':
     batch_size = ini.getint('conf', 'batch_size')
     n_epoch = ini.getint('conf', 'n_epoch')
     lr = ini.getfloat('conf', 'lr')
+
+    eval_itvl = args.eval_itvl or 10
 
     data_transform = transforms.Compose([
         transforms.Grayscale(),
@@ -89,3 +100,29 @@ if __name__ == '__main__':
         else:
             loss_stats = np.vstack([loss_stats, vae_loss_epoch])
         print(f'train loss = {vae_loss_epoch[0]:.3f} at epoch {epoch + 1}')
+
+        if (epoch + 1) % eval_itvl == 0:
+            with torch.no_grad():
+                model.eval()
+                print(f'----- evaluating at epoch {epoch} -----')
+                z_x = torch.Tensor().to(device)
+                labels_true = []
+
+                for batch, (x, l) in enumerate(train_loader):
+                    x = x.to(device)
+                    params = model(x, return_params=True)
+                    z_x = torch.cat((z_x, params['z_x']), 0)
+                    labels_true += l
+
+                # decompose...
+                print(f'----- decomposing and plotting -----')
+                pca = PCA(n_components=2)
+                tsne = TSNE(n_components=2)
+                z_x = z_x.cpu().numpy()
+
+                z_x_tsne = tsne.fit_transform(z_x)
+
+                if not os.path.exists(outdir):
+                    os.mkdir(outdir)
+                ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
+                           labels_true, f'{outdir}/zx_tsne_{epoch}.png')
