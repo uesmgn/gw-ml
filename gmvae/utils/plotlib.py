@@ -8,10 +8,13 @@ import itertools
 
 def plot(xy, out, xlabel=None, ylabel=None,
          xlim=None, ylim=None):
-    xy = np.array(xy)
     if xy.shape[0] > 2:
-        xx = xy[:,0]
-        yy = xy[:,1]
+        if len(xy.shape) > 1:
+            xx = xy[:,0]
+            yy = xy[:,1]
+        else:
+            yy = np.array(xy)
+            xx = np.array(range(xy.size))
         plt.figure(figsize=[8, 4])
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
