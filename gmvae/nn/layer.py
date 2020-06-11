@@ -66,17 +66,22 @@ class ConvTranspose2dModule(nn.Module):
         return x
 
 class Gaussian(nn.Module):
-    def __init__(self):
+    def __init__(self, act_regur=None):
         super().__init__()
+        layers = []
+        if act_regur in ACTIVATIONS:
+            layers.append(cn.get_activation(act_regur))
+        self.features = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = x.tanh()
+        x = self.features(x)
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit) + eps
-        if self.training:
-            x = reparameterize(mean, var)
-        else:
-            x = mean
+        # if self.training:
+        #     x = reparameterize(mean, var)
+        # else:
+        #     x = mean
+        x = reparameterize(mean, var)
         return x, mean, var
 
 class GumbelSoftmax(nn.Module):
