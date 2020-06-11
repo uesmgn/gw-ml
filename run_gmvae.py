@@ -164,7 +164,7 @@ if __name__ == '__main__':
         time_start = time.time()
 
         n_samples = 0
-        gmvae_loss_epoch = torch.zeros(len(loss_labels)).to(device)
+        gmvae_loss_epoch = np.zeros(len(loss_labels))
 
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
@@ -176,10 +176,9 @@ if __name__ == '__main__':
                 print(', '.join([f'{loss_labels[i]}: {l:.3f}' for i, l in enumerate(each_loss)]))
             total_loss.backward()
             optimizer.step()
-            gmvae_loss_epoch += each_loss
+            gmvae_loss_epoch += each_loss.cpu().numpy()
             n_samples += x.shape[0]
         gmvae_loss_epoch /= n_samples
-        gmvae_loss_epoch = gmvae_loss_epoch.cpu().numpy()
 
         # initialize or append loss
         if loss_stats is None:
