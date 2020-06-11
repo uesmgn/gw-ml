@@ -129,9 +129,9 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = loss_function.Criterion()
 
-    model.eval()
-    if verbose:
-        summary(model, x_shape)
+    # model.eval()
+    # if verbose:
+    #     summary(model, x_shape)
 
     init_epoch = 0
     loss_labels = ['total',
@@ -173,6 +173,7 @@ if __name__ == '__main__':
             total_loss, each_loss = criterion.gmvae_loss(params)
             if verbose:
                 print(f'batch: {batch_idx}, loss: {total_loss:.3f}')
+                print(', '.join([f'{loss_labels[i]}: {l:.3f}' for i, l in enumerate(each_loss)]))
             total_loss.backward()
             optimizer.step()
             gmvae_loss_epoch += each_loss
