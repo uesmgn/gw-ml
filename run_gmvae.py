@@ -153,6 +153,8 @@ if __name__ == '__main__':
         time_stats = checkpoint['time_stats']
         print(f'load model from epoch {init_epoch}')
 
+    beta_rate = 0.02
+
     for epoch in range(init_epoch, n_epoch):
         epoch = epoch + 1
         # training
@@ -162,12 +164,13 @@ if __name__ == '__main__':
 
         n_samples = 0
         gmvae_loss_epoch = np.zeros(len(loss_labels))
+        beta = min(1., np.log(epoch * beta_rate + 1.)
 
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
-            total_loss, each_loss = criterion.gmvae_loss(params)
+            total_loss, each_loss = criterion.gmvae_loss(params, beta)
             if verbose:
                 print(f'batch: {batch_idx}, loss: {total_loss:.3f}')
                 print(', '.join([f'{loss_labels[i]}: {l:.1f}' for i, l in enumerate(each_loss)]))
