@@ -83,7 +83,7 @@ class GumbelSoftmax(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, logits, tau=0.5):
+    def forward(self, logits, tau=0.7):
         # x: (batch_size, K)
         pi = F.softmax(logits, dim=-1)
         u = torch.rand_like(logits)
