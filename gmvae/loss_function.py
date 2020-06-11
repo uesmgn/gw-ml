@@ -7,7 +7,7 @@ eps = 1e-10
 
 class Criterion:
 
-    def gmvae_loss(self, params, reduction='none'):
+    def gmvae_loss(self, params):
         # get parameters from model
         x = params['x']
         x_z = params['x_z']
