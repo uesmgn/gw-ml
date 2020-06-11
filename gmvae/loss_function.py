@@ -87,5 +87,5 @@ class Criterion:
         # kl: (batch_size, )
         k = y.shape[-1]
         u = torch.ones_like(y) / k
-        kl = (u * torch.log(y / u + eps)).mean(1)
+        kl = (u * torch.log(u / y + eps)).mean(1)
         return kl
