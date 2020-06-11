@@ -240,7 +240,7 @@ if __name__ == '__main__':
                 cm, cm_index, cm_columnns = ut.confution_matrix(labels_true,
                                                                 labels_pred,
                                                                 xlabels,
-                                                                ylabels))
+                                                                ylabels)
 
                 if not os.path.exists(outdir):
                     os.mkdir(outdir)
@@ -275,7 +275,7 @@ if __name__ == '__main__':
 
                 time_elapse = time.time() - time_start
                 print(f"calc time = {time_elapse:.3f} sec")
-        
+
         # if epoch % save_itvl == 0:
         #     torch.save({
         #     'epoch': epoch,
