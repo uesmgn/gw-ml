@@ -1,11 +1,11 @@
 import torch.optim as optim
-from .functions import activation
+from nn.functions import get_activation
 
 
 def get_activation(trial):
     activation_names = ['Tanh', 'ReLU', 'ELU']
     activation_name = trial.suggest_categorical('activation', activation_names)
-    act_func = activation(activation_name)
+    act_func = get_activation(activation_name)
     return act_func
 
 def get_pooling(trial):

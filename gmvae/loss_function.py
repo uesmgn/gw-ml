@@ -2,11 +2,12 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
-class Criterion:
-    def __init__(self):
-        pass
 
-    def gmvae_loss(self, params, weights, reduction='none'):
+eps = 1e-10
+
+class Criterion:
+
+    def gmvae_loss(self, params, reduction='none'):
         # get parameters from model
         x = params['x']
         x_z = params['x_z']
@@ -16,115 +17,63 @@ class Criterion:
         z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
         z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
 
-        # get loss weights from arguments
-        rec_wei = weights.get('rec_wei') or 1.
-        cond_wei = weights.get('cond_wei') or 1.
-        w_wei = weights.get('w_wei') or 1.
-        y_wei = weights.get('y_wei') or 1.
-        y_thres = weights.get('y_thres') or 0.
-
-        rec_loss = rec_wei * self.binary_cross_entropy(x, x_z)
-        conditional_negative_kl = \
-            cond_wei * self.conditional_negative_kl(z_x, z_x_mean, z_x_var,
-                                                    z_wy_means, z_wy_vars, y_wz)
-        w_prior_negative_kl = w_wei * self.gaussian_negative_kl(w_x_mean, w_x_var)
-        y_prior_negative_kl = y_wei * self.y_prior_negative_kl(y_wz, thres=y_thres)
+        rec_loss = self.binary_cross_entropy(x, x_z).sum()
+        cond_kl = self.gaussian_gmm_kl(z_x_mean, z_x_var,
+                                       z_wy_means, z_wy_vars, y_wz).sum()
+        w_kl = self.standard_gaussian_kl(w_x_mean, w_x_var).sum()
+        y_kl = self.uniform_categorical_kl(y_wz).sum()
 
         total = torch.cat([rec_loss.view(-1),
-                           conditional_negative_kl.view(-1),
-                           w_prior_negative_kl.view(-1),
-                           y_prior_negative_kl.view(-1)])
+                           cond_kl.view(-1),
+                           w_kl.view(-1),
+                           y_kl.view(-1)])
 
-        if reduction is 'sum':
-            return total.sum()
-        return total
+        return total.sum(), total
 
-    def gmvae_m2_loss(self, params, weights, reduction='none'):
-        x = params['x']
-        x_z = params['x_z']
-        z_y_mean, z_y_var = params['z_y_mean'], params['z_y_var']
-        y_x = params['y_x']
-        y_x_prob = params['y_x_prob']
-        z_xy = params['z_xy']
-        z_xy_mean, z_xy_var = params['z_xy_mean'], params['z_xy_var'],
-
-        # get loss weights from arguments
-        rec_wei = weights.get('rec_wei') or 1.
-        cond_wei = weights.get('cond_wei') or 1.
-        y_wei = weights.get('y_wei') or 1.
-        y_thres = weights.get('y_thres') or 0.
-
-        rec_loss = rec_wei * self.binary_cross_entropy(x, x_z)
-        conditional_negative_kl = \
-            cond_wei * self.gaussian_loss(z_xy, z_xy_mean, z_xy_var,
-                                          z_y_mean, z_y_var)
-        y_prior_negative_kl = y_wei * self.y_prior_negative_kl(y_x_prob, thres=y_thres)
-
-        total = torch.cat([rec_loss.view(-1),
-                           conditional_negative_kl.view(-1),
-                           y_prior_negative_kl.view(-1)])
-
-        if reduction is 'sum':
-            return total.sum()
-        return total
-
-    def cross_entropy(self, output, target):
-        loss = F.cross_entropy(output, target, reduction='sum')
-        loss /= output.shape[0]
+    def binary_cross_entropy(x, x_):
+        # x: (batch_size, x_size, x_size)
+        # x_: (batch_size, x_size, x_size)
+        # loss: (batch_size, )
+        assert x.shape == x_.shape
+        x = x.view(x.shape[0], -1)
+        x_ = x_.view(x_.shape[0], -1)
+        loss = F.binary_cross_entropy(x_, x, reduction='none').sum(1)
         return loss
 
-    def binary_cross_entropy(self, x, x_):
-        # Reconstruction loss
-        # https://arxiv.org/pdf/1312.6114.pdf -> C.1
-        # E_q[log p(x^(i)|z^(i))]=1/LΣ(log p(x_m^(i)|z_m^(i,l)))
-        # x, p ~ β(p, x)=p^x+(1-p)^(1-x)
-        # log p(x_m^(i)|z_m^(i,l) = log(p_i^x_i+(1-p_i)^(1-x_i))
-        #                         = x_i log(p_i)+(1-x_i) log(1-p_i)
-        loss = F.binary_cross_entropy(x_, x, reduction='sum')
-        loss /= x.shape[0]
-        return loss
-
-
-    def conditional_negative_kl(self, z_x, z_x_mean, z_x_var,
-                                z_wy_means, z_wy_vars, y_wz):
-        # Conditional loss
-        # q(z|x)=N(μ_x,σ_x)
-        # logp = −0.5 * { log(det(σ_x^2)) + (z − μ_x)^2 / σ_x^2 }
-        # q(z|w,y=1)=N(μ_w,σ_w)
-        # logq = −0.5 * { Σπlog(det(σ_w^2)) + Σπ(z − μ_w)^2 / σ_w^2 }
-        eps = 1e-10
-        logq = -0.5 * (torch.log(z_x_var + eps).sum(1)
-                      + (torch.pow(z_x - z_x_mean, 2) / z_x_var).sum(1))
-        K = y_wz.shape[-1]
-        z_wy = z_x.repeat(1, K).view(z_x.shape[0], K, -1).transpose(1,2)  # (batch_size, z_dim, K)
-        logp = -0.5 * (y_wz * torch.log(z_wy_vars + eps).sum(1)
-                       + y_wz * (torch.pow(z_wy - z_wy_means, 2) / z_wy_vars).sum(1)).sum(1)
-        kl = (logq - logp).mean()
+    def gaussian_gmm_kl(mean, var, means, variances, pi):
+        # mean: (batch_size, dim)
+        # var: (batch_size, dim) > 0
+        # means: (batch_size, dim, K)
+        # vars: (batch_size, dim, K) > 0
+        # pi: (batch_size, K)
+        # kl: (batch_size, )
+        K = pi.shape[-1]
+        mean_repeat = mean.unsqueeze(-1).repeat(1, 1, K)
+        var_repeat = var.unsqueeze(-1).repeat(1, 1, K)
+        kl = (pi * gaussian_kl(mean_repeat, var_repeat, means, variances)).sum(1)
         return kl
 
-    def gaussian_loss(self, z_xy, z_xy_mean, z_xy_var,
-                      z_y_mean, z_y_var):
-        eps = 1e-10
-        logq = -0.5 * (torch.log(z_xy_var + eps).sum(1)
-                      + (torch.pow(z_xy - z_xy_mean, 2) / z_xy_var).sum(1))
-        logp = -0.5 * (torch.log(z_y_var + eps).sum(1)
-                      + (torch.pow(z_xy - z_y_mean, 2) / z_y_var).sum(1))
-        kl = (logq - logp).mean()
+    def gaussian_kl(mean1, var1, mean2, var2):
+        # mean1: (batch_size, dim, .. )
+        # mean2: (batch_size, dim, .. )
+        # var1: (batch_size, dim, .. ) > 0
+        # var2: (batch_size, dim, .. ) > 0
+        # kl: (batch_size, .. )
+        assert (torch.cat([var1, var2]) > 0).all()
+        kl = (torch.log(var2 / var1) + var1 / var2 + torch.pow(mean1 - mean2, 2) / var2 - 1).sum(1)
         return kl
 
-    def gaussian_negative_kl(self, mean, var):
-        # input: μ_θ(w), (batch_size, w_dim)
-        # input: σ_θ(w), (batch_size, w_dim)
-        eps = 1e-10
-        kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).sum(-1)
-        kl = kl.mean()
+    def standard_gaussian_kl(mean, var):
+        # mean: (batch_size, dim, ..)
+        # var: (batch_size, dim, ..)
+        # kl: (batch_size, ..)
+        kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).sum(1)
         return kl
 
-    def y_prior_negative_kl(self, y_wz, pi=None, thres=0.):
-        eps = 1e-10
-        k = y_wz.shape[-1]
-        kl = -np.log(k) - 1 / k * torch.log(y_wz + eps).sum(-1)
-        thres = torch.ones_like(kl) * thres
-        kl = torch.max(kl, thres)
-        kl = kl.mean() # negative value minimize(kl)
+    def uniform_categorical_kl(y):
+        # y: (batch_size, K)
+        # kl: (batch_size, )
+        k = y.shape[-1]
+        u = torch.ones_like(y) / k
+        kl = F.kl_div(torch.log(u), y,reduction='none').sum(1)
         return kl
