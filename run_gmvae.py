@@ -176,10 +176,11 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
-            total_loss, each_loss = criterion.gmvae_loss(params, beta)
+            total_loss, each_loss = criterion.gmvae_loss(params, beta,
+                                                         reduction='sum')
             if verbose:
                 print(f'batch: {batch_idx}, loss: {total_loss:.3f}')
-                print(', '.join([f'{loss_labels[i]}: {l:.1f}' for i, l in enumerate(each_loss)]))
+                print(', '.join([f'{loss_labels[i]}: {l:.3f}' for i, l in enumerate(each_loss)]))
             total_loss.backward()
             optimizer.step()
             gmvae_loss_epoch += each_loss.cpu().numpy()
@@ -193,7 +194,7 @@ if __name__ == '__main__':
         time_elapse = time.time() - time_start
         time_stats.append(time_elapse)
         print(f'train loss = {gmvae_loss_epoch[0]:.3f} at epoch {epoch}, beta {beta:.3f}')
-        print(', '.join([f'{loss_labels[i]}: {l:.1f}' for i, l in enumerate(gmvae_loss_epoch)]))
+        print(', '.join([f'{loss_labels[i]}: {l:.3f}' for i, l in enumerate(gmvae_loss_epoch)]))
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(time_stats).mean():.3f} sec")
 
