@@ -3,8 +3,6 @@ import torch.nn.functional as F
 import numpy as np
 
 class Criterion:
-    def __init__(self):
-        pass
 
     def vae_loss(self, params, beta=1.0):
         # get parameters from model
@@ -23,7 +21,6 @@ class Criterion:
 
     def binary_cross_entropy(self, x, x_):
         loss = F.binary_cross_entropy(x_, x, reduction='sum')
-        loss = loss.sum()
         return loss
 
     def gaussian_kl(self, mean, var):
