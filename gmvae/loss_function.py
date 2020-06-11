@@ -7,7 +7,7 @@ eps = 1e-10
 
 class Criterion:
 
-    def gmvae_loss(self, params, beta=1.0):
+    def gmvae_loss(self, params, beta=1.0, reduction='mean'):
         # get parameters from model
         x = params['x']
         x_z = params['x_z']
@@ -17,11 +17,12 @@ class Criterion:
         z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var'],
         z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
 
-        rec_loss = self.binary_cross_entropy(x, x_z).mean()
+        rec_loss = self.binary_cross_entropy(x, x_z, reduction).sum()
         cond_kl = self.gaussian_gmm_kl(z_x_mean, z_x_var,
-                                       z_wy_means, z_wy_vars, y_wz).mean()
-        w_kl = self.standard_gaussian_kl(w_x_mean, w_x_var).mean()
-        y_kl = self.uniform_categorical_kl(y_wz).mean()
+                                       z_wy_means, z_wy_vars, y_wz,
+                                       reduction).sum()
+        w_kl = self.standard_gaussian_kl(w_x_mean, w_x_var, reduction).sum()
+        y_kl = self.uniform_categorical_kl(y_wz, reduction).sum()
 
         total = rec_loss + beta * (cond_kl + w_kl + y_kl)
 
@@ -33,17 +34,21 @@ class Criterion:
 
         return total, each.detach()
 
-    def binary_cross_entropy(self, x, x_):
+    def binary_cross_entropy(self, x, x_, reduction='mean'):
         # x: (batch_size, x_size, x_size)
         # x_: (batch_size, x_size, x_size)
         # loss: (batch_size, )
         assert x.shape == x_.shape
         x = x.view(x.shape[0], -1)
         x_ = x_.view(x_.shape[0], -1)
-        loss = F.binary_cross_entropy(x_, x, reduction='none').sum(1)
+        loss = F.binary_cross_entropy(x_, x, reduction='none')
+        if reduction is 'sum':
+            return loss.sum(1)
+        elif reduction is 'mean':
+            return loss.mean(1)
         return loss
 
-    def gaussian_gmm_kl(self, mean, var, means, variances, pi):
+    def gaussian_gmm_kl(self, mean, var, means, variances, pi, reduction='mean'):
         # mean: (batch_size, dim)
         # var: (batch_size, dim) > 0
         # means: (batch_size, dim, K)
@@ -53,30 +58,42 @@ class Criterion:
         K = pi.shape[-1]
         mean_repeat = mean.unsqueeze(-1).repeat(1, 1, K)
         var_repeat = var.unsqueeze(-1).repeat(1, 1, K)
-        kl = (pi * self.gaussian_kl(mean_repeat, var_repeat, means, variances)).mean(1)
+        kl = (pi * self.gaussian_kl(mean_repeat, var_repeat, means, variances, reduction)).mean(1)
         return kl
 
-    def gaussian_kl(self, mean1, var1, mean2, var2):
+    def gaussian_kl(self, mean1, var1, mean2, var2, reduction='mean'):
         # mean1: (batch_size, dim, .. )
         # mean2: (batch_size, dim, .. )
         # var1: (batch_size, dim, .. ) > 0
         # var2: (batch_size, dim, .. ) > 0
         # kl: (batch_size, .. )
         assert (torch.cat([var1, var2]) > 0).all()
-        kl = (torch.log(var2 / var1) + var1 / var2 + torch.pow(mean1 - mean2, 2) / var2 - 1).sum(1)
+        kl = torch.log(var2 / var1) + var1 / var2 + torch.pow(mean1 - mean2, 2) / var2 - 1
+        if reduction is 'sum':
+            return kl.sum(1)
+        elif reduction is 'mean':
+            return kl.mean(1)
         return kl
 
-    def standard_gaussian_kl(self, mean, var):
+    def standard_gaussian_kl(self, mean, var, reduction='mean'):
         # mean: (batch_size, dim, ..)
         # var: (batch_size, dim, ..)
         # kl: (batch_size, ..)
-        kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).sum(1)
+        kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2))
+        if reduction is 'sum':
+            return kl.sum(1)
+        elif reduction is 'mean':
+            return kl.mean(1)
         return kl
 
-    def uniform_categorical_kl(self, y):
+    def uniform_categorical_kl(self, y, reduction='mean'):
         # y: (batch_size, K)
         # kl: (batch_size, )
         k = y.shape[-1]
         u = torch.ones_like(y) / k
-        kl = F.kl_div(torch.log(u), y, reduction='none').sum(1)
+        kl = F.kl_div(torch.log(u), y, reduction='none')
+        if reduction is 'sum':
+            return kl.sum(1)
+        elif reduction is 'mean':
+            return kl.mean(1)
         return kl
