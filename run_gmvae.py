@@ -225,9 +225,11 @@ if __name__ == '__main__':
                 time_start = time.time()
                 tsne = TSNE(n_components=2)
                 z_x = z_x.cpu().numpy()
-                # z_wy = z_wy.cpu().numpy()
-                # w_x = w_x.cpu().numpy()
+                z_wy = z_wy.cpu().numpy()
+                w_x = w_x.cpu().numpy()
                 z_x_tsne = tsne.fit_transform(z_x)
+                z_wy_tsne = tsne.fit_transform(z_wy)
+                w_x_tsne = tsne.fit_transform(w_x)
 
         #         # multi processing
         #         with mp.Pool(6) as pool:
@@ -249,15 +251,15 @@ if __name__ == '__main__':
                            labels_true, f'{outdir}/zx_tsne_{epoch}_t.png')
                 ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
                            labels_pred, f'{outdir}/zx_tsne_{epoch}_p.png')
-        #         ut.scatter(z_wy_tsne[:, 0], z_wy_tsne[:, 1],
-        #                    labels_true, f'{outdir}/zwy_tsne_{epoch}_t.png')
-        #         ut.scatter(z_wy_tsne[:, 0], z_wy_tsne[:, 1],
-        #                    labels_pred, f'{outdir}/zwy_tsne_{epoch}_p.png')
-        #         ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
-        #                    labels_true, f'{outdir}/wx_tsne_{epoch}_t.png')
-        #         ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
-        #                    labels_pred, f'{outdir}/wx_tsne_{epoch}_p.png')
-        #
+                ut.scatter(z_wy_tsne[:, 0], z_wy_tsne[:, 1],
+                           labels_true, f'{outdir}/zwy_tsne_{epoch}_t.png')
+                ut.scatter(z_wy_tsne[:, 0], z_wy_tsne[:, 1],
+                           labels_pred, f'{outdir}/zwy_tsne_{epoch}_p.png')
+                ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
+                           labels_true, f'{outdir}/wx_tsne_{epoch}_t.png')
+                ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
+                           labels_pred, f'{outdir}/wx_tsne_{epoch}_p.png')
+
                 counter = np.array(
                     [[label, np.count_nonzero(labels_pred==label)] for label in ylabels])
                 ut.bar(counter[:,0], counter[:,1], f'{outdir}/bar_{epoch}.png', reverse=True)
