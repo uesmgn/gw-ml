@@ -19,7 +19,7 @@ class Criterion:
 
         rec_loss = self.binary_cross_entropy(x, x_z).sum()
         cond_kl = self.gaussian_gmm_kl(z_x_mean, z_x_var,
-                                       z_wy_means, z_wy_vars, y_wz).sum()
+                                       z_wy_means, z_wy_vars, y_kl).sum()
         w_kl = self.standard_gaussian_kl(w_x_mean, w_x_var).sum()
         y_kl = self.uniform_categorical_kl(y_wz).sum()
 
@@ -78,5 +78,5 @@ class Criterion:
         # kl: (batch_size, )
         k = y.shape[-1]
         u = torch.ones_like(y) / k
-        kl = F.kl_div(torch.log(u), y, reduction='none').sum(1)
+        kl = F.kl_div(torch.log(u), y, reduction='none').mean(1)
         return kl
