@@ -164,24 +164,21 @@ if __name__ == '__main__':
         time_start = time.time()
 
         n_samples = 0
-        total_loss_epoch = 0
         gmvae_loss_epoch = torch.zeros(len(loss_labels)).to(device)
 
         for batch_idx, (x, l) in enumerate(train_loader):
-            if verbose:
-                print(f'batch: {batch_idx}')
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
-            gmvae_loss_total, gmvae_loss = criterion.gmvae_loss(params)
-            gmvae_loss_total.backward()
+            total_loss, each_loss = criterion.gmvae_loss(params)
+            if verbose:
+                print(f'batch: {batch_idx}, loss: {total_loss:.3f}')
+            total_loss.backward()
             optimizer.step()
-            gmvae_loss_epoch += torch.cat([gmvae_loss_total.view(-1),
-                                           gmvae_loss.view(-1)])
-            total_loss_epoch += gmvae_loss_total.item()
+            gmvae_loss_epoch += each_loss
             n_samples += x.shape[0]
         gmvae_loss_epoch /= n_samples
-        gmvae_loss_epoch = gmvae_loss_epoch.detach().cpu().numpy()
+        gmvae_loss_epoch = gmvae_loss_epoch.cpu().numpy()
 
         # initialize or append loss
         if loss_stats is None:
