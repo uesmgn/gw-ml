@@ -7,7 +7,7 @@ eps = 1e-10
 
 class Criterion:
 
-    def gmvae_loss(self, params):
+    def gmvae_loss(self, params, beta=1.0):
         # get parameters from model
         x = params['x']
         x_z = params['x_z']
@@ -23,7 +23,7 @@ class Criterion:
         w_kl = self.standard_gaussian_kl(w_x_mean, w_x_var).sum()
         y_kl = self.uniform_categorical_kl(y_wz).sum()
 
-        total = rec_loss + cond_kl + w_kl + y_kl
+        total = rec_loss + beta * (cond_kl + w_kl + y_kl)
 
         each = torch.cat([total.view(-1),
                           rec_loss.view(-1),
