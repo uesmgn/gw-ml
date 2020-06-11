@@ -35,10 +35,9 @@ class Dataset(data.Dataset):
         return Dataset(df, self.transform)
 
     def sample(self, column, min_value_count=0,
-               n_sample=1, random_state=0, copy=False):
+               n_sample=0, random_state=0, copy=False):
         df = self.df
         assert column in df.columns
-        assert min_value_count <= n_sample
         if n_sample > 0:
             value_count = df[column].value_counts()
             idx = value_count[value_count > min_value_count].index
