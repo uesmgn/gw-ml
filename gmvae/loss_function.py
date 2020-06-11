@@ -23,12 +23,15 @@ class Criterion:
         w_kl = self.standard_gaussian_kl(w_x_mean, w_x_var).sum()
         y_kl = self.uniform_categorical_kl(y_wz).sum()
 
-        total = torch.cat([rec_loss.view(-1),
-                           cond_kl.view(-1),
-                           w_kl.view(-1),
-                           y_kl.view(-1)])
+        total = rec_loss + cond_kl + w_kl + y_kl
 
-        return total.sum(), total
+        each = torch.cat([total.view(-1),
+                          rec_loss.view(-1),
+                          cond_kl.view(-1),
+                          w_kl.view(-1),
+                          y_kl.view(-1)])
+
+        return total.sum(), each.detach()
 
     def binary_cross_entropy(self, x, x_):
         # x: (batch_size, x_size, x_size)
