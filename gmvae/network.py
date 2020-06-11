@@ -1,8 +1,7 @@
 import os
 import torch
 import torch.nn as nn
-from .utils import nn as cn
-from . import utils as ut
+from . import nn as cn
 import torch.nn.functional as F
 
 
