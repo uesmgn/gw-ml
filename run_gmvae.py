@@ -177,7 +177,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             params = model(x, return_params=True)
             total_loss, each_loss = criterion.gmvae_loss(params, beta,
-                                                         reduction='sum')
+                                                         reduction='mean')
             if verbose:
                 print(f'batch: {batch_idx}, loss: {total_loss:.3f}')
                 print(', '.join([f'{loss_labels[i]}: {l:.3f}' for i, l in enumerate(each_loss)]))
@@ -185,7 +185,6 @@ if __name__ == '__main__':
             optimizer.step()
             gmvae_loss_epoch += each_loss.cpu().numpy()
             n_samples += x.shape[0]
-        gmvae_loss_epoch /= n_samples
         # initialize or append loss
         if loss_stats is None:
             loss_stats = gmvae_loss_epoch
