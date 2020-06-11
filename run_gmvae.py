@@ -109,13 +109,11 @@ if __name__ == '__main__':
                               batch_size=batch_size,
                               num_workers=num_workers,
                               shuffle=True,
-                              pin_memory=True,
                               drop_last=True)
     test_loader = DataLoader(test_set,
                              batch_size=batch_size,
                              num_workers=num_workers,
                              shuffle=True,
-                             pin_memory=True,
                              drop_last=True)
 
     model = GMVAE(nargs)
