@@ -153,7 +153,7 @@ if __name__ == '__main__':
         time_stats = checkpoint['time_stats']
         print(f'load model from epoch {init_epoch}')
 
-    beta_rate = 0.04
+    beta_rate = 0.05
 
     for epoch in range(init_epoch, n_epoch):
         epoch = epoch + 1
@@ -165,7 +165,7 @@ if __name__ == '__main__':
         n_samples = 0
         gmvae_loss_epoch = np.zeros(len(loss_labels))
         # beta(x) = exp(-10*exp(-0.1x))
-        beta = min(1., np.exp(-10 * np.exp(-beta_rate * epoch)))
+        beta = max(min(1., np.exp(-20 * np.exp(-beta_rate * epoch))), 0)
 
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
@@ -179,7 +179,6 @@ if __name__ == '__main__':
             optimizer.step()
             gmvae_loss_epoch += each_loss.cpu().numpy()
             n_samples += x.shape[0]
-        gmvae_loss_epoch /= n_samples
 
         # initialize or append loss
         if loss_stats is None:
