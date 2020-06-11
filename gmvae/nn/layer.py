@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from functions import *
+from .functions import *
 
 eps = 1e-10
 

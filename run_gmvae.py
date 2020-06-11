@@ -20,7 +20,7 @@ from sklearn.manifold import TSNE
 
 from gmvae.dataset import Dataset
 from gmvae.network import *
-import gmvae.utils as ut
+import utils as ut
 from gmvae import loss_function
 
 parser = argparse.ArgumentParser(
