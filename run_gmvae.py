@@ -172,7 +172,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             params = model(x, return_params=True)
-            gmvae_loss_total, gmvae_loss = criterion.gmvae_loss(params, reduction='none')
+            gmvae_loss_total, gmvae_loss = criterion.gmvae_loss(params)
             gmvae_loss_total.backward()
             optimizer.step()
             gmvae_loss_epoch += torch.cat([gmvae_loss_total.view(-1),
@@ -189,41 +189,41 @@ if __name__ == '__main__':
             loss_stats = np.vstack([loss_stats, gmvae_loss_epoch])
         time_elapse = time.time() - time_start
         time_stats.append(time_elapse)
-        print(f'train loss = {gmvae_loss_epoch[0]:.3f} at epoch {epoch_idx+1}')
+        print(f'train loss = {gmvae_loss_epoch[0]:.3f} at epoch {epoch}')
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(time_stats).mean():.3f} sec")
-        #
-        # # eval...
-        # if epoch % eval_itvl == 0:
-        #     with torch.no_grad():
-        #         model.eval()
-        #         print(f'----- evaluating at epoch {epoch} -----')
-        #         time_start = time.time()
-        #         z_x = torch.Tensor().to(device)
-        #         z_wy = torch.Tensor().to(device)
-        #         w_x = torch.Tensor().to(device)
-        #         labels_true = []
-        #         labels_pred = []
-        #
-        #         for batch_idx, (x, l) in enumerate(train_loader):
-        #             x = x.to(device)
-        #             params = model(x, return_params=True)
-        #             z_x = torch.cat((z_x, params['z_x']), 0)
-        #             z_wy = torch.cat((z_wy, params['z_wy']), 0)
-        #             w_x = torch.cat((w_x, params['w_x']), 0)
-        #             y_pred = params['y_pred']
-        #             labels_true += l
-        #             labels_pred += list(y_pred.cpu().numpy().astype(int))
-        #         nmi = ut.nmi(labels_true, labels_pred)
-        #         nmi_stats.append(nmi)
-        #         ari = ut.ari(labels_true, labels_pred)
-        #         ari_stats.append(ari)
-        #         time_elapse = time.time() - time_start
-        #         print(f"calc time = {time_elapse:.3f} sec")
-        #         print(f'# classes predicted: {len(set(labels_pred))}')
-        #         print(f'NMI: {nmi:.3f}')
-        #         print(f'ARI: {ari:.3f}')
-        #
+
+        # eval...
+        if epoch % eval_itvl == 0:
+            with torch.no_grad():
+                model.eval()
+                print(f'----- evaluating at epoch {epoch} -----')
+                time_start = time.time()
+                z_x = torch.Tensor().to(device)
+                z_wy = torch.Tensor().to(device)
+                w_x = torch.Tensor().to(device)
+                labels_true = []
+                labels_pred = []
+
+                for batch_idx, (x, l) in enumerate(train_loader):
+                    x = x.to(device)
+                    params = model(x, return_params=True)
+                    z_x = torch.cat((z_x, params['z_x']), 0)
+                    z_wy = torch.cat((z_wy, params['z_wy']), 0)
+                    w_x = torch.cat((w_x, params['w_x']), 0)
+                    y_pred = params['y_pred']
+                    labels_true += l
+                    labels_pred += list(y_pred.cpu().numpy().astype(int))
+                nmi = ut.nmi(labels_true, labels_pred)
+                nmi_stats.append(nmi)
+                ari = ut.ari(labels_true, labels_pred)
+                ari_stats.append(ari)
+                time_elapse = time.time() - time_start
+                print(f"calc time = {time_elapse:.3f} sec")
+                print(f'# classes predicted: {len(set(labels_pred))}')
+                print(f'NMI: {nmi:.3f}')
+                print(f'ARI: {ari:.3f}')
+
         #         # decompose...
         #         print(f'----- decomposing and plotting -----')
         #         time_start = time.time()
