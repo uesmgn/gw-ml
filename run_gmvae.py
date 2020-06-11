@@ -223,7 +223,7 @@ if __name__ == '__main__':
                 # decompose...
                 print(f'----- decomposing and plotting -----')
                 time_start = time.time()
-                tsne = TSNE(n_components=2)
+                tsne = TSNE(n_jobs=4)
                 z_x = z_x.cpu().numpy()
                 z_wy = z_wy.cpu().numpy()
                 w_x = w_x.cpu().numpy()
