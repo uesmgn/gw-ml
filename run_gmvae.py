@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     df = pd.read_json(dataset_json)
     dataset = Dataset(df, data_transform)
-    # dataset.sample('label', min_value_count=200, n_sample=200)
+    dataset.sample('label', min_value_count=200)
     # new_set = dataset.get_by_keys('label', new_labels)
     # dataset = dataset.get_by_keys('label', labels)
     train_set, test_set = dataset.random_split()
