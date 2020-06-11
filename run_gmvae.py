@@ -29,6 +29,8 @@ parser.add_argument('-e', '--n_epoch', type=int,
                     help='number of epochs')
 parser.add_argument('-o', '--outdir', type=str,
                     help='output directory')
+parser.add_argument('-m', '--model_id', type=int,
+                    help='model id')
 parser.add_argument('--eval_itvl', type=int,
                     help='eval interval')
 parser.add_argument('--save_itvl', type=int,
@@ -57,6 +59,7 @@ if __name__ == '__main__':
     n_epoch = args.n_epoch or ini.getint('conf', 'n_epoch')
     eval_itvl = args.eval_itvl or ini.getint('conf', 'eval_itvl')
     save_itvl = args.save_itvl or ini.getint('conf', 'save_itvl')
+    model_id = args.model_id or 0
 
     batch_size = ini.getint('conf', 'batch_size') or 32
     num_workers = ini.getint('conf', 'num_workers') or 1
@@ -114,8 +117,10 @@ if __name__ == '__main__':
                              num_workers=num_workers,
                              shuffle=True,
                              drop_last=True)
-
-    model = GMVAE(nargs)
+    if model_id == 0:
+        model = GMVAE(nargs)
+    elif model_id == 1:
+        model = GMVAE_gumbel(nargs)
 
     # GPU Parallelize
     if torch.cuda.is_available():
