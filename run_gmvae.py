@@ -184,7 +184,6 @@ if __name__ == '__main__':
             optimizer.step()
             gmvae_loss_epoch += each_loss.cpu().numpy()
             n_samples += x.shape[0]
-
         # initialize or append loss
         if loss_stats is None:
             loss_stats = gmvae_loss_epoch
