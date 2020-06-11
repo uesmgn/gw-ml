@@ -168,9 +168,10 @@ if __name__ == '__main__':
         gmvae_loss_epoch = torch.zeros(len(loss_labels)).to(device)
 
         for batch_idx, (x, l) in enumerate(train_loader):
+            if verbose:
+                print(f'batch: {batch_idx}')
             x = x.to(device)
             optimizer.zero_grad()
-
             params = model(x, return_params=True)
             gmvae_loss_total, gmvae_loss = criterion.gmvae_loss(params)
             gmvae_loss_total.backward()
