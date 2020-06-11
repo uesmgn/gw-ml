@@ -187,7 +187,7 @@ if __name__ == '__main__':
             loss_stats = np.vstack([loss_stats, gmvae_loss_epoch])
         time_elapse = time.time() - time_start
         time_stats.append(time_elapse)
-        print(f'train loss = {gmvae_loss_epoch[0]:.3f} at epoch {epoch}')
+        print(f'train loss = {gmvae_loss_epoch[0]:.3f} at epoch {epoch}, beta {beta:.3f}')
         print(', '.join([f'{loss_labels[i]}: {l:.1f}' for i, l in enumerate(gmvae_loss_epoch)]))
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(time_stats).mean():.3f} sec")
