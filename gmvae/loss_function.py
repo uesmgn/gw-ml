@@ -40,7 +40,7 @@ class Criterion:
         assert x.shape == x_.shape
         x = x.view(x.shape[0], -1)
         x_ = x_.view(x_.shape[0], -1)
-        loss = F.binary_cross_entropy(x_, x, reduction='none').sum(1)
+        loss = F.binary_cross_entropy(x_, x, reduction='none').mean(1)
         return loss
 
     def gaussian_gmm_kl(self, mean, var, means, variances, pi):
@@ -53,7 +53,7 @@ class Criterion:
         K = pi.shape[-1]
         mean_repeat = mean.unsqueeze(-1).repeat(1, 1, K)
         var_repeat = var.unsqueeze(-1).repeat(1, 1, K)
-        kl = (pi * self.gaussian_kl(mean_repeat, var_repeat, means, variances)).sum(1)
+        kl = (pi * self.gaussian_kl(mean_repeat, var_repeat, means, variances)).mean(1)
         return kl
 
     def gaussian_kl(self, mean1, var1, mean2, var2):
@@ -63,14 +63,14 @@ class Criterion:
         # var2: (batch_size, dim, .. ) > 0
         # kl: (batch_size, .. )
         assert (torch.cat([var1, var2]) > 0).all()
-        kl = (torch.log(var2 / var1) + var1 / var2 + torch.pow(mean1 - mean2, 2) / var2 - 1).sum(1)
+        kl = (torch.log(var2 / var1) + var1 / var2 + torch.pow(mean1 - mean2, 2) / var2 - 1).mean(1)
         return kl
 
     def standard_gaussian_kl(self, mean, var):
         # mean: (batch_size, dim, ..)
         # var: (batch_size, dim, ..)
         # kl: (batch_size, ..)
-        kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).sum(1)
+        kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).mean(1)
         return kl
 
     def uniform_categorical_kl(self, y):
