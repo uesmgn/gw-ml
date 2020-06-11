@@ -70,7 +70,7 @@ class Gaussian(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        x = F.tanh(x)
+        x = x.tanh()
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit) + eps
         if self.training:
