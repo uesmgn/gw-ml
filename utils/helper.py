@@ -7,8 +7,14 @@ __all__ = [
 
 def _check_array(*args, allow_2d=True, sort=False, reverse=False,
                  unique=False, check_size=False, check_shape=False, dtype=None):
+    if len(args) > 1 and check_size:
+        if len(set([len(arr) for arr in args])) > 1:
+            raise ValueError('Input arrays must have same length')
+    if len(args) > 1 and check_shape:
+        if len(set([arr.shape for arr in args])) > 1:
+            raise ValueError('Input arrays must have same shape')
     values = []
-    for i, arg in enumerate(args):
+    for arg in args:
         if not hasattr(arg, '__len__') or isinstance(arg, str):
             raise ValueError('Input type must be array-like')
         if len(arg) < 1:
@@ -29,15 +35,10 @@ def _check_array(*args, allow_2d=True, sort=False, reverse=False,
         else:
             raise ValueError('Input type must be 1-D array')
         if dtype is not None:
-            arr = arr.astype(_list_get(dtype, i) or dtype)
+            arr = arr.astype(dtype)
         values.append(arr)
-    if len(values) > 1 and check_size:
-        if len(set([len(arr) for arr in values])) > 1:
-            raise ValueError('Input arrays must have same length')
-    if len(values) > 1 and check_shape:
-        if len(set([arr.shape for arr in values])) > 1:
-            raise ValueError('Input arrays must have same shape')
     return tuple(values) if len(values) > 1 else values[0]
+
 
 def _list_get(arr, idx):
   try:
