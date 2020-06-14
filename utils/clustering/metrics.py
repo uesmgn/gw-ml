@@ -14,9 +14,10 @@ __all__ = [
 def confusion_matrix(true, pred, labels_true=None, labels_pred=None,
                      normalize=True, return_labels=False):
     true, pred = _check_array(true, pred, check_size=True)
-    labels_true = _check_array(labels_true or true, sort=True, unique=True)
-    labels_pred = _check_array(labels_pred or pred, sort=True, unique=True)
-
+    if labels_true is None:
+        labels_true = _check_array(true, sort=True, unique=True)
+    if labels_pred is None:
+        labels_pred = _check_array(pred, sort=True, unique=True)
     matrix = np.zeros([len(labels_true), len(labels_pred)])
     for (t, p) in itertools.product(true, pred):
         matrix[list(labels_true).index(t),
