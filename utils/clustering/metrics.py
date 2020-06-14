@@ -1,3 +1,4 @@
+import itertools
 import numpy as np
 from sklearn import metrics
 from sklearn import preprocessing
