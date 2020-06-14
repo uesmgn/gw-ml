@@ -260,17 +260,18 @@ if __name__ == '__main__':
             print(labels_pred.shape)
             print(xlabels)
             print(ylabels)
-            cm, xlabels, ylabels = metrics.confusion_matrix(
-                labels_true, labels_pred, xlabels, ylabels, return_labels=True)
-            plt.plot_confusion_matrix(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png',
+            cm, cm_xlabels, cm_ylabels = metrics.confusion_matrix(
+                labels_pred, labels_true, ylabels, xlabels, return_labels=True)
+            plt.plot_confusion_matrix(cm, cm_xlabels, cm_ylabels,
+                                      f'{outdir}/cm_{epoch}.png',
                                       xlabel='predicted', ylabel='true')
 
             # decomposing latent features
             print(f'----- decomposing and plotting -----')
             time_start = time.time()
             tsne = decomposition.TSNE()
-            z_x_tsne = tsne.fit_transform(z_x)
-            w_x_tsne = tsne.fit_transform(w_x)
+            z_x_tsne = tsne.fit_transform(z_x.cpu().numpy())
+            w_x_tsne = tsne.fit_transform(w_x.cpu().numpy())
 
             plt.scatter(z_x_tsne, labels_true,
                         f'{outdir}/zx_tsne_{epoch}_t.png')
