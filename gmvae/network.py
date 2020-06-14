@@ -114,11 +114,11 @@ class GMVAE(nn.Module):
                     nn.init.constant_(m.bias, 0)
 
 
-    def forward(self, x, clustering=False, return_params=False):
-        if clustering:
-            return self.clustering(x)
-        else:
+    def forward(self, x, return_params=False):
+        if self.training:
             return self.fit_train(x, return_params)
+        return self.clustering(x)
+
 
     def fit_train(self, x, return_params=False):
         # Encoder
@@ -126,7 +126,6 @@ class GMVAE(nn.Module):
         z_x, z_x_mean, z_x_var = self.z_x_graph(h)
         w_x, w_x_mean, w_x_var = self.w_x_graph(h)
         # pi: softmax(MLP(torch.cat((w_x, z_x)))
-        # y_wz: gumbel-sample
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
         x_z = self.x_z_graph(z_x)
 
@@ -159,16 +158,15 @@ class GMVAE(nn.Module):
             return x_z
 
     def clustering(self, x):
-        # Encoder
         h = self.zw_x_graph(x)
         z_x, _, _ = self.z_x_graph(h)
         w_x, _, _ = self.w_x_graph(h)
-        # pi: softmax(MLP(torch.cat((w_x, z_x)))
-        # y_wz: gumbel-sample
         y_wz = self.y_wz_graph(torch.cat((w_x, z_x), 1))
         _, y_pred = torch.max(y_wz, dim=1)
 
-        return  {'y_wz': y_wz,
+        return  {'z_x': z_x,
+                 'w_x': w_x,
+                 'y_wz': y_wz,
                  'y_pred': y_pred }
 
 

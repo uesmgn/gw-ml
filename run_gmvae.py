@@ -14,13 +14,13 @@ from torchvision import transforms
 from torchsummary import summary
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from MulticoreTSNE import MulticoreTSNE as TSNE
 
 from gmvae.dataset import Dataset
 from gmvae.network import *
-import utils as ut
 from gmvae import loss_function
+
+from utils.clustering import decomposition, metrics
+from utils.plotlib import plot as plt
 
 parser = argparse.ArgumentParser(
     description='PyTorch Implementation of GMVAE Unsupervised Clustering')
@@ -170,7 +170,7 @@ if __name__ == '__main__':
         n_samples = 0
         gmvae_loss_epoch = np.zeros(len(loss_labels))
         # beta(x) = exp(-10*exp(-0.1x))
-        beta = max(min(1., np.exp(-20 * np.exp(-beta_rate * epoch))), 0)
+        beta = max((1., np.exp(-20 * np.exp(-beta_rate * epoch))), 0)
 
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
@@ -198,94 +198,81 @@ if __name__ == '__main__':
         print(f"calc time = {time_elapse:.3f} sec")
         print(f"average calc time = {np.array(time_stats).mean():.3f} sec")
 
-        # eval...
+        # ----------
+        # evaluation
+        # ----------
         if epoch % eval_itvl == 0:
+            print(f'----- evaluating at epoch {epoch} -----')
+            time_start = time.time()
+            model.eval()
             with torch.no_grad():
-                model.eval()
-                print(f'----- evaluating at epoch {epoch} -----')
-                time_start = time.time()
+                # latent features for visualizing
                 z_x = torch.Tensor().to(device)
-                z_wy = torch.Tensor().to(device)
                 w_x = torch.Tensor().to(device)
-                labels_true = []
-                labels_pred = []
+                labels_true = np.array([])
+                labels_pred = np.array([])
 
                 for batch_idx, (x, l) in enumerate(train_loader):
                     x = x.to(device)
-                    params = model(x, return_params=True)
+                    params = model(x)
+                    # stack features over all batches
                     z_x = torch.cat((z_x, params['z_x']), 0)
-                    z_wy = torch.cat((z_wy, params['z_wy']), 0)
                     w_x = torch.cat((w_x, params['w_x']), 0)
-                    y_pred = params['y_pred']
-                    labels_true += l
-                    labels_pred += list(y_pred.cpu().numpy().astype(int))
-                nmi = ut.nmi(labels_true, labels_pred)
-                nmi_stats.append(nmi)
-                ari = ut.ari(labels_true, labels_pred)
-                ari_stats.append(ari)
-                time_elapse = time.time() - time_start
-                print(f"calc time = {time_elapse:.3f} sec")
-                print(f'# classes predicted: {len(set(labels_pred))}')
-                print(f'NMI: {nmi:.3f}')
-                print(f'ARI: {ari:.3f}')
+                    # concatenate all labels
+                    labels_pred = np.append(labels_pred, params['y_pred'].cpu().numpy())
+                    labels_true = np.append(labels_true, l)
+            # metrics
+            nmi = metrics.nmi(labels_true, labels_pred)
+            nmi_stats.append(nmi)
+            ari = metrics.ari(labels_true, labels_pred)
+            ari_stats.append(ari)
+            cm, xlabels, ylabels = metrics.confution_matrix(
+                labels_true, labels_pred, xlabels, ylabels, return_labels=True)
+            time_elapse = time.time() - time_start
 
-                # decompose...
-                print(f'----- decomposing and plotting -----')
-                time_start = time.time()
-                tsne = TSNE(n_jobs=4)
-                z_x = z_x.cpu().numpy()
-                z_wy = z_wy.cpu().numpy()
-                w_x = w_x.cpu().numpy()
-                z_x_tsne = tsne.fit_transform(z_x)
-                z_wy_tsne = tsne.fit_transform(z_wy)
-                w_x_tsne = tsne.fit_transform(w_x)
+            print(f"calc time = {time_elapse:.3f} sec")
+            print(f'# classes predicted: {len(set(labels_pred))}')
+            print(f'nmi: {nmi:.3f}')
+            print(f'ari: {ari:.3f}')
 
-        #         # multi processing
-        #         with mp.Pool(6) as pool:
-        #             z_x_tsne = pool.apply_async(
-        #                 tsne.fit_transform, (z_x, )).get()
-        #             z_wy_tsne = pool.apply_async(
-        #                 tsne.fit_transform, (z_wy, )).get()
-        #             w_x_tsne = pool.apply_async(
-        #                 tsne.fit_transform, (w_x, )).get()
-                cm, cm_index, cm_columnns = ut.confution_matrix(labels_true,
-                                                                labels_pred,
-                                                                xlabels,
-                                                                ylabels)
+            # ----------
+            # decomposing and plotting latent features
+            # ----------
+            print(f'----- decomposing and plotting -----')
+            time_start = time.time()
+            tsne = decomposition.TSNE(cuda=True)
+            z_x_tsne = tsne.fit_transform(z_x)
+            w_x_tsne = tsne.fit_transform(w_x)
 
-                if not os.path.exists(outdir):
-                    os.mkdir(outdir)
-                # output plots
-                ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
-                           labels_true, f'{outdir}/zx_tsne_{epoch}_t.png')
-                ut.scatter(z_x_tsne[:, 0], z_x_tsne[:, 1],
-                           labels_pred, f'{outdir}/zx_tsne_{epoch}_p.png')
-                ut.scatter(z_wy_tsne[:, 0], z_wy_tsne[:, 1],
-                           labels_true, f'{outdir}/zwy_tsne_{epoch}_t.png')
-                ut.scatter(z_wy_tsne[:, 0], z_wy_tsne[:, 1],
-                           labels_pred, f'{outdir}/zwy_tsne_{epoch}_p.png')
-                ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
-                           labels_true, f'{outdir}/wx_tsne_{epoch}_t.png')
-                ut.scatter(w_x_tsne[:, 0], w_x_tsne[:, 1],
-                           labels_pred, f'{outdir}/wx_tsne_{epoch}_p.png')
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+            # output plots
+            plt.scatter(z_x_tsne, labels_true,
+                        f'{outdir}/zx_tsne_{epoch}_t.png')
+            plt.scatter(z_x_tsne, labels_pred,
+                        f'{outdir}/zx_tsne_{epoch}_p.png')
+            plt.scatter(w_x_tsne, labels_true,
+                        f'{outdir}/wx_tsne_{epoch}_t.png')
+            plt.scatter(w_x_tsne, labels_pred,
+                        f'{outdir}/wx_tsne_{epoch}_p.png')
 
-                counter = np.array(
-                    [[label, np.count_nonzero(labels_pred==label)] for label in ylabels])
-                ut.bar(counter[:,0], counter[:,1], f'{outdir}/bar_{epoch}.png', reverse=True)
+            counter = np.array(
+                [[label, np.count_nonzero(labels_pred==label)] for label in ylabels])
+            plt.bar(counter[:,0], counter[:,1],
+                    f'{outdir}/bar_{epoch}.png', reverse=True)
 
-                ut.cmshow(cm, cm_index, cm_columnns, f'{outdir}/cm_{epoch}.png')
+            plt.plot_confusion_matrix(cm, cm_index, cm_columnns,
+                                      f'{outdir}/cm_{epoch}.png')
 
-                for i in range(loss_stats.shape[1]):
-                    loss_label = loss_labels[i]
-                    yy = loss_stats[:,i]
-                    ut.plot(yy, f'{outdir}/{loss_label}_{epoch}.png', 'epoch', loss_label)
-                ut.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png', 'epoch', 'adjusted mutual info score',
-                        ylim=(-0.1,1))
-                ut.plot(ari_stats, f'{outdir}/ari_{epoch}.png', 'epoch', 'adjusted rand score',
-                        ylim=(-0.1,1))
+            for i in range(loss_stats.shape[1]):
+                loss_label = loss_labels[i]
+                yy = loss_stats[:,i]
+                plt.plot(yy, f'{outdir}/{loss_label}_{epoch}.png', 'epoch', loss_label)
+            plt.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png', ymin=-0.1)
+            plt.plot(ari_stats, f'{outdir}/ari_{epoch}.png', ymin=-0.1)
 
-                time_elapse = time.time() - time_start
-                print(f"calc time = {time_elapse:.3f} sec")
+            time_elapse = time.time() - time_start
+            print(f"calc time = {time_elapse:.3f} sec")
 
         # if epoch % save_itvl == 0:
         #     torch.save({
