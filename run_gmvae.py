@@ -221,32 +221,52 @@ if __name__ == '__main__':
                     # concatenate all labels
                     labels_pred = np.append(labels_pred, params['y_pred'].cpu().numpy())
                     labels_true = np.append(labels_true, l)
+
+            time_elapse = time.time() - time_start
+            print(f"calc time = {time_elapse:.3f} sec")
+            print(f'# classes predicted: {len(set(labels_pred))}')
+
+            # plotting
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+
+            # plotting predicted labels histgram
+            counter = np.array(
+                [[label, np.count_nonzero(labels_pred==label)] for label in ylabels])
+            plt.bar(counter[:,0], counter[:,1],
+                    f'{outdir}/bar_{epoch}.png', reverse=True)
+
+            # plotting training loss
+            for i in range(loss_stats.shape[1]):
+                loss_label = loss_labels[i]
+                yy = loss_stats[:,i]
+                plt.plot(yy, f'{outdir}/{loss_label}_{epoch}.png',
+                         xlabel='epoch', ylabel=loss_label)
+
             # metrics
             nmi = metrics.nmi(labels_true, labels_pred)
             nmi_stats.append(nmi)
             ari = metrics.ari(labels_true, labels_pred)
             ari_stats.append(ari)
-            cm, xlabels, ylabels = metrics.confution_matrix(
-                labels_true, labels_pred, xlabels, ylabels, return_labels=True)
-            time_elapse = time.time() - time_start
-
-            print(f"calc time = {time_elapse:.3f} sec")
-            print(f'# classes predicted: {len(set(labels_pred))}')
+            plt.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png',
+                     xlabel='epoch', ylabel='NMI', ymin=-0.1)
+            plt.plot(ari_stats, f'{outdir}/ari_{epoch}.png',
+                     xlabel='epoch', ylabel='ARI', ymin=-0.1)
             print(f'nmi: {nmi:.3f}')
             print(f'ari: {ari:.3f}')
 
-            # ----------
-            # decomposing and plotting latent features
-            # ----------
+            cm, xlabels, ylabels = metrics.confusion_matrix(
+                labels_true, labels_pred, xlabels, ylabels, return_labels=True)
+            plt.plot_confusion_matrix(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png',
+                                      xlabel='predicted', ylabel='true')
+
+            # decomposing latent features
             print(f'----- decomposing and plotting -----')
             time_start = time.time()
-            tsne = decomposition.TSNE(cuda=True)
+            tsne = decomposition.TSNE()
             z_x_tsne = tsne.fit_transform(z_x)
             w_x_tsne = tsne.fit_transform(w_x)
 
-            if not os.path.exists(outdir):
-                os.mkdir(outdir)
-            # output plots
             plt.scatter(z_x_tsne, labels_true,
                         f'{outdir}/zx_tsne_{epoch}_t.png')
             plt.scatter(z_x_tsne, labels_pred,
@@ -255,21 +275,6 @@ if __name__ == '__main__':
                         f'{outdir}/wx_tsne_{epoch}_t.png')
             plt.scatter(w_x_tsne, labels_pred,
                         f'{outdir}/wx_tsne_{epoch}_p.png')
-
-            counter = np.array(
-                [[label, np.count_nonzero(labels_pred==label)] for label in ylabels])
-            plt.bar(counter[:,0], counter[:,1],
-                    f'{outdir}/bar_{epoch}.png', reverse=True)
-
-            plt.plot_confusion_matrix(cm, cm_index, cm_columnns,
-                                      f'{outdir}/cm_{epoch}.png')
-
-            for i in range(loss_stats.shape[1]):
-                loss_label = loss_labels[i]
-                yy = loss_stats[:,i]
-                plt.plot(yy, f'{outdir}/{loss_label}_{epoch}.png', 'epoch', loss_label)
-            plt.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png', ymin=-0.1)
-            plt.plot(ari_stats, f'{outdir}/ari_{epoch}.png', ymin=-0.1)
 
             time_elapse = time.time() - time_start
             print(f"calc time = {time_elapse:.3f} sec")
