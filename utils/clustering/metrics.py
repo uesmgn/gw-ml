@@ -20,13 +20,14 @@ def confusion_matrix(true, pred, labels_true=None, labels_pred=None,
     if labels_pred is None:
         labels_pred = _check_array(pred, sort=True, unique=True)
     matrix = np.zeros([len(labels_true), len(labels_pred)])
-    for (t, p) in itertools.product(true, pred):
+    for (t, p) in itertools.product(labels_true, labels_pred):
+        idx = np.where(pred[np.where(true==t)]==p)
         matrix[list(labels_true).index(t),
-               list(labels_pred).index(p)] += 1.
+               list(labels_pred).index(p)] += len(idx)
     if normalize:
         matrix = preprocessing.normalize(matrix, axis=1, norm='l1')
     if return_labels:
-        return matrix, xlabels, ylabels
+        return matrix, labels_true, labels_pred
     return matrix
 
 
