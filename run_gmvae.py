@@ -237,11 +237,12 @@ if __name__ == '__main__':
                     f'{outdir}/bar_{epoch}.png', reverse=True)
 
             # plotting training loss
-            for i in range(loss_stats.shape[1]):
-                loss_label = loss_labels[i]
-                yy = loss_stats[:,i]
-                plt.plot(yy, f'{outdir}/{loss_label}_{epoch}.png',
-                         xlabel='epoch', ylabel=loss_label)
+            if epoch > 1:
+                for i in range(loss_stats.shape[1]):
+                    loss_label = loss_labels[i]
+                    yy = loss_stats[:,i]
+                    plt.plot(yy, f'{outdir}/{loss_label}_{epoch}.png',
+                             xlabel='epoch', ylabel=loss_label)
 
             # metrics
             nmi = metrics.nmi(labels_true, labels_pred)
