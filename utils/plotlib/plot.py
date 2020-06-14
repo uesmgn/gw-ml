@@ -25,7 +25,8 @@ def bar(x_labels, yy, out, reverse=True, **kwargs):
     _init_plot(**kwargs)
     plt.bar(x_position, yy, tick_label=x_labels)
     _setup_plot(**kwargs)
-    plt.setp(x_labels, rotation=45, ha="right",
+    xticklabels = plt.gca().get_xticklabels()
+    plt.setp(xticklabels, rotation=45, ha="right",
              rotation_mode="anchor")
     fig.tight_layout()
     fig.savefig(out)
