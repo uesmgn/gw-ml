@@ -57,11 +57,12 @@ def plot(data, out, **kwargs):
 
 def scatter(data, labels, out, **kwargs):
     data, labels_unique = _check_array(
-        data, labels, unique=True, sort=True, check_size=True)
-    labels_unique = labels_unique.astype(np.str)
+        data, labels, unique=True, sort=True,
+        check_size=True, dtype=[np.float, np.str])
+    labels = _check_array(labels, dtype=np.str)
     if data.ndim is 2:
-        xx = data[:, 0].astype(np.float)
-        yy = data[:, 1].astype(np.float)
+        xx = data[:, 0]
+        yy = data[:, 1]
     else:
         raise ValueError('Invalid data format')
     cmap = plt.get_cmap("tab20")
@@ -69,7 +70,7 @@ def scatter(data, labels, out, **kwargs):
     colors = np.tile(colors, 3)
     _init_plot(**kwargs)
     for i, label in enumerate(labels_unique):
-        idx = np.where(labels == label)
+        idx = np.where(labels==label)
         x = xx[idx]
         y = yy[idx]
         color = colors[i]
