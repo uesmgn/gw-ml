@@ -219,7 +219,8 @@ if __name__ == '__main__':
                     z_x = torch.cat((z_x, params['z_x']), 0)
                     w_x = torch.cat((w_x, params['w_x']), 0)
                     # concatenate all labels
-                    labels_pred = np.append(labels_pred, params['y_pred'].cpu().numpy())
+                    labels_pred = np.append(
+                        labels_pred, params['y_pred'].cpu().numpy().astype(np.int))
                     labels_true = np.append(labels_true, l)
 
             time_elapse = time.time() - time_start
@@ -258,7 +259,7 @@ if __name__ == '__main__':
 
             cm, cm_xlabels, cm_ylabels = metrics.confusion_matrix(
                 labels_pred, labels_true, ylabels, xlabels, return_labels=True)
-            cm_figsize = (len(cm_xlabels) / 1.5, len(cm_ylabels) / 1.5)
+            cm_figsize = (len(cm_xlabels) / 1.2, len(cm_ylabels) / 1.2)
             plt.plot_confusion_matrix(cm, cm_xlabels, cm_ylabels,
                                       f'{outdir}/cm_{epoch}.png',
                                       xlabel='predicted', ylabel='true',
@@ -270,7 +271,7 @@ if __name__ == '__main__':
             tsne = decomposition.TSNE()
             z_x_tsne = tsne.fit_transform(z_x.cpu().numpy())
             w_x_tsne = tsne.fit_transform(w_x.cpu().numpy())
-            
+
             plt.scatter(z_x_tsne, labels_true,
                         f'{outdir}/zx_tsne_{epoch}_t.png')
             plt.scatter(z_x_tsne, labels_pred,
