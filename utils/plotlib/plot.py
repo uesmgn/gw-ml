@@ -43,15 +43,16 @@ def plot(data, out, **kwargs):
         yy = data[:, 1].astype(np.float)
     else:
         raise ValueError('Invalid data format')
-    _init_plot(**kwargs)
-    plt.plot(xx, yy)
-    _setup_plot(**kwargs)
-    ax = plt.gca()
-    ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
-    ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
-    plt.tight_layout()
-    plt.savefig(out)
-    plt.close()
+    if len(xx) > 1:
+        _init_plot(**kwargs)
+        plt.plot(xx, yy)
+        _setup_plot(**kwargs)
+        ax = plt.gca()
+        ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
+        ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
+        plt.tight_layout()
+        plt.savefig(out)
+        plt.close()
 
 
 def scatter(data, labels, out, **kwargs):
