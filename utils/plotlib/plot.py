@@ -28,8 +28,8 @@ def bar(x_labels, yy, out, reverse=True, **kwargs):
     xticklabels = plt.gca().get_xticklabels()
     plt.setp(xticklabels, rotation=45, ha="right",
              rotation_mode="anchor")
-    fig.tight_layout()
-    fig.savefig(out)
+    plt.tight_layout()
+    plt.savefig(out)
     plt.close()
 
 
@@ -50,7 +50,7 @@ def plot(data, out, **kwargs):
     ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
     ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
     plt.tight_layout()
-    fig.savefig(out)
+    plt.savefig(out)
     plt.close()
 
 
@@ -77,7 +77,7 @@ def scatter(data, labels, out, **kwargs):
     plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left',
                borderaxespad=0)
     plt.tight_layout()
-    fig.savefig(out)
+    plt.savefig(out)
     plt.close()
 
 
@@ -100,7 +100,7 @@ def plot_confusion_matrix(cm, xlabels, ylabels, out, **kwargs):
         ax.text(i, j, num, fontsize=10, color=color, ha='center', va='center')
     _setup_plot(**kwargs)
     plt.tight_layout()
-    fig.savefig(out)
+    plt.savefig(out)
     plt.close()
 
 
