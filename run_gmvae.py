@@ -170,7 +170,7 @@ if __name__ == '__main__':
         n_samples = 0
         gmvae_loss_epoch = np.zeros(len(loss_labels))
         # beta(x) = exp(-10*exp(-0.1x))
-        beta = max((1., np.exp(-20 * np.exp(-beta_rate * epoch))), 0)
+        beta = max(min(1., np.exp(-20 * np.exp(-beta_rate * epoch))), 0)
 
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
