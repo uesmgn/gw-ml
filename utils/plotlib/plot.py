@@ -77,7 +77,7 @@ def scatter(data, labels, out, **kwargs):
         plt.scatter(x, y, c=color, s=8.0, label=label)
     _setup_plot(**kwargs)
     plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left',
-               borderaxespad=0)
+               borderaxespad=0, fontsize=8)
     plt.tight_layout()
     plt.savefig(out)
     plt.close()
