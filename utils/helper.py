@@ -14,7 +14,7 @@ def _check_array(*args, allow_2d=True, sort=False, reverse=False,
         if len(set([arr.shape for arr in args])) > 1:
             raise ValueError('Input arrays must have same shape')
     values = []
-    for arg in args:
+    for i, arg in enumerate(args):
         if not hasattr(arg, '__len__') or isinstance(arg, str):
             raise ValueError('Input type must be array-like')
         if len(arg) < 1:
@@ -35,7 +35,7 @@ def _check_array(*args, allow_2d=True, sort=False, reverse=False,
         else:
             raise ValueError('Input type must be 1-D array')
         if dtype is not None:
-            arr = arr.astype(dtype)
+            arr = arr.astype(_list_get(dtype, i) or dtype)
         values.append(arr)
     return tuple(values) if len(values) > 1 else values[0]
 
