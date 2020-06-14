@@ -256,6 +256,10 @@ if __name__ == '__main__':
             print(f'nmi: {nmi:.3f}')
             print(f'ari: {ari:.3f}')
 
+            print(labels_true.shape)
+            print(labels_pred.shape)
+            print(xlabels)
+            print(ylabels)
             cm, xlabels, ylabels = metrics.confusion_matrix(
                 labels_true, labels_pred, xlabels, ylabels, return_labels=True)
             plt.plot_confusion_matrix(cm, xlabels, ylabels, f'{outdir}/cm_{epoch}.png',
