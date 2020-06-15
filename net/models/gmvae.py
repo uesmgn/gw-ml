@@ -133,9 +133,14 @@ class GMVAE(nn.Module):
         x_z = self.x_z_graph(z_wy)
 
         if return_params:
-            return (x, x_z, z_x, z_x_mean, z_x_var,
-                    z_wys, z_wy_means, z_wy_vars,
-                    w_x, w_x_mean, w_x_var,
-                    y_wz, pi, y_pred)
+            return {'x': x, 'x_z': x_z,
+                    'z_x': z_x,
+                    'z_x_mean': z_x_mean, 'z_x_var': z_x_var,
+                    'z_wys': z_wys,
+                    'z_wy_means': z_wy_means, 'z_wy_vars': z_wy_vars,
+                    'w_x': w_x,
+                    'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
+                    'y_wz': y_wz, 'pi': pi, 'y_pred': y_pred }
+
         else:
             return x_z
