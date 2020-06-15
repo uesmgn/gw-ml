@@ -39,7 +39,7 @@ def binary_cross_entropy(input, target):
     input = input.view(input.shape[0], -1)
     target = target.view(target.shape[0], -1)
     loss = F.binary_cross_entropy(input, target, reduction='none')
-    return loss.mean(1)
+    return loss.sum(1)
 
 def gaussian_gmm_kl(mean, var, means, variances, pi):
     # mean: (batch_size, dim)
@@ -62,14 +62,14 @@ def gaussian_kl(mean1, var1, mean2, var2):
     # kl: (batch_size, .. )
     assert (torch.cat([var1, var2]) > 0).all()
     kl = 0.5 * (torch.log(var2 / var1) + var1 / var2 + torch.pow(mean1 - mean2, 2) / var2 - 1)
-    return kl.mean(1)
+    return kl.sum(1)
 
 def standard_gaussian_kl(mean, var):
     # mean: (batch_size, dim, ..)
     # var: (batch_size, dim, ..)
     # kl: (batch_size, ..)
     kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2))
-    return kl.mean(1)
+    return kl.sum(1)
 
 def uniform_categorical_kl(y):
     # y: (batch_size, K)
@@ -77,4 +77,4 @@ def uniform_categorical_kl(y):
     k = y.shape[-1]
     u = torch.ones_like(y) / k
     kl = F.kl_div(torch.log(u), y, reduction='none')
-    return kl.mean(1)
+    return kl.sum(1)
