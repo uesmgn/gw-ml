@@ -40,7 +40,8 @@ parser.add_argument('-v', '--verbose', action='store_true',
                     help='verbose')
 parser.add_argument('-l', '--load_model', action='store_true',
                     help='load saved model')
-
+parser.add_argument('-b', '--beta_amp', action='store_true',
+                    help='amplify beta or not')
 args = parser.parse_args()
 
 if __name__ == '__main__':
@@ -55,6 +56,7 @@ if __name__ == '__main__':
 
     load_model = args.load_model or False
     verbose = args.verbose or False
+    beta_amp = args.beta_amp or False
     outdir = args.outdir or ini.get('conf', 'outdir') + f'_{time_exec}'
     n_epoch = args.n_epoch or ini.getint('conf', 'n_epoch')
     eval_itvl = args.eval_itvl or ini.getint('conf', 'eval_itvl')
@@ -153,9 +155,10 @@ if __name__ == '__main__':
         time_stats = checkpoint['time_stats']
         print(f'load model from epoch {init_epoch}')
 
+    beta = 1.0
     beta_rate = 0.03
     beta_ini = -0.1
-    beta_max = 5.0
+    beta_max = 1.0
 
     for epoch in range(init_epoch, n_epoch):
         epoch = epoch + 1
@@ -167,7 +170,8 @@ if __name__ == '__main__':
         n_samples = 0
         gmvae_loss_epoch = np.zeros(len(loss_labels))
 
-        beta = max(min(beta_max, beta_max * np.exp(-20 * np.exp(-beta_rate * epoch)) + beta_ini), 0)
+        if beta_amp:
+            beta = max(min(beta_max, beta_max * np.exp(-20 * np.exp(-beta_rate * epoch)) + beta_ini), 0)
 
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
