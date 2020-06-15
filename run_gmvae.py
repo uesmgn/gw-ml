@@ -171,7 +171,7 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
-            total_loss, each_loss = criterion.gmvae_loss(*params, beta)
+            total_loss, each_loss = criterion.gmvae_loss(params, beta)
             if verbose:
                 print(f'batch: {batch_idx}, loss: {total_loss:.3f}')
                 print(', '.join([f'{loss_labels[i]}: {l:.3f}' for i, l in enumerate(each_loss)]))
@@ -208,7 +208,7 @@ if __name__ == '__main__':
 
                 for batch_idx, (x, l) in enumerate(train_loader):
                     x = x.to(device)
-                    params = model(x)
+                    params = model(x, return_params=True)
                     # stack features over all batches
                     z_x = torch.cat((z_x, params['z_x']), 0)
                     w_x = torch.cat((w_x, params['w_x']), 0)
