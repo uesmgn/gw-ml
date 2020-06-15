@@ -20,7 +20,7 @@ class GMVAE(nn.Module):
         activation = kwargs.get('activation') or 'ReLU'
         pool = kwargs.get('pool') or 'max'
 
-        middle_flat = bottle_ch * middle_dim * middle_dim
+        middle_flat = bottle * middle_dim * middle_dim
 
         assert len(channels) == len(poolings) == len(kernels)
 
@@ -40,7 +40,7 @@ class GMVAE(nn.Module):
         self.z_x_graph = nn.Sequential(
             DenseModule(middle_flat, z_dim * 2,
                         n_layers=1,
-                        hidden_dim=hidden,
+                        hidden_dims=(hidden,),
                         act_trans=activation,
                         act_out=None),
             Gaussian()
@@ -49,7 +49,7 @@ class GMVAE(nn.Module):
         self.w_x_graph = nn.Sequential(
             DenseModule(middle_flat, w_dim * 2,
                         n_layers=1,
-                        hidden_dim=hidden,
+                        hidden_dims=(hidden,),
                         act_trans=activation,
                         act_out=None),
             Gaussian()
@@ -58,7 +58,7 @@ class GMVAE(nn.Module):
         self.wz = DenseModule(w_dim + z_dim,
                               y_dim,
                               n_layers=1,
-                              hidden_dim=hidden,
+                              hidden_dims=(hidden,),
                               act_trans=activation,
                               act_out=None)
 
@@ -68,7 +68,7 @@ class GMVAE(nn.Module):
             nn.Sequential(
                 DenseModule(w_dim, z_dim * 2,
                             n_layers=1,
-                            hidden_dim=hidden,
+                            hidden_dims=(hidden,),
                             act_trans=activation,
                             act_out=None),
                 Gaussian()
@@ -78,6 +78,8 @@ class GMVAE(nn.Module):
 
         self.x_z_graph = nn.Sequential(
             DenseModule(z_dim, middle_flat,
+                        n_layers=0,
+                        act_trans=activation,
                         act_out=activation),
             Reshape((bottle, middle_dim, middle_dim)),
             ConvTranspose2dModule(bottle, channels[-1],
