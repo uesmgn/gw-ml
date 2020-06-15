@@ -72,17 +72,17 @@ if __name__ == '__main__':
     w_dim = ini.getint('net', 'w_dim')
     z_dim = ini.getint('net', 'z_dim')
 
-    nargs = dict()
-    nargs['bottle'] = ini.getint('net', 'bottle')
-    nargs['channels'] = json.loads(ini.get('net', 'channels'))
-    nargs['kernels'] = json.loads(ini.get('net', 'kernels'))
-    nargs['poolings'] = json.loads(ini.get('net', 'poolings'))
-    nargs['hidden'] = ini.getint('net', 'hidden')
-    nargs['activation'] = ini.get('net', 'activation')
-    nargs['pool'] = ini.get('net', 'pool')
+    nkwargs = dict()
+    nkwargs['bottle'] = ini.getint('net', 'bottle')
+    nkwargs['channels'] = json.loads(ini.get('net', 'channels'))
+    nkwargs['kernels'] = json.loads(ini.get('net', 'kernels'))
+    nkwargs['poolings'] = json.loads(ini.get('net', 'poolings'))
+    nkwargs['hidden'] = ini.getint('net', 'hidden')
+    nkwargs['activation'] = ini.get('net', 'activation')
+    nkwargs['pool'] = ini.get('net', 'pool')
 
     if verbose:
-        pprint(nargs)
+        pprint(nkwargs)
 
     device_ids = range(torch.cuda.device_count())
     device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
@@ -116,7 +116,7 @@ if __name__ == '__main__':
                              num_workers=num_workers,
                              shuffle=True,
                              drop_last=True)
-    model = GMVAE(nargs)
+    model = GMVAE(x_shape, y_dim, w_dim, z_dim, **nkwargs)
 
     # GPU Parallelize
     if torch.cuda.is_available():
