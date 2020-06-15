@@ -154,6 +154,7 @@ if __name__ == '__main__':
         print(f'load model from epoch {init_epoch}')
 
     beta_rate = 0.07
+    beta_ini = -0.05
 
     for epoch in range(init_epoch, n_epoch):
         epoch = epoch + 1
@@ -165,7 +166,7 @@ if __name__ == '__main__':
         n_samples = 0
         gmvae_loss_epoch = np.zeros(len(loss_labels))
 
-        beta = max(min(1., np.exp(-20 * np.exp(-beta_rate * epoch))), 0)
+        beta = max(min(1., np.exp(-20 * np.exp(-beta_rate * epoch)) + beta_ini), 0)
 
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
@@ -203,8 +204,8 @@ if __name__ == '__main__':
                 # latent features for visualizing
                 z_x = torch.Tensor().to(device)
                 w_x = torch.Tensor().to(device)
-                labels_true = np.array([])
-                labels_pred = np.array([])
+                labels_true = np.array([], dtype=np.str)
+                labels_pred = np.array([], dtype=np.int)
 
                 for batch_idx, (x, l) in enumerate(train_loader):
                     x = x.to(device)
@@ -220,7 +221,6 @@ if __name__ == '__main__':
             time_elapse = time.time() - time_start
             print(f"calc time = {time_elapse:.3f} sec")
             print(f'# classes predicted: {len(set(labels_pred))}')
-            print(f'classes predicted: {list(set(labels_pred))}')
 
             # plotting
             if not os.path.exists(outdir):
