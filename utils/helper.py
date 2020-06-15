@@ -65,7 +65,7 @@ def _cast_array(arg):
 
 def acronym(name):
     name = re.sub(r'(^[0-9a-zA-Z]{5,}(?=_?))|((?<=_)[0-9a-zA-Z]*)',
-                  lambda m: str(m.group(1) or '')[:5] + str(m.group(2) or '')[:1],
+                  lambda m: str(m.group(1) or '')[:3] + str(m.group(2) or '')[:1],
                   name)
     name = name.replace('_', '.')
     return name

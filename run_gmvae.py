@@ -15,9 +15,9 @@ from torchsummary import summary
 import pandas as pd
 import numpy as np
 
-from gmvae.dataset import Dataset
-from gmvae.network import *
-from gmvae import loss_function
+from gwspy.dataset import Dataset
+from net.models.gmvae import *
+from net import criterion
 
 from utils.clustering import decomposition, metrics
 from utils.plotlib import plot as plt
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     time_exec = gpstime.gps_time_now()
 
-    config_ini = 'config_gmvae.ini'
+    config_ini = 'config/gmvae.ini'
     assert os.path.exists(config_ini)
     basedir = os.path.dirname(os.path.abspath(__file__))
     ini = configparser.ConfigParser()
@@ -67,21 +67,20 @@ if __name__ == '__main__':
     model_path = ini.get('conf', 'model_path')
     dataset_json = ini.get('conf', 'dataset_json')
     x_size = ini.getint('net', 'x_size')
+    x_shape = (1, x_size, x_size)
     y_dim = ini.getint('net', 'y_dim')
+    w_dim = ini.getint('net', 'w_dim')
+    z_dim = ini.getint('net', 'z_dim')
 
     nargs = dict()
-    nargs['x_shape'] = (1, x_size, x_size)
-    nargs['y_dim'] = y_dim
-    nargs['z_dim'] = ini.getint('net', 'z_dim')
-    nargs['w_dim'] = ini.getint('net', 'w_dim')
-    nargs['bottle_channel'] = ini.getint('net', 'bottle_channel')
-    nargs['conv_channels'] = json.loads(ini.get('net', 'conv_channels'))
+    nargs['bottle'] = ini.getint('net', 'bottle')
+    nargs['channels'] = json.loads(ini.get('net', 'channels'))
     nargs['kernels'] = json.loads(ini.get('net', 'kernels'))
-    nargs['pool_kernels'] = json.loads(ini.get('net', 'pool_kernels'))
-    nargs['middle_size'] = ini.getint('net', 'middle_size')
-    nargs['hidden_dim'] = ini.getint('net', 'hidden_dim')
+    nargs['poolings'] = json.loads(ini.get('net', 'poolings'))
+    nargs['hidden'] = ini.getint('net', 'hidden')
     nargs['activation'] = ini.get('net', 'activation')
-    nargs['pooling'] = ini.get('net', 'pooling')
+    nargs['pool'] = ini.get('net', 'pool')
+
     if verbose:
         pprint(nargs)
 
@@ -117,10 +116,7 @@ if __name__ == '__main__':
                              num_workers=num_workers,
                              shuffle=True,
                              drop_last=True)
-    if model_id == 0:
-        model = GMVAE(nargs)
-    elif model_id == 1:
-        model = GMVAE_gumbel(nargs)
+    model = GMVAE(nargs)
 
     # GPU Parallelize
     if torch.cuda.is_available():
@@ -129,8 +125,8 @@ if __name__ == '__main__':
     model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = loss_function.Criterion()
 
+    exit()
     # model.eval()
     # if verbose:
     #     summary(model, x_shape)
@@ -176,8 +172,7 @@ if __name__ == '__main__':
             x = x.to(device)
             optimizer.zero_grad()
             params = model(x, return_params=True)
-            total_loss, each_loss = criterion.gmvae_loss(params, beta,
-                                                         reduction='mean')
+            total_loss, each_loss = criterion.gmvae_loss(*params, beta)
             if verbose:
                 print(f'batch: {batch_idx}, loss: {total_loss:.3f}')
                 print(', '.join([f'{loss_labels[i]}: {l:.3f}' for i, l in enumerate(each_loss)]))
