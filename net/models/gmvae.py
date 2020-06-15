@@ -12,7 +12,7 @@ class GMVAE(nn.Module):
         in_ch = x_shape[0]
         x_dim = x_shape[-1]
         poolings = kwargs.get('poolings') or (3, 3, 3, 3)
-        middle_dim = middle_dim(x_dim, poolings)
+        middle_dim = get_middle_dim(x_dim, poolings)
         channels = kwargs.get('channels') or (32, 48, 64, 32)
         bottle = kwargs.get('bottle') or 16
         kernels = kwargs.get('kernels') or (3, 3, 3, 3)
