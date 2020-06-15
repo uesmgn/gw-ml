@@ -153,8 +153,9 @@ if __name__ == '__main__':
         time_stats = checkpoint['time_stats']
         print(f'load model from epoch {init_epoch}')
 
-    beta_rate = 0.07
-    beta_ini = -0.05
+    beta_rate = 0.03
+    beta_ini = -0.1
+    beta_max = 5.0
 
     for epoch in range(init_epoch, n_epoch):
         epoch = epoch + 1
@@ -166,7 +167,7 @@ if __name__ == '__main__':
         n_samples = 0
         gmvae_loss_epoch = np.zeros(len(loss_labels))
 
-        beta = max(min(1., np.exp(-20 * np.exp(-beta_rate * epoch)) + beta_ini), 0)
+        beta = max(min(beta_max, beta_max * np.exp(-20 * np.exp(-beta_rate * epoch)) + beta_ini), 0)
 
         for batch_idx, (x, l) in enumerate(train_loader):
             x = x.to(device)
@@ -247,10 +248,10 @@ if __name__ == '__main__':
             ari = metrics.ari(labels_true, labels_pred)
             ari_stats.append(ari)
             plt.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png',
-                     xlabel='epoch', ylabel='NMI', ymin=-0.05,
+                     xlabel='epoch', ylabel='NMI',
                      xmin=0, xmax=epoch-1)
             plt.plot(ari_stats, f'{outdir}/ari_{epoch}.png',
-                     xlabel='epoch', ylabel='ARI', ymin=-0.05,
+                     xlabel='epoch', ylabel='ARI',
                      xmin=0, xmax=epoch-1)
             print(f'nmi: {nmi:.3f}')
             print(f'ari: {ari:.3f}')
