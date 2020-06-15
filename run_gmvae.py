@@ -220,6 +220,7 @@ if __name__ == '__main__':
             time_elapse = time.time() - time_start
             print(f"calc time = {time_elapse:.3f} sec")
             print(f'# classes predicted: {len(set(labels_pred))}')
+            print(f'classes predicted: {list(set(labels_pred))}')
 
             # plotting
             if not os.path.exists(outdir):
@@ -237,7 +238,8 @@ if __name__ == '__main__':
                     loss_label = loss_labels[i]
                     yy = loss_stats[:,i]
                     plt.plot(yy, f'{outdir}/{loss_label}_{epoch}.png',
-                             xlabel='epoch', ylabel=loss_label)
+                             xlabel='epoch', ylabel=loss_label,
+                             xmin=0, xmax=epoch-1)
 
             # metrics
             nmi = metrics.nmi(labels_true, labels_pred)
@@ -245,15 +247,17 @@ if __name__ == '__main__':
             ari = metrics.ari(labels_true, labels_pred)
             ari_stats.append(ari)
             plt.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png',
-                     xlabel='epoch', ylabel='NMI', ymin=-0.1)
+                     xlabel='epoch', ylabel='NMI', ymin=-0.05,
+                     xmin=0, xmax=epoch-1)
             plt.plot(ari_stats, f'{outdir}/ari_{epoch}.png',
-                     xlabel='epoch', ylabel='ARI', ymin=-0.1)
+                     xlabel='epoch', ylabel='ARI', ymin=-0.05,
+                     xmin=0, xmax=epoch-1)
             print(f'nmi: {nmi:.3f}')
             print(f'ari: {ari:.3f}')
 
             cm, cm_xlabels, cm_ylabels = metrics.confusion_matrix(
                 labels_pred, labels_true, ylabels, xlabels, return_labels=True)
-            cm_figsize = (len(cm_xlabels) / 1.2, len(cm_ylabels) / 1.2)
+            cm_figsize = (len(cm_xlabels) / 1.2, len(cm_ylabels) / 1.5)
             plt.plot_confusion_matrix(cm, cm_xlabels, cm_ylabels,
                                       f'{outdir}/cm_{epoch}.png',
                                       xlabel='predicted', ylabel='true',
