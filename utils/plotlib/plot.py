@@ -15,7 +15,7 @@ __all__ = [
 
 
 def bar(x_labels, yy, out, reverse=True, **kwargs):
-    x_labels, yy = _check_array(x_labels, yy, check_size=True)
+    x_labels, yy = check_array(x_labels, yy, check_size=True)
     x_labels = x_labels.astype(str)
     idx = np.argsort(yy)
     if reverse:
@@ -34,7 +34,7 @@ def bar(x_labels, yy, out, reverse=True, **kwargs):
 
 
 def plot(data, out, **kwargs):
-    data = _check_array(data)
+    data = check_array(data)
     if data.ndim is 1:
         yy = data.astype(np.float)
         xx = np.array(range(yy.size))
@@ -56,10 +56,10 @@ def plot(data, out, **kwargs):
 
 
 def scatter(data, labels, out, **kwargs):
-    data, labels_unique = _check_array(
+    data, labels_unique = check_array(
         data, labels, unique=True, sort=True,
         check_size=True, dtype=[np.float, np.str])
-    labels = _check_array(labels, dtype=np.str)
+    labels = check_array(labels, dtype=np.str)
     if data.ndim is 2:
         xx = data[:, 0]
         yy = data[:, 1]
@@ -73,6 +73,7 @@ def scatter(data, labels, out, **kwargs):
         idx = np.where(labels==label)
         x = xx[idx]
         y = yy[idx]
+        label = acronym(label)
         color = colors[i]
         plt.scatter(x, y, c=color, s=8.0, label=label)
     _setup_plot(**kwargs)
