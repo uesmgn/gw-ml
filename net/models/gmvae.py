@@ -25,13 +25,18 @@ class GMVAE(nn.Module):
         assert len(channels) == len(poolings) == len(kernels)
 
         self.zw_x_graph = nn.Sequential(
-            Conv2dModule(in_ch, channels[0],
+            Conv2dModule(in_ch, bottle,
                          activation=activation),
-            *[DownSample(channels[i], channels[i+1],
+            DownSample(bottle, channels[0],
+                         kernel=kernels[0],
+                         pool_kernel=poolings[0],
+                         pooling=pool,
+                         activation=activation)
+            *[DownSample(channels[i-1], channels[i],
                          kernel=kernels[i],
                          pool_kernel=poolings[i],
                          pooling=pool,
-                         activation=activation) for i in range(len(channels)-1)],
+                         activation=activation) for i in range(1, len(channels))],
             Conv2dModule(channels[-1], bottle,
                          activation=activation),
             nn.Flatten()
