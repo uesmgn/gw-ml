@@ -10,7 +10,7 @@ def gmvae_loss(x, x_z, z_x, z_x_mean, z_x_var,
                w_x, w_x_mean, w_x_var,
                y_wz, pi, y_pred, beta=1.0):
 
-    rec_loss = binary_cross_entropy(x, x_z)
+    rec_loss = binary_cross_entropy(x_z, x)
     cond_kl = gaussian_gmm_kl(z_x_mean, z_x_var,
                               z_wy_means, z_wy_vars, pi)
     w_kl = standard_gaussian_kl(w_x_mean, w_x_var)
@@ -46,7 +46,7 @@ def gaussian_gmm_kl(mean, var, means, variances, pi):
     K = pi.shape[-1]
     mean_repeat = mean.unsqueeze(-1).repeat(1, 1, K)
     var_repeat = var.unsqueeze(-1).repeat(1, 1, K)
-    kl = (pi * self.gaussian_kl(mean_repeat, var_repeat, means, variances))
+    kl = (pi * gaussian_kl(mean_repeat, var_repeat, means, variances))
     return kl.mean(1)
 
 def gaussian_kl(mean1, var1, mean2, var2):
