@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 __all__ = [
     'Reshape',
@@ -80,7 +81,7 @@ class Gaussian(nn.Module):
     def forward(self, x):
         x = self.features(x)
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
-        var = logit.softplus() + eps
+        var = F.softplus(logit) + eps
         if self.training:
             x = _reparameterize(mean, var)
         else:
@@ -199,7 +200,7 @@ class SafeBatchNorm2d(nn.Module):
 def _sequential(*layers):
     new_layers = []
     for layer in layers:
-        if layer.__class__.__bases__[0].__name__ is 'Module':
+        if hasattr(layer, 'forward'):
             new_layers.append(layer)
     return nn.Sequential(*new_layers)
 
