@@ -31,7 +31,7 @@ class GMVAE(nn.Module):
                          kernel=kernels[0],
                          pool_kernel=poolings[0],
                          pooling=pool,
-                         activation=activation)
+                         activation=activation),
             *[DownSample(channels[i-1], channels[i],
                          kernel=kernels[i],
                          pool_kernel=poolings[i],
@@ -92,7 +92,10 @@ class GMVAE(nn.Module):
             *[Upsample(channels[-i], channels[-i-1],
                        unpool_kernel=poolings[-i],
                        activation=activation) for i in range(1, len(channels))],
-            ConvTranspose2dModule(channels[0], in_ch,
+            Upsample(channels[0], bottle,
+                     unpool_kernel=poolings[0],
+                     activation=activation),
+            ConvTranspose2dModule(bottle, in_ch,
                                   activation='Sigmoid')
         )
 
