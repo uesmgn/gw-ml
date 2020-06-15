@@ -5,10 +5,15 @@ __all__ = [
     'gmvae_loss'
 ]
 
-def gmvae_loss(x, x_z, z_x, z_x_mean, z_x_var,
-               z_wys, z_wy_means, z_wy_vars,
-               w_x, w_x_mean, w_x_var,
-               y_wz, pi, y_pred, beta=1.0):
+def gmvae_loss(params, beta=1.0):
+    x, x_z = params['x'], params['x_z']
+    z_x = params['z_x']
+    z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var']
+    z_wys = params['z_wys']
+    z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
+    w_x = params['w_x']
+    w_x_mean, w_x_var = params['w_x_mean'], params['w_x_var']
+    y_wz, pi, y_pred = params['y_wz'], params['pi'], params['y_pred']
 
     rec_loss = binary_cross_entropy(x_z, x)
     cond_kl = gaussian_gmm_kl(z_x_mean, z_x_var,
