@@ -82,7 +82,7 @@ class GMVAE(nn.Module):
             Reshape((bottle, middle_dim, middle_dim)),
             ConvTranspose2dModule(bottle, channels[-1],
                                   activation=activation),
-            *[Upsample(channels[-i], channels[-i-1)],
+            *[Upsample(channels[-i], channels[-i-1],
                        unpool_kernel=poolings[-i],
                        activation=activation) for i in range(1, len(channels))],
             ConvTranspose2dModule(channels[0], in_ch,
