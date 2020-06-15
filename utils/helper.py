@@ -1,12 +1,15 @@
 import numpy as np
+import re
+
 
 __all__ = [
-    '_check_array'
+    'check_array',
+    'acronym'
 ]
 
 
-def _check_array(*args, allow_2d=True, sort=False, reverse=False,
-                 unique=False, check_size=False, check_shape=False, dtype=None):
+def check_array(*args, allow_2d=True, sort=False, reverse=False,
+                unique=False, check_size=False, check_shape=False, dtype=None):
     if len(args) > 1 and check_size:
         if len(set([len(arr) for arr in args])) > 1:
             raise ValueError('Input arrays must have same length')
@@ -59,3 +62,10 @@ def _cast_array(arg):
         except:
             pass
     return arr.astype(cast_type) if cast_type else arr
+
+def acronym(name):
+    name = re.sub(r'(^[0-9a-zA-Z]{5,}(?=_))|((?<=_)[0-9a-zA-Z]{5,})',
+                  lambda m: str(m.group(1) or '')[:3] + str(m.group(2) or '')[:1],
+                  name)
+    name = name.replace('_', '.')
+    return name
