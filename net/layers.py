@@ -128,7 +128,7 @@ class DownSample(nn.Module):
                                        stride=pool_kernel,
                                        padding=(kernel - pool_kernel) // 2))
 
-        layers.appennd(Conv2dModule(in_ch, out_ch,
+        layers.append(Conv2dModule(in_ch, out_ch,
                                     activation=activation))
         self.features = _sequential(*layers)
 
@@ -165,7 +165,8 @@ class DenseModule(nn.Module):
                  act_trans='ReLU',
                  act_out=None):
         super().__init__()
-        assert len(hidden_dim) == n_layers
+        if n_layers > 0:
+            assert len(hidden_dims) == n_layers
         layers = []
         if n_layers > 0:
             for i in range(n_layers):
