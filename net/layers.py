@@ -75,7 +75,7 @@ class ConvTranspose2dModule(nn.Module):
 
 
 class Gaussian(nn.Module):
-    def __init__(self, in_dim, out_dim, act_regur='Tanh'):
+    def __init__(self, in_dim, out_dim, act_regur=None):
         super().__init__()
         layers = []
         layers.append(nn.Linear(in_dim, out_dim * 2),)
@@ -93,7 +93,7 @@ class Gaussian(nn.Module):
         return x, mean, var
 
 class GaussianInput(nn.Module):
-    def __init__(self, in_dim, out_dim, act_regur='Tanh'):
+    def __init__(self, in_dim, out_dim, act_regur=None):
         super().__init__()
         layers = []
         layers.append(nn.Linear(in_dim, out_dim * 2),)
@@ -107,7 +107,7 @@ class GaussianInput(nn.Module):
         return mean, var
 
 class GaussianMixture(nn.Module):
-    def __init__(self, in_dim, out_dim, n_components, act_regur='Tanh'):
+    def __init__(self, in_dim, out_dim, n_components, act_regur=None):
         super().__init__()
         self.layers = nn.ModuleList([
             _sequential(*[
@@ -126,9 +126,9 @@ class GaussianMixture(nn.Module):
             mean, logit = torch.split(h, h.shape[1] // 2, -1)
             var = F.softplus(logit) + eps
             dim = mean.shape[-1]
-            # p = pi[:,i].unsqueeze(-1).repeat(1, dim)
-            # mean = torch.pow(mean, p)
-            # var = torch.pow(var, p)
+            p = pi[:,i].unsqueeze(-1).repeat(1, dim)
+            mean = torch.pow(mean, p)
+            var = torch.pow(var, p)
             if self.training:
                 h = reparameterize(mean, var)
             else:
