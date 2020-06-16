@@ -9,6 +9,11 @@ class GMVAE(nn.Module):
                  **kwargs):
         super().__init__()
 
+        self.x_shape = x_shape
+        self.y_dim = y_dim
+        self.w_dim = w_dim
+        self.z_dim = z_dim
+
         in_ch = x_shape[0]
         x_dim = x_shape[-1]
         poolings = kwargs.get('poolings') or (3, 3, 3, 3)
@@ -121,7 +126,7 @@ class GMVAE(nn.Module):
         z_wy_vars_stack = []
         for i, graph in enumerate(self.z_wy_graphs):
             z_w_mean, z_w_var = graph(w_x)
-            y = y_wz[:,i]
+            y = y_wz[:,i].unsqueeze(-1).repeat(1, self.z_dim)
             z_wy_mean = torch.pow(z_w_mean, y)
             z_wy_var = torch.pow(z_w_var, y)
             z_wy = reparameterize(z_wy_mean, z_wy_var)
