@@ -48,43 +48,21 @@ class GMVAE(nn.Module):
         )
 
         self.z_x_graph = nn.Sequential(
-            DenseModule(middle_flat, z_dim * 2,
-                        n_layers=1,
-                        hidden_dims=(hidden,),
-                        act_trans=activation,
-                        act_out=None),
-            Gaussian()
+            Gaussian(middle_flat, z_dim)
         )
 
         self.w_x_graph = nn.Sequential(
-            DenseModule(middle_flat, w_dim * 2,
-                        n_layers=1,
-                        hidden_dims=(hidden,),
-                        act_trans=activation,
-                        act_out=None),
-            Gaussian()
+            Gaussian(middle_flat, w_dim)
         )
 
-        self.wz = DenseModule(w_dim + z_dim,
-                              y_dim,
-                              n_layers=1,
-                              hidden_dims=(hidden,),
-                              act_trans=activation,
-                              act_out=None)
+        self.y_wz_graph = DenseModule(w_dim + z_dim,
+                                      y_dim,
+                                      n_layers=1,
+                                      hidden_dims=(hidden,),
+                                      act_trans=activation,
+                                      act_out='Softmax')
 
-        self.y_wz_graph = GumbelSoftmax()
-
-        self.z_wy_graphs = nn.ModuleList([
-            nn.Sequential(
-                DenseModule(w_dim, z_dim * 2,
-                            n_layers=1,
-                            hidden_dims=(hidden,),
-                            act_trans=activation,
-                            act_out=None),
-                GaussianInput()
-            ) for _ in range(y_dim)
-        ])
-
+        self.z_wy_graph = GaussianMixture(w_dim, z_dim, y_dim)
 
         self.x_z_graph = nn.Sequential(
             DenseModule(z_dim, middle_flat,
@@ -118,26 +96,9 @@ class GMVAE(nn.Module):
         h = self.zw_x_graph(x)
         z_x, z_x_mean, z_x_var = self.z_x_graph(h)
         w_x, w_x_mean, w_x_var = self.w_x_graph(h)
-        wz = self.wz(torch.cat((w_x, z_x), 1))
-        y_wz, pi = self.y_wz_graph(wz, tau)
-
-        z_wys_stack = []
-        z_wy_means_stack = []
-        z_wy_vars_stack = []
-        for i, graph in enumerate(self.z_wy_graphs):
-            z_w_mean, z_w_var = graph(w_x)
-            y = y_wz[:,i].unsqueeze(-1).repeat(1, self.z_dim)
-            z_wy_mean = torch.pow(z_w_mean, y)
-            z_wy_var = torch.pow(z_w_var, y)
-            z_wy = reparameterize(z_wy_mean, z_wy_var)
-            z_wys_stack.append(z_wy)
-            z_wy_means_stack.append(z_wy_mean)
-            z_wy_vars_stack.append(z_wy_var)
-        z_wys = torch.stack(z_wys_stack, 2)
-        z_wy_means = torch.stack(z_wy_means_stack, 2)
-        z_wy_vars = torch.stack(z_wy_vars_stack, 2)
-
-        _, y_pred = torch.max(y_wz, dim=1)
+        y_wz = self.y_wz_graph(torch.cat((w_x, z_x), -1))
+        z_wys, z_wy_means, z_wy_vars = self.z_wy_graph(w_x, y_wz)
+        _, y_pred = torch.max(y_wz, dim=-1)
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, y_pred]
         x_z = self.x_z_graph(z_x)
 
@@ -149,7 +110,7 @@ class GMVAE(nn.Module):
                     'z_wy_means': z_wy_means, 'z_wy_vars': z_wy_vars,
                     'w_x': w_x,
                     'w_x_mean': w_x_mean, 'w_x_var': w_x_var,
-                    'y_wz': y_wz, 'pi': pi, 'y_pred': y_pred }
+                    'y_wz': y_wz, 'y_pred': y_pred }
 
         else:
             return x_z
