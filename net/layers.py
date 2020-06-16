@@ -7,6 +7,7 @@ __all__ = [
     'Conv2dModule',
     'ConvTranspose2dModule',
     'Gaussian',
+    'GaussianInput',
     'GumbelSoftmax',
     'DownSample',
     'Upsample',
