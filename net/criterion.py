@@ -27,7 +27,7 @@ def gmvae_loss(params, beta=1.0):
                         rec_loss,
                         cond_kl,
                         w_kl,
-                        y_kl], 1).detach()
+                        y_kl]).detach()
 
     return total, each
 
