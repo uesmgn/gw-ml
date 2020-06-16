@@ -131,6 +131,7 @@ if __name__ == '__main__':
     if verbose:
         model.eval()
         summary(model, x_shape)
+        print(model)
 
     init_epoch = 0
     loss_labels = ['total',
