@@ -76,7 +76,7 @@ class GMVAE(nn.Module):
                             hidden_dims=(hidden,),
                             act_trans=activation,
                             act_out=None),
-                Gaussian()
+                GaussianInput()
             ) for _ in range(y_dim)
         ])
 
@@ -119,8 +119,12 @@ class GMVAE(nn.Module):
         z_wys_stack = []
         z_wy_means_stack = []
         z_wy_vars_stack = []
-        for graph in self.z_wy_graphs:
-            z_wy, z_wy_mean, z_wy_var = graph(w_x)
+        for i, graph in enumerate(self.z_wy_graphs):
+            z_w_mean, z_w_var = graph(w_x)
+            y = y_wz[:,i]
+            z_wy_mean = torch.pow(z_w_mean, y)
+            z_wy_var = torch.pow(z_w_var, y)
+            z_wy = reparameterize(z_wy_mean, z_wy_var)
             z_wys_stack.append(z_wy)
             z_wy_means_stack.append(z_wy_mean)
             z_wy_vars_stack.append(z_wy_var)
