@@ -8,6 +8,7 @@ __all__ = [
     'ConvTranspose2dModule',
     'Gaussian',
     'GaussianInput',
+    'GaussianMixture',
     'GumbelSoftmax',
     'DownSample',
     'Upsample',
@@ -74,9 +75,10 @@ class ConvTranspose2dModule(nn.Module):
 
 
 class Gaussian(nn.Module):
-    def __init__(self, act_regur='Tanh'):
+    def __init__(self, in_dim, out_dim, act_regur='Tanh'):
         super().__init__()
         layers = []
+        layers.append(nn.Linear(in_dim, out_dim * 2),)
         layers.append(_activation(act_regur))
         self.features = _sequential(*layers)
 
@@ -91,9 +93,10 @@ class Gaussian(nn.Module):
         return x, mean, var
 
 class GaussianInput(nn.Module):
-    def __init__(self, act_regur='Tanh'):
+    def __init__(self, in_dim, out_dim, act_regur='Tanh'):
         super().__init__()
         layers = []
+        layers.append(nn.Linear(in_dim, out_dim * 2),)
         layers.append(_activation(act_regur))
         self.features = _sequential(*layers)
 
@@ -102,6 +105,41 @@ class GaussianInput(nn.Module):
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit) + eps
         return mean, var
+
+class GaussianMixture(nn.Module):
+    def __init__(self, in_dim, out_dim, n_components, act_regur='Tanh'):
+        self.layers = nn.ModuleList([
+            _sequential(*[
+                nn.Linear(in_dim, out_dim * 2),
+                _activation(act_regur)]) for _ in range(n_components)
+        ])
+
+    def forward(self, x, pi):
+        # x: (batch_size, dim)
+        # pi: (batch_size, n_components)
+        x_stack = []
+        means_stack = []
+        vars_stack = []
+        for i, layer in enumerate(self.layers):
+            h = layer(x)
+            mean, logit = torch.split(h, h.shape[1] // 2, -1)
+            var = F.softplus(logit) + eps
+            dim = mean.shape[-1]
+            p = pi[:,i].unsqueeze(-1).repeat(1, dim)
+            mean = torch.pow(mean, p)
+            var = torch.pow(var, p)
+            if self.training:
+                h = reparameterize(mean, var)
+            else:
+                h = mean
+            x_stack.append(h)
+            means_stack.append(mean)
+            vars_stack.append(var)
+        x = torch.stack(x_stack, -1)
+        means = torch.stack(means_stack, -1)
+        vars = torch.stack(vars_stack, -1)
+        return x, means, vars
+
 
 class GumbelSoftmax(nn.Module):
     def __init__(self):
