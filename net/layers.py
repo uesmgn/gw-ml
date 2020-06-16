@@ -10,7 +10,8 @@ __all__ = [
     'GumbelSoftmax',
     'DownSample',
     'Upsample',
-    'DenseModule'
+    'DenseModule',
+    'reparameterize'
 ]
 
 eps = 1e-10
@@ -83,11 +84,23 @@ class Gaussian(nn.Module):
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit) + eps
         if self.training:
-            x = _reparameterize(mean, var)
+            x = reparameterize(mean, var)
         else:
             x = mean
         return x, mean, var
 
+class GaussianInput(nn.Module):
+    def __init__(self, act_regur='Tanh'):
+        super().__init__()
+        layers = []
+        layers.append(_activation(act_regur))
+        self.features = _sequential(*layers)
+
+    def forward(self, x):
+        x = self.features(x)
+        mean, logit = torch.split(x, x.shape[1] // 2, 1)
+        var = F.softplus(logit) + eps
+        return mean, var
 
 class GumbelSoftmax(nn.Module):
     def __init__(self):
@@ -204,7 +217,7 @@ def _sequential(*layers):
             new_layers.append(layer)
     return nn.Sequential(*new_layers)
 
-def _reparameterize(mean, var):
+def reparameterize(mean, var):
     if torch.is_tensor(var):
         std = torch.pow(var, 0.5)
     else:
