@@ -139,7 +139,7 @@ class GMVAE(nn.Module):
 
         _, y_pred = torch.max(y_wz, dim=1)
         z_wy = z_wys[torch.arange(z_wys.shape[0]), :, y_pred]
-        x_z = self.x_z_graph(z_wy)
+        x_z = self.x_z_graph(z_x)
 
         if return_params:
             return {'x': x, 'x_z': x_z,
