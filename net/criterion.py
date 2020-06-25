@@ -6,7 +6,7 @@ __all__ = [
 ]
 
 def gmvae_loss(params, beta=1.0):
-    x, x_z = params['x'], params['x_z']
+    x, x_z_mean, x_z_var = params['x'], params['x_z_mean'], params['x_z_var']
     z_x = params['z_x']
     z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var']
     z_wys = params['z_wys']
@@ -15,7 +15,7 @@ def gmvae_loss(params, beta=1.0):
     w_x_mean, w_x_var = params['w_x_mean'], params['w_x_var']
     y_wz, y_pred = params['y_wz'], params['y_pred']
 
-    rec_loss = binary_cross_entropy(x_z, x)
+    rec_loss = log_norm(x, x_z_mean, x_z_var)
     cond_kl = gaussian_gmm_kl(z_x, z_x_mean, z_x_var,
                               z_wy_means, z_wy_vars, y_wz)
     w_kl = standard_gaussian_kl(w_x_mean, w_x_var)
@@ -30,6 +30,10 @@ def gmvae_loss(params, beta=1.0):
                         y_kl]).detach()
 
     return total, each
+
+def log_norm(x, mean, var):
+    loss = 0.5 * (torch.pow(x - mean, 2) / var) * torch.log(torch.pow(2 * np.pi * var, 0.5))
+    return loss.mean()
 
 def binary_cross_entropy(input, target):
     # x: (batch_size, x_size, x_size)
