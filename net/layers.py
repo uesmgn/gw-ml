@@ -277,5 +277,5 @@ def _activation(key='ReLU'):
     elif key in ('PReLU', 'prelu'):
         return nn.PReLU()
     elif key in ('ReLU', 'relu'):
-        return nn.ReLU()
+        return nn.ReLU(inplace=True)
     return None
