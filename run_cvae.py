@@ -201,7 +201,7 @@ if __name__ == '__main__':
         loss_stats.append(losses.values())
         nmi = metrics.nmi(trues, pseudos)
         nmi_stats.append(nmi)
-        print(epoch, total_loss, nmi)
+        print(epoch, losses.values(), nmi)
 
         if epoch % plt_itvl == 0:
 
