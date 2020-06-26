@@ -163,7 +163,6 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             for b, (x, l, idx) in enumerate(loader):
-                print(b)
                 x = x.to(device)
                 params = model(x)
                 idxs = np.append(idxs, np.ravel(idx))
@@ -184,11 +183,10 @@ if __name__ == '__main__':
         model.train()
         losses = defaultdict(lambda: 0)
         for b, (x, p, idx) in enumerate(pseudo_loader):
-            print(b)
             x = x.to(device)
             params = model(x)
             params['pseudos'] = p.to(device)
-            params['logits'] = classifier(params['f'].detach())
+            params['logits'] = classifier(params['f'])
             features_loss, clustering_loss = criterion.cvae(params, beta, clustering_weight)
             optimizer.zero_grad()
             optimizer_pseudo.zero_grad()
