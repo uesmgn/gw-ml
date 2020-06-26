@@ -45,7 +45,7 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
 
-    beta = (1., .9, 0.01)
+    beta = (1., 1., 1.)
 
     time_exec = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
