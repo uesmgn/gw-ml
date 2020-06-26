@@ -186,7 +186,7 @@ if __name__ == '__main__':
             x = x.to(device)
             params = model(x)
             params['pseudos'] = p.to(device)
-            params['logits'] = classifier(params['f'])
+            params['logits'] = classifier(params['f'].detach().requires_grad_())
             features_loss, clustering_loss = criterion.cvae(params, beta, clustering_weight)
             optimizer.zero_grad()
             optimizer_pseudo.zero_grad()
