@@ -190,8 +190,6 @@ if __name__ == '__main__':
             params['pseudos'] = p.to(device)
             params['logits'] = classifier(params['f'].detach())
             features_loss, clustering_loss = criterion.cvae(params, beta, clustering_weight)
-            print(features_loss)
-            print(clustering_loss)
             optimizer.zero_grad()
             optimizer_pseudo.zero_grad()
             features_loss.backward()
@@ -201,4 +199,30 @@ if __name__ == '__main__':
             losses['features_loss'] += features_loss.item()
             losses['clustering_loss'] += clustering_loss.item()
         loss_stats.append(losses.values())
-        print(epoch, losses)
+        nmi = metrics.adjusted_mutual_info_score(trues, pseudos)
+        nmi_stats.append(nmi)
+        print(epoch, total_loss, nmi)
+
+        if epoch % plt_itvl == 0:
+
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+
+            z = z.squeeze(1).detach().cpu().numpy()
+
+            cm = metrics.confusion_matrix(pseudos, trues, labels_pred, labels_true)
+
+            counter = np.array([[label, np.count_nonzero(
+                np.array(pseudos) == label)] for label in list(set(pseudos))])
+            x_position = np.arange(len(counter[:, 0]))
+            plt.bar(counter[:, 0], counter[:, 1], f'{outdir}/bar_{epoch}.png')
+
+            plt.scatter(np.array([z[:, 0], z[:, 1]]), trues,
+                        f'{outdir}/latent_t_{epoch}.png')
+            plt.scatter(np.array([z[:, 0], z[:, 1]]), pseudos,
+                        f'{outdir}/latent_p_{epoch}.png')
+
+            plt.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png')
+
+            plt.plot_confusion_matrix(cm, labels_pred, labels_true,
+                                      f'{outdir}/cm_{epoch}.png')
