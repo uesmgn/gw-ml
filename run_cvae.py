@@ -163,6 +163,7 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             for b, (x, l, idx) in enumerate(loader):
+                print(b)
                 x = x.to(device)
                 params = model(x)
                 idxs = np.append(idxs, np.ravel(idx))
@@ -175,14 +176,15 @@ if __name__ == '__main__':
             pseudo_dict[i] = int(p)
 
         clustering_weight = []
-            for i in range(y_dim):
-                w = np.count_nonzero(pseudos == i)
-                clustering_weight.append(w)
-            clustering_weight = 1. / torch.Tensor(clustering_weight).to(device)
+        for i in range(y_dim):
+            w = np.count_nonzero(pseudos == i)
+            clustering_weight.append(w)
+        clustering_weight = 1. / torch.Tensor(clustering_weight).to(device)
 
         model.train()
         losses = defaultdict(lambda: 0)
         for b, (x, p, idx) in enumerate(pseudo_loader):
+            print(b)
             x = x.to(device)
             params = model(x)
             params['pseudos'] = p.to(device)
