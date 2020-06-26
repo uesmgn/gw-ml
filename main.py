@@ -4,7 +4,7 @@ from collections import defaultdict
 import re
 import pandas as pd
 
-DATASET_DIR = '../H1L1'
+DATASET_DIR = '../TrainingSet'
 
 if __name__ == '__main__':
     base_dir = os.path.dirname(os.path.abspath(__file__))
