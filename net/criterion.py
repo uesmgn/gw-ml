@@ -1,9 +1,12 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 __all__ = [
     'cvae'
 ]
+
+eps = 1e-10
 
 def cvae(params, beta=(1.0, 1.0, 1.0), clustering_weight=None):
     reconst_loss = beta[0] * mse_loss(params['x'], params['x_reconst']).view(-1)
