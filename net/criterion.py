@@ -2,79 +2,40 @@ import torch
 import torch.nn.functional as F
 
 __all__ = [
-    'gmvae_loss'
+    'cvae'
 ]
 
-def gmvae_loss(params, beta=1.0):
-    x, x_z_mean, x_z_var = params['x'], params['x_z_mean'], params['x_z_var']
-    z_x = params['z_x']
-    z_x_mean, z_x_var = params['z_x_mean'], params['z_x_var']
-    z_wys = params['z_wys']
-    z_wy_means, z_wy_vars = params['z_wy_means'], params['z_wy_vars']
-    w_x = params['w_x']
-    w_x_mean, w_x_var = params['w_x_mean'], params['w_x_var']
-    y_wz, y_pred = params['y_wz'], params['y_pred']
+def cvae(params, beta=(1.0, 1.0, 1.0), clustering_weight=None):
+    reconst_loss = beta[0] * mse_loss(params['x'], params['x_reconst']).view(-1)
+    z_kl = beta[1] * log_norm_kl(
+        params['z'], params['z_mean'], params['z_var'],
+        params['z_prior_mean'], params['z_prior_var']).view(-1)
+    y_kl = beta[2] * uniform_categorical_kl(params['y']).view(-1)
+    features_loss = (rec_loss + z_kl + y_kl).sum()
+    cluster_loss = F.cross_entropy(params['logits'].squeeze(1), params['pseudos'], weight=clustering_weight).sum()
+    return features_loss, cluster_loss
 
-    rec_loss = log_norm(x, x_z_mean, x_z_var)
-    cond_kl = gaussian_gmm_kl(z_x, z_x_mean, z_x_var,
-                              z_wy_means, z_wy_vars, y_wz)
-    w_kl = standard_gaussian_kl(w_x_mean, w_x_var)
-    y_kl = uniform_categorical_kl(y_wz)
+def mse_loss(inputs, targets, reduction='mean'):
+    loss = F.mse_loss(inputs, targets).sum(-1)
+    return reduce(loss, reduction)
 
-    total = rec_loss + beta * (cond_kl + w_kl + y_kl)
+def log_norm_kl(x, mean, var, mean_, var_, reduction='mean'):
+    log_p = -0.5 * (torch.log(2.0 * np.pi * var) +
+                    torch.pow(x - mean, 2) / var).sum(-1)
+    log_q = -0.5 * (torch.log(2.0 * np.pi * var_) +
+                    torch.pow(x - mean_, 2) / var_).sum(-1)
+    loss = log_p - log_q
+    return reduce(loss, reduction)
 
-    each = torch.stack([total,
-                        rec_loss,
-                        cond_kl,
-                        w_kl,
-                        y_kl]).detach()
-
-    return total, each
-
-def log_norm(x, mean, var):
-    loss = 0.5 * (torch.pow(x - mean, 2) / var) * torch.log(torch.pow(2 * np.pi * var, 0.5))
-    return loss.mean()
-
-def binary_cross_entropy(input, target):
-    # x: (batch_size, x_size, x_size)
-    # x_: (batch_size, x_size, x_size)
-    # loss: (batch_size, )
-    assert input.shape == target.shape
-    input = input.view(input.shape[0], -1)
-    target = target.view(target.shape[0], -1)
-    loss = F.binary_cross_entropy(input, target, reduction='none').sum(1)
-    return loss.mean()
-
-def gaussian_gmm_kl(z, mean, variance, means, variances, pi):
-    # mean: (batch_size, dim)
-    # var: (batch_size, dim) > 0
-    # means: (batch_size, dim, K)
-    # vars: (batch_size, dim, K) > 0
-    # pi: (batch_size, K)
-    # kl: (batch_size, )
-    k = pi.shape[-1]
-    z_repeat = z.unsqueeze(-1).repeat(1, 1, k)
-    log_q = -0.5 * (torch.log(variance) + torch.pow(z - mean, 2) / variance ).sum(-1)
-    log_p = -0.5 * (
-        (pi * torch.log(variances).sum(1)).sum(-1) + \
-        (pi * (torch.pow(z_repeat - means, 2) / variances).sum(1)).sum(-1)
-    )
-    kl = log_q - log_p
-    return kl.mean()
-
-def standard_gaussian_kl(mean, var):
-    # mean: (batch_size, dim, ..)
-    # var: (batch_size, dim, ..)
-    # kl: (batch_size, ..)
-    kl = 0.5 * (var - 1 - torch.log(var) + torch.pow(mean, 2)).sum(1)
-    # sum over dimenntion of w
-    return kl.mean()
-
-def uniform_categorical_kl(y):
-    # y: (batch_size, K)
-    # kl: (batch_size, )
+def uniform_categorical_kl(y, reduction='mean'):
     k = y.shape[-1]
     u = torch.ones_like(y) / k
-    # (y * torch.log(y/u)).sum() = F.kl_div(torch.log(u), y, reduction='none')
-    kl = F.kl_div(torch.log(u), y, reduction='none').sum(1)
-    return kl.mean()
+    kl = (u * torch.log(u / y + eps)).sum(-1)
+    return reduce(kl, reduction)
+
+def reduce(target, reduction):
+    if reduction is 'mean':
+        return target.mean()
+    if reduction is 'sum':
+        return target.sum()
+    return target

@@ -33,7 +33,7 @@ class Conv2dModule(nn.Module):
                  out_ch,
                  kernel=1,
                  stride=1,
-                 activation='ReLU'):
+                 act_func='ReLU'):
         super().__init__()
 
         layers = []
@@ -42,7 +42,7 @@ class Conv2dModule(nn.Module):
                                 stride=stride,
                                 padding=(kernel - stride) // 2))
         layers.append(nn.BatchNorm2d(out_ch))
-        layers.append(_activation(activation))
+        layers.append(_activation(act_func))
         self.features = _sequential(*layers)
 
     def forward(self, x):
@@ -56,7 +56,7 @@ class ConvTranspose2dModule(nn.Module):
                  out_ch,
                  kernel=1,
                  stride=1,
-                 activation='ReLU'):
+                 act_func='ReLU'):
         super().__init__()
 
         layers = []
@@ -65,7 +65,7 @@ class ConvTranspose2dModule(nn.Module):
                                          stride=stride,
                                          padding=(kernel - stride) // 2))
         layers.append(nn.BatchNorm2d(out_ch))
-        layers.append(_activation(activation))
+        layers.append(_activation(act_func))
         self.features = _sequential(*layers)
 
     def forward(self, x):
@@ -142,47 +142,45 @@ class GaussianMixture(nn.Module):
 
 
 class GumbelSoftmax(nn.Module):
-    def __init__(self):
+    def __init__(self, in_dim, out_dim):
         super().__init__()
+        self.features = nn.Linear(in_dim, out_dim)
 
-    def forward(self, logits, tau=.5):
-        dim = -1
+    def forward(self, x, tau=1., dim=-1, hard=False):
+        logits = self.features(x)
         pi = logits.softmax(dim)
+        gumbels = -torch.empty_like(logits).exponential_().log()
+        gumbels = (logits + gumbels) / tau
+        y = gumbels.softmax(dim)
 
-        if self.training:
-            # Straight through.
-            gumbels = -torch.empty_like(logits).exponential_().log()
-            gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
-            pred = gumbels.softmax(dim)
-            index = pred.max(dim, keepdim=True)[1]
+        if hard:
+            index = y.max(dim, keepdim=True)[1]
             y_hard = torch.zeros_like(logits).scatter_(dim, index, 1.0)
-            one_hot = y_hard - pred.detach() + pred
-        else:
-            index = pi.max(dim, keepdim=True)[1]
-            one_hot = torch.zeros_like(logits).scatter_(dim, index, 1.0)
-        return one_hot, pi
+            y = y_hard - y.detach() + y
+
+        return y
 
 
 class DownSample(nn.Module):
     def __init__(self, in_ch, out_ch,
                  kernel=3,
-                 pool_kernel=3,
-                 pooling='max',
-                 activation='ReLU'):
+                 pooling=3,
+                 pool_func='max',
+                 act_func='ReLU'):
         super().__init__()
         layers = []
-        assert kernel >= pool_kernel
-        if pooling in ('avg',):
+        assert kernel >= pooling
+        if pool_func in ('avg',):
             layers.append(nn.AvgPool2d(kernel_size=kernel,
-                                       stride=pool_kernel,
-                                       padding=(kernel - pool_kernel) // 2))
+                                       stride=pooling,
+                                       padding=(kernel - pooling) // 2))
         else:
             layers.append(nn.MaxPool2d(kernel_size=kernel,
-                                       stride=pool_kernel,
-                                       padding=(kernel - pool_kernel) // 2))
+                                       stride=pooling,
+                                       padding=(kernel - pooling) // 2))
 
         layers.append(Conv2dModule(in_ch, out_ch,
-                                    activation=activation))
+                                    act_func=act_func))
         self.features = _sequential(*layers)
 
     def forward(self, x):
@@ -192,16 +190,16 @@ class DownSample(nn.Module):
 
 class Upsample(nn.Module):
     def __init__(self, in_ch, out_ch,
-                 unpool_kernel=3,
-                 activation='ReLU'):
+                 unpooling=3,
+                 act_func='ReLU'):
         super().__init__()
         layers = []
         layers.append(ConvTranspose2dModule(in_ch, in_ch,
-                                            kernel=unpool_kernel,
-                                            stride=unpool_kernel,
-                                            activation=activation))
+                                            kernel=unpooling,
+                                            stride=unpooling,
+                                            act_func=act_func))
         layers.append(ConvTranspose2dModule(in_ch, out_ch,
-                                            activation=activation))
+                                            act_func=act_func))
         self.features = _sequential(*layers)
 
     def forward(self, x):

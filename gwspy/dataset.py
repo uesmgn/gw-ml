@@ -6,22 +6,33 @@ import numpy  as  np
 
 class Dataset(data.Dataset):
 
-    def __init__(self, df, transform=None, columns=('label', 'path')):
+    def __init__(self, df, columns=('label', 'path'), **kwargs):
         self.df = df
         for column in columns:
             assert column in df.columns
         self.columns = columns
-        self.transform = transform
+        self.transform = kwargs.get('transform')
+
+        self.use_pseudo = False
+        if kwargs.get('pseudo_dict') is not None:
+            self.pseudo_dict = kwargs['pseudo_dict']
+            self.use_pseudo = True
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
-        (label, path) = self.df.iloc[idx, :]
+        true, path = self.df.iloc[idx, :]
         img = Image.open(path)
-        if self.transform:
+        if self.transform is not None:
             img = self.transform(img)
-        return (img, label)
+
+        if self.use_pseudo:
+            if idx not in self.pseudo_dict:
+                self.pseudo_dict[idx] = true
+            pseudo = self.pseudo_dict[idx]
+            return (img, pseudo, idx)
+        return (img, true, idx)
 
     def unique_column(self, column, dtype=str, sort=True):
         arr = self.df[column].unique().astype(dtype)

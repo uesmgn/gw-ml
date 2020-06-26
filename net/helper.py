@@ -1,6 +1,7 @@
 import numpy as np
 
-def get_middle_dim(input_dim, pool_kernels):
+def get_middle_dim(input_shape, pool_kernels):
+    input_dim = int(np.prod(input_shape[2:]))
     prod = int(np.prod(pool_kernels))
     if input_dim % prod == 0:
         middle_dim = input_dim
