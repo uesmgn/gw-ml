@@ -55,16 +55,10 @@ def plot(data, out, **kwargs):
         plt.close()
 
 
-def scatter(data, labels, out, **kwargs):
-    data, labels_unique = check_array(
-        data, labels, unique=True, sort=True,
-        check_size=True, dtype=[np.float, np.str])
-    labels = check_array(labels, dtype=np.str)
-    if data.ndim is 2:
-        xx = data[:, 0]
-        yy = data[:, 1]
-    else:
-        raise ValueError('Invalid data format')
+def scatter(xx, yy, labels, out, **kwargs):
+    xx, yy, labels = check_array(
+        xx, yy, labels, check_size=True, dtype=[np.float, np.float, np.str])
+    labels_unique = check_array(labels, unique=True, sort=True, dtype=np.str)
     cmap = plt.get_cmap("tab20")
     colors = [mcolors.rgb2hex(cmap(i)) for i in range(20)]
     colors = np.tile(colors, 3)
