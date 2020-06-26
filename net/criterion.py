@@ -8,7 +8,7 @@ __all__ = [
 eps = 1e-10
 
 def cvae(params, beta=(1.0, 1.0, 1.0), clustering_weight=None):
-    rec_loss = beta[0] * mse_loss(params['x'], params['x_reconst']).view(-1)
+    rec_loss = beta[0] * bce_loss(params['x'], params['x_reconst']).view(-1)
     z_kl = beta[1] * log_norm_kl(
         params['z'], params['z_mean'], params['z_var'],
         params['z_prior_mean'], params['z_prior_var']).view(-1)
@@ -19,6 +19,10 @@ def cvae(params, beta=(1.0, 1.0, 1.0), clustering_weight=None):
 
 def mse_loss(inputs, targets, reduction='mean'):
     loss = F.mse_loss(inputs, targets).sum(-1)
+    return reduce(loss, reduction)
+
+def bce_loss(inputs, targets, reduction='mean'):
+    loss = F.binary_cross_entropy(inputs, targets).sum(-1)
     return reduce(loss, reduction)
 
 def log_norm_kl(x, mean, var, mean_, var_, reduction='mean'):
