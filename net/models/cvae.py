@@ -48,4 +48,5 @@ class CVAE(nn.Module):
 
         return {'x': x, 'f': f, 'x_reconst': x_reconst,
                 'z': z, 'z_mean': z_mean, 'z_var': z_var,
-                'z_prior_mean': z_prior_mean, 'z_prior_var': z_prior_var }
+                'z_prior_mean': z_prior_mean, 'z_prior_var': z_prior_var,
+                'y': y }
