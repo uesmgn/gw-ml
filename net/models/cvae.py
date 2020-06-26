@@ -46,7 +46,6 @@ class CVAE(nn.Module):
         _, z_prior_mean, z_prior_var = self.z_prior(y)
         x_reconst = self.decoder(z)
 
-        return {'x': x, 'f': f, 'x_reconst': x_reconst,
+        return {'x': x, 'f': f, 'x_reconst': x_reconst, 'y': y,
                 'z': z, 'z_mean': z_mean, 'z_var': z_var,
-                'z_prior_mean': z_prior_mean, 'z_prior_var': z_prior_var,
-                'y': y }
+                'z_prior_mean': z_prior_mean, 'z_prior_var': z_prior_var }

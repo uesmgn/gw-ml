@@ -142,11 +142,11 @@ if __name__ == '__main__':
     classifier.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    pseudo_optimizer = torch.optim.Adam(classifier.parameters(), lr=lr)
+    optimizer_pseudo = torch.optim.Adam(classifier.parameters(), lr=lr)
 
     if verbose:
-        model.eval()
-        summary(model, x_shape)
+        # model.eval()
+        # summary(model, x_shape)
         print(model)
 
     init_epoch = 0
@@ -190,7 +190,8 @@ if __name__ == '__main__':
             params['pseudos'] = p.to(device)
             params['logits'] = classifier(params['f'].detach())
             features_loss, clustering_loss = criterion.cvae(params, beta, clustering_weight)
-
+            print(features_loss)
+            print(clustering_loss)
             optimizer.zero_grad()
             optimizer_pseudo.zero_grad()
             features_loss.backward()
@@ -200,4 +201,4 @@ if __name__ == '__main__':
             losses['features_loss'] += features_loss.item()
             losses['clustering_loss'] += clustering_loss.item()
         loss_stats.append(losses.values())
-        print(e, losses)
+        print(epoch, losses)

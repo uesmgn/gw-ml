@@ -1,15 +1,14 @@
 import torch
 import torch.nn.functional as F
-import numpy as np
+import  numpy as np
 
 __all__ = [
     'cvae'
 ]
-
 eps = 1e-10
 
 def cvae(params, beta=(1.0, 1.0, 1.0), clustering_weight=None):
-    reconst_loss = beta[0] * mse_loss(params['x'], params['x_reconst']).view(-1)
+    rec_loss = beta[0] * mse_loss(params['x'], params['x_reconst']).view(-1)
     z_kl = beta[1] * log_norm_kl(
         params['z'], params['z_mean'], params['z_var'],
         params['z_prior_mean'], params['z_prior_var']).view(-1)

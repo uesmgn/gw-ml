@@ -29,7 +29,7 @@ class Dataset(data.Dataset):
 
         if self.use_pseudo:
             if idx not in self.pseudo_dict:
-                self.pseudo_dict[idx] = -1
+                self.pseudo_dict[idx] = 0
             pseudo = self.pseudo_dict[idx]
             return (img, pseudo, idx)
         return (img, true, idx)
