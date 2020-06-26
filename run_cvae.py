@@ -199,7 +199,7 @@ if __name__ == '__main__':
             losses['features_loss'] += features_loss.item()
             losses['clustering_loss'] += clustering_loss.item()
         loss_stats.append(losses.values())
-        nmi = metrics.adjusted_mutual_info_score(trues, pseudos)
+        nmi = metrics.nmi(trues, pseudos)
         nmi_stats.append(nmi)
         print(epoch, total_loss, nmi)
 
@@ -217,9 +217,9 @@ if __name__ == '__main__':
             x_position = np.arange(len(counter[:, 0]))
             plt.bar(counter[:, 0], counter[:, 1], f'{outdir}/bar_{epoch}.png')
 
-            plt.scatter(np.array([z[:, 0], z[:, 1]]), trues,
+            plt.scatter(z[:, 0], z[:, 1], trues,
                         f'{outdir}/latent_t_{epoch}.png')
-            plt.scatter(np.array([z[:, 0], z[:, 1]]), pseudos,
+            plt.scatter(z[:, 0], z[:, 1], pseudos,
                         f'{outdir}/latent_p_{epoch}.png')
 
             plt.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png')
