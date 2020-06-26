@@ -22,21 +22,21 @@ def mse_loss(inputs, targets, reduction='mean'):
     return reduce(loss, reduction)
 
 def bce_loss(inputs, targets, reduction='mean'):
-    loss = F.binary_cross_entropy(inputs, targets, reduction='none').mean(-1)
+    loss = F.binary_cross_entropy(inputs, targets, reduction='none').sum(-1)
     return reduce(loss, reduction)
 
 def log_norm_kl(x, mean, var, mean_, var_, reduction='mean'):
     log_p = -0.5 * (torch.log(2.0 * np.pi * var) +
-                    torch.pow(x - mean, 2) / var).mean(-1)
+                    torch.pow(x - mean, 2) / var).sum(-1)
     log_q = -0.5 * (torch.log(2.0 * np.pi * var_) +
-                    torch.pow(x - mean_, 2) / var_).mean(-1)
+                    torch.pow(x - mean_, 2) / var_).sum(-1)
     loss = log_p - log_q
     return reduce(loss, reduction)
 
 def uniform_categorical_kl(y, reduction='mean'):
     k = y.shape[-1]
     u = torch.ones_like(y) / k
-    kl = (u * torch.log(u / y + eps)).mean(-1)
+    kl = (u * torch.log(u / y + eps)).sum(-1)
     return reduce(kl, reduction)
 
 def reduce(target, reduction):
