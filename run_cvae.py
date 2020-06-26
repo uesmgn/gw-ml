@@ -203,14 +203,14 @@ if __name__ == '__main__':
         nmi_stats.append(nmi)
         print(epoch, losses.values(), nmi)
 
-        if epoch % plt_itvl == 0:
+        if epoch % eval_itvl == 0:
 
             if not os.path.exists(outdir):
                 os.mkdir(outdir)
 
             z = z.squeeze(1).detach().cpu().numpy()
 
-            cm = metrics.confusion_matrix(pseudos, trues, labels_pred, labels_true)
+            cm, labels_pred, labels_true = metrics.confusion_matrix(pseudos, trues, ylabels, xlabels, return_labels=True)
 
             counter = np.array([[label, np.count_nonzero(
                 np.array(pseudos) == label)] for label in list(set(pseudos))])
