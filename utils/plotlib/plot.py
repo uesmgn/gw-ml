@@ -14,9 +14,11 @@ __all__ = [
 ]
 
 
-def bar(x_labels, yy, out, reverse=True, **kwargs):
-    x_labels, yy = check_array(x_labels, yy, check_size=True)
-    x_labels = x_labels.astype(str)
+def bar(input, out, reverse=True, **kwargs):
+    input = check_array(input)
+    counter = np.array([[label, np.count_nonzero(
+        np.array(input) == label)] for label in list(set(input))])
+    x_labels, yy = counter[:, 0].astype(str), counter[:, 1].astype(np.int32)
     idx = np.argsort(yy)
     if reverse:
         idx = idx[::-1]
