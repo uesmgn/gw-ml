@@ -161,6 +161,7 @@ def main(args):
             clustering_weight.append(w)
         clustering_weight = 1. / torch.Tensor(clustering_weight).to(device)
 
+        model.train()
         for b, (x, t, p, idx) in enumerate(train_loader):
             x = x.to(device)
             y_logits = model.clustering_logits(x)
@@ -171,6 +172,9 @@ def main(args):
             loss.backward()
             optim_c.step()
             losses['clustering_loss'] += loss.item()
+        if verbose:
+            print(f'clustering_loss: {losses["clustering_loss"]:.3f}')
+
         #
         #
         #
