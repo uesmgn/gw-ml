@@ -134,16 +134,16 @@ def main(args):
 
         losses = defaultdict(lambda: 0)
 
+        model.train()
         for b, (x, t, idx) in enumerate(loader):
             x = x.to(device)
-            params = model(x)
-            loss = criterion.cvae(params, beta)
+            loss = model(x)
             optim.zero_grad()
             loss.backward()
             optim.step()
             losses['features_loss'] += loss.item()
         if verbose:
-            print(f'features_loss: {losses['features_loss']:.3f}')
+            print(f'features_loss: {losses["features_loss"]:.3f}')
 
         features, idxs = compute_features(loader, model)
         if verbose:
@@ -171,7 +171,7 @@ def main(args):
             loss.backward()
             optim_c.step()
             losses['clustering_loss'] += loss.item()
-        # 
+        #
         #
         #
         # nmi = metrics.nmi(trues, pseudos)
