@@ -130,7 +130,7 @@ def main(args):
 
     for epoch in range(1, n_epoch+1):
         if verbose:
-            print(f'epoch: {epoch}')
+            print(f'---------- epoch: {epoch} ----------')
 
         losses = defaultdict(lambda: 0)
 
@@ -145,7 +145,7 @@ def main(args):
         if verbose:
             print(f'features_loss: {losses["features_loss"]:.3f}')
 
-        features, idxs = compute_features(loader, model)
+        features, trues, idxs = compute_features(loader, model)
         if verbose:
             print('features.shape:', features.shape)
             print('idxs.shape:', idxs.shape)
@@ -165,8 +165,6 @@ def main(args):
         for b, (x, t, p, idx) in enumerate(train_loader):
             x = x.to(device)
             y_logits = model.clustering_logits(x)
-            print('y_logits.shape:', y_logits.shape)
-            print('p.shape:', p.shape)
             loss = criterion.cross_entropy(y_logits, p.to(device), clustering_weight)
             optim_c.zero_grad()
             loss.backward()
@@ -175,40 +173,64 @@ def main(args):
         if verbose:
             print(f'clustering_loss: {losses["clustering_loss"]:.3f}')
 
-        #
-        #
-        #
-        # nmi = metrics.nmi(trues, pseudos)
-        # nmi_stats.append(nmi)
-        # print(epoch, losses.values(), nmi)
-        #
-        # if epoch % eval_itvl == 0:
-        #
-        #     if not os.path.exists(outdir):
-        #         os.mkdir(outdir)
-        #
-        #     z = z.squeeze(1).detach().cpu().numpy()
-        #
-        #     cm, labels_pred, labels_true = metrics.confusion_matrix(pseudos, trues, ylabels, xlabels, return_labels=True)
-        #
-        #     counter = np.array([[label, np.count_nonzero(
-        #         np.array(pseudos) == label)] for label in list(set(pseudos))])
-        #     x_position = np.arange(len(counter[:, 0]))
-        #     plt.bar(counter[:, 0], counter[:, 1], f'{outdir}/bar_{epoch}.png')
-        #
-        #     plt.scatter(z[:, 0], z[:, 1], trues,
-        #                 f'{outdir}/latent_t_{epoch}.png')
-        #     plt.scatter(z[:, 0], z[:, 1], pseudos,
-        #                 f'{outdir}/latent_p_{epoch}.png')
-        #
-        #     plt.plot(nmi_stats, f'{outdir}/nmi_{epoch}.png')
-        #
-        #     plt.plot_confusion_matrix(cm, labels_pred, labels_true,
-        #                               f'{outdir}/cm_{epoch}.png')
+        nmi = metrics.nmi(trues, pseudos)
+        if verbose:
+            print(f'nmi: {nmi:.3f}')
+
+        # statistics
+        stats['features_loss'].append(losses['features_loss'])
+        stats['clustering_loss'].append(losses['clustering_loss'])
+        stats['nmi'].append(nmi)
+
+        if epoch % eval_itvl == 0:
+            if verbose:
+                print(f'plotting...')
+
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+
+            if verbose:
+                print(f'calculating confusion_matrix...')
+
+            cm, ylabels, xlabels = metrics.confusion_matrix(pseudos, trues, ylabels, xlabels, return_labels=True)
+
+            if verbose:
+                print(f'plotting confusion_matrix...')
+
+            plt.plot_confusion_matrix(cm, ylabels, xlabels,
+                                      f'{outdir}/cm_{epoch}.png')
+            if verbose:
+                print(f'plotting bar...')
+
+            plt.bar(pseudos, f'{outdir}/bar_{epoch}.png')
+
+            if verbose:
+                print(f'calculating tsne...')
+
+            tsne = decomposition.TSNE(n_components=2)
+
+            features = tsne.fit_transform(features)
+
+            if verbose:
+                print(f'plotting tsne...')
+
+            plt.scatter(features[:, 0], features[:, 1], trues,
+                        f'{outdir}/features_t_{epoch}.png')
+            plt.scatter(features[:, 0], features[:, 1], pseudos,
+                        f'{outdir}/features_p_{epoch}.png')
+
+            if verbose:
+                print(f'plotting stats...')
+
+            for k, v in stats.items():
+                plt.plot(v, f'{outdir}/{k}_{epoch}.png')
+
+
 
 def compute_features(loader, model):
     device = next(model.parameters()).device
     features = torch.Tensor([]).to(device)
+    labels = np.array([])
     idxs = np.array([], dtype=np.int32)
     model.eval()
     with torch.no_grad():
@@ -216,9 +238,10 @@ def compute_features(loader, model):
             x = x.to(device)
             z = model.features(x)
             features = torch.cat([features, z], 0)
+            labels = np.append(labels, np.ravel(l))
             idxs = np.append(idxs, np.ravel(idx).astype(np.int32))
         features = features.squeeze(1).cpu().numpy()
-    return features, idxs
+    return features, labels, idxs
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
