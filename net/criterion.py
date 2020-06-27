@@ -14,7 +14,7 @@ def cvae(params, beta=(1.0, 1.0, 1.0), clustering_weight=None):
         params['z_prior_mean'], params['z_prior_var']).view(-1)
     y_kl = beta[2] * uniform_categorical_kl(params['y']).view(-1)
     loss = (rec_loss + z_kl + y_kl).sum()
-    return loss
+    return loss, rec_loss, z_kl, y_kl
 
 def cross_entropy(input, target, clustering_weight=None):
     loss = F.cross_entropy(input,
