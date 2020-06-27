@@ -200,12 +200,14 @@ def main(args):
 
             cm, pred_labels, true_labels = metrics.confusion_matrix(
                 pseudos, trues, pred_labels, true_labels, return_labels=True)
+            figsize_cm = (len(pred_labels) / 1.2, len(true_labels) / 1.5)
 
             if verbose:
                 print(f'plotting confusion_matrix...')
 
             plt.plot_confusion_matrix(cm, pred_labels, true_labels,
-                                      f'{outdir}/cm_{epoch}.png')
+                                      f'{outdir}/cm_{epoch}.png',
+                                      figsize=figsize_cm)
             if verbose:
                 print(f'plotting bar...')
 
@@ -230,7 +232,8 @@ def main(args):
                 print(f'plotting stats...')
 
             for k, v in stats.items():
-                plt.plot(v, f'{outdir}/{k}_{epoch}.png')
+                plt.plot(v, f'{outdir}/{k}_{epoch}.png',
+                         fit_x=True)
 
 
 
