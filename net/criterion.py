@@ -13,9 +13,14 @@ def cvae(params, beta=(1.0, 1.0, 1.0), clustering_weight=None):
         params['z'], params['z_mean'], params['z_var'],
         params['z_prior_mean'], params['z_prior_var']).view(-1)
     y_kl = beta[2] * uniform_categorical_kl(params['y']).view(-1)
-    features_loss = (rec_loss + z_kl + y_kl).sum()
-    cluster_loss = F.cross_entropy(params['logits'].squeeze(1), params['pseudos'], weight=clustering_weight).sum()
-    return features_loss, cluster_loss
+    loss = (rec_loss + z_kl + y_kl).sum()
+    return loss
+
+def cross_entropy(input, target, clustering_weight=None):
+    loss = F.cross_entropy(input,
+                           target,
+                           weight=clustering_weight).sum()
+    return loss
 
 def mse_loss(inputs, targets, reduction='mean'):
     loss = F.mse_loss(inputs, targets).sum(-1)
