@@ -4,7 +4,7 @@ import torch.nn as nn
 from .vae import *
 from ..layers import *
 from ..helper import *
-from ..criterionn import *
+from .. import criterion
 
 __all__ = [
     'CVAE'
