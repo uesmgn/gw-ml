@@ -31,7 +31,7 @@ class Dataset(data.Dataset):
             if idx not in self.pseudo_dict:
                 self.pseudo_dict[idx] = 0
             pseudo = self.pseudo_dict[idx]
-            return (img, pseudo, idx)
+            return (img, true, pseudo, idx)
         return (img, true, idx)
 
     def unique_column(self, column, dtype=str, sort=True):

@@ -158,7 +158,7 @@ class GumbelSoftmax(nn.Module):
             y_hard = torch.zeros_like(logits).scatter_(dim, index, 1.0)
             y = y_hard - y.detach() + y
 
-        return y
+        return logits, y
 
 
 class DownSample(nn.Module):

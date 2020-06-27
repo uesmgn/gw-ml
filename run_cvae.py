@@ -110,8 +110,8 @@ if __name__ == '__main__':
     if verbose:
         print(f'length of dataset: ', len(dataset))
 
-    xlabels = dataset.unique_column('label')
-    ylabels = np.array(range(y_dim))
+    true_labels = dataset.unique_column('label')
+    pred_labels = np.array(range(y_dim)).astype(np.int32)
 
     loader = DataLoader(dataset,
                         batch_size=batch_size,
@@ -120,29 +120,22 @@ if __name__ == '__main__':
                         drop_last=True)
 
     pseudo_dict = Manager().dict()
-    pseudo_dataset = Dataset(df, transform=data_transform, pseudo_dict=pseudo_dict)
-    pseudo_loader = DataLoader(pseudo_dataset,
-                               batch_size=batch_size,
-                               num_workers=num_workers,
-                               shuffle=True,
-                               drop_last=True)
+    train_set = Dataset(df, transform=data_transform, pseudo_dict=pseudo_dict)
+    train_loader = DataLoader(train_set,
+                              batch_size=batch_size,
+                              num_workers=num_workers,
+                              shuffle=True,
+                              drop_last=True)
 
     model = CVAE(**nkwargs)
 
-    # GPU Parallelize
     if torch.cuda.is_available():
-        model = torch.nn.DataParallel(model)
+        # model = torch.nn.DataParallel(model)
         torch.backends.cudnn.benchmark = True
     model.to(device)
 
-    classifier = nn.Sequential(
-        nn.Linear(f_dim, 256),
-        nn.Linear(256, y_dim)
-    )
-    classifier.to(device)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    optimizer_pseudo = torch.optim.Adam(classifier.parameters(), lr=lr)
+    optim = torch.optim.Adam(model.parameters(), lr=lr)
+    optim_c = torch.optim.Adam(model.classifier.parameters(), lr=lr)
 
     if verbose:
         # model.eval()
@@ -150,26 +143,24 @@ if __name__ == '__main__':
         print(model)
 
     init_epoch = 0
-    loss_stats = []
-    nmi_stats = []
-    ari_stats = []
-    time_stats = []
+    stats = defaultdict(list)
 
     for epoch in range(1, n_epoch+1):
-        trues = np.array([])
-        idxs = np.array([], dtype=np.int32)
-        z = torch.Tensor([]).to(device)
 
-        model.eval()
-        with torch.no_grad():
-            for b, (x, l, idx) in enumerate(loader):
-                x = x.to(device)
-                params = model(x)
-                idxs = np.append(idxs, np.ravel(idx))
-                z = torch.cat([z, params['z']], 0)
-                trues = np.append(trues, np.ravel(l))
+        for b, (x, t, idx) in enumerate(loader):
+            x = x.to(device)
+            params = model(x)
+            loss = criterion.cvae(params, beta)
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+            stats['features_loss'].append(loss.item())
 
-        features = z.squeeze(1).cpu().numpy()
+        features, idxs = compute_features(loader, model)
+        if verbose:
+            print('features.shape:', features.shape)
+
+        # assign cluster labels to pseudo_loader
         pseudos = functional.run_kmeans(features, y_dim)
         for i, p in zip(idxs, pseudos):
             pseudo_dict[i] = int(p)
@@ -180,23 +171,18 @@ if __name__ == '__main__':
             clustering_weight.append(w)
         clustering_weight = 1. / torch.Tensor(clustering_weight).to(device)
 
-        model.train()
-        losses = defaultdict(lambda: 0)
-        for b, (x, p, idx) in enumerate(pseudo_loader):
+        for b, (x, t, p, idx) in enumerate(train_loader):
             x = x.to(device)
-            params = model(x)
-            params['pseudos'] = p.to(device)
-            params['logits'] = classifier(params['f'].detach().requires_grad_())
-            features_loss, clustering_loss = criterion.cvae(params, beta, clustering_weight)
-            optimizer.zero_grad()
-            optimizer_pseudo.zero_grad()
-            features_loss.backward()
-            clustering_loss.backward()
-            optimizer.step()
-            optimizer_pseudo.step()
-            losses['features_loss'] += features_loss.item()
-            losses['clustering_loss'] += clustering_loss.item()
-        loss_stats.append(losses.values())
+            y_logits = model.clustering_logits(x)
+            loss = criterion.cross_entropy(y_logits, p, clustering_weight)
+            optim_c.zero_grad()
+            loss.backward()
+            optim_c.step()
+            stats['clustering_loss'].append(loss.item())
+
+
+
+
         nmi = metrics.nmi(trues, pseudos)
         nmi_stats.append(nmi)
         print(epoch, losses.values(), nmi)
@@ -224,3 +210,16 @@ if __name__ == '__main__':
 
             plt.plot_confusion_matrix(cm, labels_pred, labels_true,
                                       f'{outdir}/cm_{epoch}.png')
+
+def compute_features(loader, model):
+    device = model.device
+    features = torch.Tensor([]).to(device)
+    idxs = np.array([], dtype=np.int32)
+    model.eval()
+    for b, (x, l, idx) in enumerate(loader):
+        x = x.to(device)
+        z = model.features(x)
+        features = torch.cat([features, z], 0)
+        idxs = np.append(idxs, np.ravel(idx).astype(np.int32))
+    features = features.squeeze(1).cpu().numpy()
+    return features, idxs

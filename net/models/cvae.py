@@ -23,8 +23,8 @@ class CVAE(nn.Module):
 
         # encoder: (M, C, W, H) -> (M, features_dim)
         self.encoder = Encoder(**kwargs)
-        # y: (M, features_dim) -> (M, y_dim)
-        self.y = GumbelSoftmax(self.f_dim, self.y_dim)
+        # classifier: (M, features_dim) -> (M, y_dim)
+        self.classifier = GumbelSoftmax(self.f_dim, self.y_dim)
         # z: (M, features_dim + y_dim) -> (M, z_dim)
         self.z = Gaussian(self.f_dim + self.y_dim, self.z_dim)
         # z_prior: (M, y_dim) -> (M, z_dim)
@@ -40,7 +40,7 @@ class CVAE(nn.Module):
 
     def forward(self, x):
         f = self.encoder(x)
-        y = self.y(f)
+        y_logits, y = self.classifier(f)
         xy = torch.cat((f, y), -1)
         z, z_mean, z_var = self.z(xy)
         _, z_prior_mean, z_prior_var = self.z_prior(y)
@@ -49,3 +49,14 @@ class CVAE(nn.Module):
         return {'x': x, 'f': f, 'x_reconst': x_reconst, 'y': y,
                 'z': z, 'z_mean': z_mean, 'z_var': z_var,
                 'z_prior_mean': z_prior_mean, 'z_prior_var': z_prior_var }
+
+    def features(self, x):
+        f = self.encoder(x)
+        y_logits, y = self.classifier(f)
+        z, _, _ = self.z(torch.cat((f, y), -1))
+        return z
+
+    def clustering_logits(self, x):
+        f = self.encoder(x)
+        y_logits, y = self.classifier(f)
+        return y_logits
