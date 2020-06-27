@@ -49,6 +49,10 @@ def plot(data, out, **kwargs):
         _init_plot(**kwargs)
         plt.plot(xx, yy)
         _setup_plot(**kwargs)
+        if kwargs.get('fit_x'):
+            plt.xlim(min(xx), max(xx))
+        if kwargs.get('fit_y'):
+            plt.ylim(min(yy), max(yy))
         ax = plt.gca()
         ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
         ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
