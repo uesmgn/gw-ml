@@ -167,7 +167,7 @@ def main(args):
             y_logits = model.clustering_logits(x)
             print('y_logits.shape:', y_logits.shape)
             print('p.shape:', p.shape)
-            loss = criterion.cross_entropy(y_logits, p, clustering_weight)
+            loss = criterion.cross_entropy(y_logits, p.to(device), clustering_weight)
             optim_c.zero_grad()
             loss.backward()
             optim_c.step()
