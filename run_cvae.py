@@ -207,12 +207,13 @@ def compute_features(loader, model):
     features = torch.Tensor([]).to(device)
     idxs = np.array([], dtype=np.int32)
     model.eval()
-    for b, (x, l, idx) in enumerate(loader):
-        x = x.to(device)
-        z = model.features(x)
-        features = torch.cat([features, z], 0)
-        idxs = np.append(idxs, np.ravel(idx).astype(np.int32))
-    features = features.squeeze(1).cpu().numpy()
+    with torch.no_grad():
+        for b, (x, l, idx) in enumerate(loader):
+            x = x.to(device)
+            z = model.features(x)
+            features = torch.cat([features, z], 0)
+            idxs = np.append(idxs, np.ravel(idx).astype(np.int32))
+        features = features.squeeze(1).cpu().numpy()
     return features, idxs
 
 if __name__ == '__main__':
