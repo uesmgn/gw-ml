@@ -4,6 +4,7 @@ import torch.nn as nn
 from .vae import *
 from ..layers import *
 from ..helper import *
+from ..criterionn import *
 
 __all__ = [
     'CVAE'
@@ -17,7 +18,6 @@ class CVAE(nn.Module):
         self.z_dim = kwargs['z_dim']
         self.bottle_channel = kwargs['bottle_channel']
         self.poolings = kwargs['poolings']
-
         self.middle_dim = get_middle_dim(self.x_shape, self.poolings)
         self.f_dim = self.bottle_channel * self.middle_dim**2
 
@@ -38,13 +38,20 @@ class CVAE(nn.Module):
                 if m.bias.data is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x, return_loss=True, beta=(1., 1., 1.)):
         f = self.encoder(x)
         y_logits, y = self.classifier(f)
         xy = torch.cat((f, y), -1)
         z, z_mean, z_var = self.z(xy)
         _, z_prior_mean, z_prior_var = self.z_prior(y)
         x_reconst = self.decoder(z)
+
+        params = {'x': x, 'f': f, 'x_reconst': x_reconst, 'y': y,
+                  'z': z, 'z_mean': z_mean, 'z_var': z_var,
+                  'z_prior_mean': z_prior_mean, 'z_prior_var': z_prior_var }
+
+        if return_loss:
+            return criterion.cvae(params, beta)
 
         return {'x': x, 'f': f, 'x_reconst': x_reconst, 'y': y,
                 'z': z, 'z_mean': z_mean, 'z_var': z_var,
@@ -53,7 +60,7 @@ class CVAE(nn.Module):
     def features(self, x):
         f = self.encoder(x)
         y_logits, y = self.classifier(f)
-        z, _, _ = self.z(torch.cat((f, y), -1))
+        _, z, _ = self.z(torch.cat((f, y), -1))
         return z
 
     def clustering_logits(self, x):
