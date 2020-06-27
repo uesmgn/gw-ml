@@ -137,18 +137,21 @@ def main(args):
         model.train()
         for b, (x, t, idx) in enumerate(loader):
             x = x.to(device)
-            loss = model(x)
+            loss, rec_loss, z_kl, y_kl = model(x)
             optim.zero_grad()
             loss.backward()
             optim.step()
             losses['features_loss'] += loss.item()
+            losses['reconstruntion_loss'] += rec_loss.item()
+            losses['z_kl_divergence'] += z_kl.item()
+            losses['y_kl_divergence'] += y_kl.item()
         if verbose:
             print(f'features_loss: {losses["features_loss"]:.3f}')
+            print(f'reconstruntion_loss: {losses["reconstruntion_loss"]:.3f}')
+            print(f'z_kl_divergence: {losses["z_kl_divergence"]:.3f}')
+            print(f'y_kl_divergence: {losses["y_kl_divergence"]:.3f}')
 
         features, trues, idxs = compute_features(loader, model)
-        if verbose:
-            print('features.shape:', features.shape)
-            print('idxs.shape:', idxs.shape)
 
         # assign cluster labels to pseudo_loader
         pseudos = functional.run_kmeans(features, y_dim)
@@ -179,6 +182,9 @@ def main(args):
 
         # statistics
         stats['features_loss'].append(losses['features_loss'])
+        stats['reconstruntion_loss'].append(losses['reconstruntion_loss'])
+        stats['z_kl_divergence'].append(losses['z_kl_divergence'])
+        stats['y_kl_divergence'].append(losses['y_kl_divergence'])
         stats['clustering_loss'].append(losses['clustering_loss'])
         stats['nmi'].append(nmi)
 
@@ -192,12 +198,13 @@ def main(args):
             if verbose:
                 print(f'calculating confusion_matrix...')
 
-            cm, ylabels, xlabels = metrics.confusion_matrix(pseudos, trues, ylabels, xlabels, return_labels=True)
+            cm, pred_labels, true_labels = metrics.confusion_matrix(
+                pseudos, trues, pred_labels, true_labels, return_labels=True)
 
             if verbose:
                 print(f'plotting confusion_matrix...')
 
-            plt.plot_confusion_matrix(cm, ylabels, xlabels,
+            plt.plot_confusion_matrix(cm, pred_labels, true_labels,
                                       f'{outdir}/cm_{epoch}.png')
             if verbose:
                 print(f'plotting bar...')
