@@ -70,14 +70,14 @@ device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
 if use_tpu:
     device = xm.xla_device()
 
-config_ini = 'config/cvae.ini'
-assert os.path.exists(config_ini)
 basedir = os.path.dirname(os.path.abspath(__file__))
+config_ini = f'{basedir}/config/cvae.ini'
+assert os.path.exists(config_ini)
 ini = configparser.ConfigParser()
-ini.read(f'{basedir}/{config_ini}', 'utf-8')
+ini.read(f'{config_ini}', 'utf-8')
 
 # dataset init
-dataset_json = ini.get('conf', 'dataset_json')
+dataset_json = f'{basedir}/dataset.json'
 df = pd.read_json(dataset_json)
 data_transform = transforms.Compose([
     transforms.CenterCrop((x_size, x_size)),
