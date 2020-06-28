@@ -47,15 +47,15 @@ class Dataset(data.Dataset):
         return Dataset(df, self.transform)
 
     def sample(self, column, min_value_count=0,
-               n_sample=0, random_state=0, copy=False):
+               n_samples=0, random_state=0, copy=False):
         df = self.df
         assert column in df.columns
-        if n_sample > 0:
+        if n_samples > 0:
             value_count = df[column].value_counts()
             idx = value_count[value_count > min_value_count].index
             df = df[df[column].isin(idx)]
             gp = df.groupby(column)
-            df = gp.apply(lambda x: x.sample(n=n_sample, random_state=self.seed))
+            df = gp.apply(lambda x: x.sample(n=n_samples, random_state=self.seed))
         if copy:
             return Dataset(df, self.transform)
         self.df = df
