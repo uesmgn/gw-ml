@@ -182,6 +182,20 @@ def objective(trial):
 
     return nmi
 
+def compute_features(loader, model):
+    features = torch.Tensor([]).to(device)
+    labels = np.array([])
+    idxs = np.array([], dtype=np.int32)
+    model.eval()
+    with torch.no_grad():
+        for b, (x, l, idx) in enumerate(loader):
+            x = x.to(device)
+            z = model.features(x)
+            features = torch.cat([features, z], 0)
+            labels = np.append(labels, np.ravel(l))
+            idxs = np.append(idxs, np.ravel(idx).astype(np.int32))
+        features = features.squeeze(1).cpu().numpy()
+    return features, labels, idxs
 
 if __name__ == '__main__':
     trial_size = 10000
