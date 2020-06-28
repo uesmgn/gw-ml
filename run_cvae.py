@@ -278,4 +278,4 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--load_model', action='store_true',
                         help='load saved model')
     args = parser.parse_args()
-    main(args, beta=(1e-3, .5, 1.), seed=123)
+    main(args, beta=(1e-2, .5, 1.), seed=123)
