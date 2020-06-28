@@ -27,22 +27,22 @@ def mse_loss(inputs, targets, reduction='mean'):
     return reduce(loss, reduction)
 
 def bce_loss(inputs, targets, reduction='mean'):
-    loss = F.binary_cross_entropy(inputs, targets, reduction='none')
+    loss = F.binary_cross_entropy(inputs, targets, reduction='none').sum(-1)
     return reduce(loss, reduction)
 
 def log_norm(x, mean, var):
     return -0.5 * (torch.log(2.0 * np.pi * var) + torch.pow(x - mean, 2) / var )
 
 def log_norm_kl(x, mean, var, mean_, var_, reduction='mean'):
-    log_p = log_norm(x, mean, var)
-    log_q = log_norm(x, mean_, var_)
+    log_p = log_norm(x, mean, var).sum(-1)
+    log_q = log_norm(x, mean_, var_).sum(-1)
     loss = log_p - log_q
     return reduce(loss, reduction)
 
 def entropy(logits, reduction='mean'):
     p = logits.softmax(-1)
     log_p = logits.log_softmax(-1)
-    entropy = -(p * log_p)
+    entropy = -(p * log_p).sum(-1)
     return reduce(entropy, reduction)
 
 def reduce(target, reduction):
