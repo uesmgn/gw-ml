@@ -24,6 +24,16 @@ from net import criterion
 from utils.clustering import decomposition, metrics, functional
 from utils.parameter import suggestions as su
 
+# xla
+import torch_xla
+import torch_xla.debug.metrics as met
+import torch_xla.distributed.data_parallel as dp
+import torch_xla.distributed.parallel_loader as pl
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.test.test_utils as test_utils
+
 # argument parser
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', '--n_epoch', type=int, default=100,
@@ -34,6 +44,8 @@ parser.add_argument('-n', '--num_workers', type=int, default=1,
                     help='num workers')
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='verbose')
+parser.add_argument('--use_tpu', action='store_true',
+                    help='use tpu')
 args = parser.parse_args()
 
 # random seed
@@ -51,9 +63,12 @@ n_epoch = args.n_epoch
 batch_size = args.batch_size
 num_workers = args.num_workers
 verbose = args.verbose
+use_tpu = args.use_tpu
 
 device_ids = list(range(torch.cuda.device_count()))
 device = f'cuda:{device_ids[0]}' if torch.cuda.is_available() else 'cpu'
+if use_tpu:
+    device = xm.xla_device()
 
 config_ini = 'config/cvae.ini'
 assert os.path.exists(config_ini)
@@ -110,8 +125,9 @@ def objective(trial):
 
     model = models.CVAE(**nkwargs)
 
-    if torch.cuda.is_available():
-        torch.backends.cudnn.benchmark = True
+    if not use_tpu:
+        if torch.cuda.is_available():
+            torch.backends.cudnn.benchmark = True
     model.to(device)
 
     # get encoder and classifier
