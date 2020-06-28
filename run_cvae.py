@@ -4,6 +4,7 @@ import json
 import datetime
 import time
 import os
+import random
 import multiprocessing as mp
 from collections import defaultdict
 from pprint import  pprint
@@ -25,9 +26,16 @@ from net.helper import get_middle_dim
 from utils.clustering import decomposition, metrics, functional
 from utils.plotlib import plot as plt
 
-def main(args):
+def main(args, **kwargs):
 
-    beta = (1., 1., 1.)
+    seed = kwargs.get('seed') or 123
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+
+    beta = kwargs.get('beta') or (1., 1., 1.)
 
     time_exec = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -86,8 +94,8 @@ def main(args):
     ])
 
     df = pd.read_json(dataset_json)
-    dataset = Dataset(df, transform=data_transform)
-    dataset.sample('label', min_value_count=200)
+    dataset = Dataset(df, transform=data_transform, seed=seed)
+    dataset.sample('label', min_value_count=200, n_samples=200)
     # train_set, test_set = dataset.random_split()
     if verbose:
         print(f'length of dataset: ', len(dataset))
@@ -201,7 +209,7 @@ def main(args):
 
             cm, pred_labels, true_labels = metrics.confusion_matrix(
                 pseudos, trues, pred_labels, true_labels, return_labels=True)
-            figsize_cm = (len(pred_labels) / 1.2, len(true_labels) / 1.5)
+            figsize_cm = (len(pred_labels) / 1.5, len(true_labels) / 2.0)
 
             if verbose:
                 print(f'plotting confusion_matrix...')
@@ -270,4 +278,4 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--load_model', action='store_true',
                         help='load saved model')
     args = parser.parse_args()
-    main(args)
+    main(args, beta=(1e-3, .5, 1.), seed=123)
