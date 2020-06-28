@@ -27,7 +27,7 @@ from utils.plotlib import plot as plt
 
 def main(args):
 
-    beta = (1., 1., 1.)
+    beta = (1e-3, 1., 1.)
 
     time_exec = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -137,7 +137,8 @@ def main(args):
         model.train()
         for b, (x, t, idx) in enumerate(loader):
             x = x.to(device)
-            loss, rec_loss, z_kl, y_kl = model(x)
+            params = model(x)
+            loss, rec_loss, z_kl, y_kl = criterion.cvae_loss(params, beta)
             optim.zero_grad()
             loss.backward()
             optim.step()
@@ -167,7 +168,7 @@ def main(args):
         model.train()
         for b, (x, t, p, idx) in enumerate(train_loader):
             x = x.to(device)
-            y_logits = model.clustering_logits(x)
+            y_logits, y = model.clustering(x)
             loss = criterion.cross_entropy(y_logits, p.to(device), clustering_weight)
             optim_c.zero_grad()
             loss.backward()
