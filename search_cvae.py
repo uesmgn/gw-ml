@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import pandas as pd
 import numpy as np
+import optuna
 
 from gwspy.dataset import Dataset
 from net import models
