@@ -45,6 +45,7 @@ torch.cuda.manual_seed(seed)
 
 # setting
 x_size = 486
+y_dim = 20
 n_epoch = args.n_epoch
 batch_size = args.batch_size
 num_workers = args.num_workers
@@ -95,9 +96,9 @@ def objective(trial):
     clustering_beta = su.suggest_loguniform(trial, low=1e-3, high=1, name='clustering_beta')
 
     nkwargs = {
-        'x_shape': (1, 486, 486),
+        'x_shape': (1, x_size, x_size),
         'z_dim': su.suggest_uniform(trial, low=64, high=512, q=64, name='z_dim'),
-        'y_dim': 20,
+        'y_dim': y_dim,
         'bottle_channel': 32,
         'channels': su.suggest_uniform_list(trial, low=64, high=192, q=32, size=4, name='channel'),
         'kernels': su.suggest_uniform_list(trial, low=3, high=11, q=2, size=4, name='kernel'),
