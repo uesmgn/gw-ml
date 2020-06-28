@@ -137,6 +137,8 @@ def objective(trial):
 
         model.train()
         for b, (x, _, _) in enumerate(loader):
+            if verbose:
+                print(f'batch: {b}')
             x = x.to(device)
             params = model(x)
             loss, _, _, _ = criterion.cvae_loss(params, features_beta)
@@ -159,6 +161,8 @@ def objective(trial):
 
         model.train()
         for b, (x, t, p, idx) in enumerate(train_loader):
+            if verbose:
+                print(f'batch: {b}')
             x = x.to(device)
             y_logits, y = model.clustering(x)
             loss = criterion.cross_entropy(y_logits, p.to(device),
