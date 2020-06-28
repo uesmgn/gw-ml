@@ -1,4 +1,5 @@
-echo $(pwd)
+gcloud config set compute/zone us-central1-f
+gcloud compute tpus list
 python -m torch_xla.distributed.xla_dist \
       --tpu=$TPU_NAME \
       --conda-env=torch-xla-nightly \
