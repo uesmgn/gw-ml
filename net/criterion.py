@@ -43,7 +43,7 @@ def entropy(logits, reduction='mean'):
     p = logits.softmax(-1)
     log_p = logits.log_softmax(-1)
     entropy = (p * log_p).sum(-1)
-    return reduce(kl, reduction)
+    return reduce(entropy, reduction)
 
 def reduce(target, reduction):
     if reduction is 'mean':
