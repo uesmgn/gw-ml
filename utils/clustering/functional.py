@@ -25,4 +25,4 @@ def run_kmeans(x, k):
     # clus.train(x, index)
     # _, I = index.search(x, 1)
 
-    return np.array([int(n[0]) for n in I])
+    return np.ravel(I)
