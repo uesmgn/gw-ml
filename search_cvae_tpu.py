@@ -63,6 +63,8 @@ num_workers = args.num_workers
 verbose = args.verbose
 
 device = xm.xla_device()
+if verbose:
+    print(device)
 
 basedir = os.path.dirname(os.path.abspath(__file__))
 config_ini = f'{basedir}/config/cvae.ini'
@@ -98,6 +100,9 @@ train_loader = DataLoader(train_set,
 true_unique = dataset.unique_column('label')
 pred_unique = np.array(range(y_dim)).astype(np.int32)
 
+if verbose:
+    print(true_unique)
+    print(pred_unique)
 
 def objective(trial):
 
