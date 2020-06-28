@@ -27,7 +27,7 @@ from utils.plotlib import plot as plt
 
 def main(args):
 
-    beta = (1e-3, 1., 1.)
+    beta = (1., 1., 1.)
 
     time_exec = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
