@@ -12,6 +12,7 @@ class Dataset(data.Dataset):
             assert column in df.columns
         self.columns = columns
         self.transform = kwargs.get('transform')
+        self.seed = kwargs.get('seed')
 
         self.use_pseudo = False
         if kwargs.get('pseudo_dict') is not None:
@@ -54,16 +55,16 @@ class Dataset(data.Dataset):
             idx = value_count[value_count > min_value_count].index
             df = df[df[column].isin(idx)]
             gp = df.groupby(column)
-            df = gp.apply(lambda x: x.sample(n=n_sample))
+            df = gp.apply(lambda x: x.sample(n=n_sample, random_state=self.seed))
         if copy:
             return Dataset(df, self.transform)
         self.df = df
 
-    def random_split(self, alpha=0.8, random_state=0):
+    def random_split(self, alpha=0.8):
         df = self.df
         n = int(len(df) * alpha)
         # shuffle DataFrame
-        df = df.sample(frac=1, random_state=random_state)
+        df = df.sample(frac=1, random_state=self.seed)
         split_df = (df.iloc[:n, :], df.iloc[n:, :])
         return (Dataset(split_df[0], self.transform),
                 Dataset(split_df[1], self.transform))
