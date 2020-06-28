@@ -12,9 +12,9 @@ def cvae_loss(params, beta=(1.0, 1.0, 1.0)):
     z_kl = beta[1] * log_norm_kl(
         params['z'], params['z_mean'], params['z_var'],
         params['z_prior_mean'], params['z_prior_var']).view(-1)
-    y_kl = beta[2] * entropy(params['y_logits']).view(-1)
-    loss = (rec_loss + z_kl + y_kl).sum()
-    return loss, rec_loss, z_kl, y_kl
+    y_entropy = beta[2] * entropy(params['y_logits']).view(-1)
+    loss = (rec_loss + z_kl + y_entropy).sum()
+    return loss, rec_loss, z_kl, y_entropy
 
 def cross_entropy(input, target, clustering_weight=None, beta=1.0):
     loss = beta * F.cross_entropy(input,
