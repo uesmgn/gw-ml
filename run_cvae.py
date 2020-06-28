@@ -138,19 +138,19 @@ def main(args):
         for b, (x, t, idx) in enumerate(loader):
             x = x.to(device)
             params = model(x)
-            loss, rec_loss, z_kl, y_kl = criterion.cvae_loss(params, beta)
+            loss, rec_loss, z_kl, y_entropy = criterion.cvae_loss(params, beta)
             optim.zero_grad()
             loss.backward()
             optim.step()
             losses['features_loss'] += loss.item()
             losses['reconstruntion_loss'] += rec_loss.item()
             losses['z_kl_divergence'] += z_kl.item()
-            losses['y_kl_divergence'] += y_kl.item()
+            losses['y_entropy'] += y_entropy.item()
         if verbose:
             print(f'features_loss: {losses["features_loss"]:.3f}')
             print(f'reconstruntion_loss: {losses["reconstruntion_loss"]:.3f}')
             print(f'z_kl_divergence: {losses["z_kl_divergence"]:.3f}')
-            print(f'y_kl_divergence: {losses["y_kl_divergence"]:.3f}')
+            print(f'y_entropy: {losses["y_entropy"]:.3f}')
 
         features, trues, idxs = compute_features(loader, model)
 
@@ -185,7 +185,7 @@ def main(args):
         stats['features_loss'].append(losses['features_loss'])
         stats['reconstruntion_loss'].append(losses['reconstruntion_loss'])
         stats['z_kl_divergence'].append(losses['z_kl_divergence'])
-        stats['y_kl_divergence'].append(losses['y_kl_divergence'])
+        stats['y_entropy'].append(losses['y_entropy'])
         stats['clustering_loss'].append(losses['clustering_loss'])
         stats['nmi'].append(nmi)
 
