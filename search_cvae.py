@@ -44,6 +44,7 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 
 # setting
+x_size = 486
 n_epoch = args.n_epoch
 batch_size = args.batch_size
 num_workers = args.num_workers
