@@ -90,19 +90,19 @@ pred_unique = np.array(range(y_dim)).astype(np.int32)
 def objective(trial):
 
     # suggest parameters
-    features_beta = su.suggest_loguniform_list(trial, low=1e-3, high=1, size=3, 'features_beta')
-    clustering_beta = su.suggest_loguniform(trial, low=1e-3, high=1, 'clustering_beta')
+    features_beta = su.suggest_loguniform_list(trial, low=1e-3, high=1, size=3, name='features_beta')
+    clustering_beta = su.suggest_loguniform(trial, low=1e-3, high=1, name='clustering_beta')
 
     nkwargs = {
         'x_shape': (1, 486, 486),
-        'z_dim': su.suggest_uniform(trial, low=64, high=512, q=64, 'z_dim'),
+        'z_dim': su.suggest_uniform(trial, low=64, high=512, q=64, name='z_dim'),
         'y_dim': 20,
         'bottle_channel': 32,
-        'channels': su.suggest_uniform_list(trial, low=64, high=192, q=32, size=4, 'channel'),
-        'kernels': su.suggest_uniform_list(trial, low=3, high=11, q=2, size=4, 'kernel'),
+        'channels': su.suggest_uniform_list(trial, low=64, high=192, q=32, size=4, name='channel'),
+        'kernels': su.suggest_uniform_list(trial, low=3, high=11, q=2, size=4, name='kernel'),
         'poolings': [3, 3, 3, 3],
         'pool_func': 'max',
-        'act_func': su.suggest_categorical(trial, ['ReLU', 'Tanh', 'ELU'], 'act_func')
+        'act_func': su.suggest_categorical(trial, ['ReLU', 'Tanh', 'ELU'], name='act_func')
     }
 
     model = models.CVAE(**nkwargs)
@@ -114,8 +114,8 @@ def objective(trial):
     # get encoder and classifier
     classifier = nn.Sequential(*list(model.children())[:2])
 
-    optim = su.suggest_optimizer(trial, model, 'optim')
-    optim_c = su.suggest_optimizer(trial, model, 'optim_c')
+    optim = su.suggest_optimizer(trial, model, name='optim')
+    optim_c = su.suggest_optimizer(trial, model, name='optim_c')
 
     for epoch in range(1, n_epoch+1):
         if verbose:
