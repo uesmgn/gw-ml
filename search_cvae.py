@@ -147,7 +147,10 @@ def objective(trial):
             loss, _, _, _ = criterion.cvae_loss(params, features_beta)
             optim.zero_grad()
             loss.backward()
-            optim.step()
+            if use_tpu:
+                xm.optimizer_step(optim)
+            else:
+                optim.step()
 
         features, trues, idxs = compute_features(loader, model)
 
@@ -170,7 +173,10 @@ def objective(trial):
                                            clustering_weight, clustering_beta)
             optim_c.zero_grad()
             loss.backward()
-            optim_c.step()
+            if use_tpu:
+                xm.optimizer_step(optim)
+            else:
+                optim.step()
 
         nmi = metrics.nmi(trues, pseudos)
 
