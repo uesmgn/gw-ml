@@ -1,212 +1,135 @@
-import argparse
-import configparser
-import json
-import datetime
-import time
 import os
-import random
-import multiprocessing as mp
-from collections import defaultdict
-from multiprocessing import Manager
-
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from torchvision import transforms
+import args_parse
+from attrdict import AttrDict as attrdict
 import pandas as pd
+import timeout_decorator
 import numpy as np
-import optuna
+import torch
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
 
-from gwspy.dataset import Dataset
-from net import models
-from net import criterion
-
-from utils.clustering import decomposition, metrics, functional
-from utils.parameter import suggestions as su
-
-# xla
 import torch_xla
-import torch_xla.debug.metrics as met
-import torch_xla.distributed.data_parallel as dp
-import torch_xla.distributed.parallel_loader as pl
-import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.distributed.parallel_loader as pl
 import torch_xla.test.test_utils as test_utils
 
-# argument parser
-parser = argparse.ArgumentParser()
-parser.add_argument('-e', '--n_epoch', type=int, default=100,
-                    help='num epoch')
-parser.add_argument('-b', '--batch_size', type=int, default=100,
-                    help='batch size')
-parser.add_argument('-n', '--num_workers', type=int, default=1,
-                    help='num workers')
-parser.add_argument('-v', '--verbose', action='store_true',
-                    help='verbose')
-args = parser.parse_args()
+import datasets
+import net
 
-# random seed
-seed = 123
+try:
+    TPU_IP = os.environ['TPU_IP']
+except:
+    print('The environment variable $TPU_IP does not exist')
+    exit(1)
+os.environ['XRT_TPU_CONFIG'] = f'tpu_worker;0;{TPU_IP}:8470'
+os.environ['XLA_USE_BF16'] = 1
 
-random.seed(seed)
-np.random.seed(seed)
-torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
+BASEDIR = os.path.dirname(os.path.abspath(__file__))
 
-# setting
-x_size = 486
-y_dim = 20
-n_epoch = args.n_epoch
-batch_size = args.batch_size
-num_workers = args.num_workers
-verbose = args.verbose
+MODELS = [
+    'cvae'
+]
 
-device = xm.xla_device()
-if verbose:
-    print(device)
+DATASETS = [
+    'gravityspy'
+]
 
-basedir = os.path.dirname(os.path.abspath(__file__))
-config_ini = f'{basedir}/config/cvae.ini'
-assert os.path.exists(config_ini)
-ini = configparser.ConfigParser()
-ini.read(f'{config_ini}', 'utf-8')
-
-# dataset init
-dataset_json = f'{basedir}/dataset.json'
-df = pd.read_json(dataset_json)
-data_transform = transforms.Compose([
-    transforms.CenterCrop((x_size, x_size)),
-    transforms.Grayscale(),
-    transforms.ToTensor()
-])
-dataset = Dataset(df, transform=data_transform, seed=seed)
-dataset.sample('label', min_value_count=200, n_samples=200)
-loader = DataLoader(dataset,
-                    batch_size=batch_size,
-                    num_workers=num_workers,
-                    shuffle=True,
-                    drop_last=True)
-
-pseudo_dict = Manager().dict()
-train_set = Dataset(df, transform=data_transform, pseudo_dict=pseudo_dict)
-train_loader = DataLoader(train_set,
-                          batch_size=batch_size,
-                          num_workers=num_workers,
-                          shuffle=True,
-                          drop_last=True)
-
-# unique labels
-true_unique = dataset.unique_column('label')
-pred_unique = np.array(range(y_dim)).astype(np.int32)
-
-if verbose:
-    print(true_unique)
-    print(pred_unique)
-
-def main(**kwargs):
-
-    # suggest parameters
-    features_beta = kwargs['features_beta']
-    clustering_beta = kwargs['clustering_beta']
-
-    nkwargs = {
-        'x_shape': (1, x_size, x_size),
-        'z_dim': kwargs['z_dim'],
-        'y_dim': kwargs['y_dim'],
-        'bottle_channel': kwargs['bottle_channel'],
-        'channels': kwargs['channels'],
-        'kernels': kwargs['kernels'],
-        'poolings': [3, 3, 3, 3],
-        'pool_func': 'max',
-        'act_func': kwargs['act_func']
+FLAGS = args_parse.parse_common_options(
+    num_cores=8,
+    batch_size=1024,
+    num_epochs=100,
+    num_workers=4,
+    log_steps=10,
+    lr=1e-3,
+    model={
+        'choices': MODELS,
+        'default': 'cvae',
+    },
+    dataset={
+        'choices': DATASETS,
+        'default': 'gravityspy',
     }
+)
 
-    model = models.CVAE(**nkwargs)
-    model.to(device)
+MODEL_PARAMS = attrdict(
+    x_channel = 1,
+    x_dim = (486, 486),
+    z_dim = 512,
+    y_dim = 20,
+    bottle_channel = 32,
+    channels = (64, 128, 192, 64),
+    kernels = (3, 3, 3, 3),
+    poolings = (3, 3, 3, 3),
+    pool_func = 'max',
+    act_func = 'ReLU'
+)
 
-    # get encoder and classifier
-    classifier = nn.Sequential(*list(model.children())[:2])
+def train_logger(device, step, loss, tracker, epoch=None, summary_writer=None):
+  test_utils.print_training_update(
+      device,
+      step,
+      loss.item(),
+      tracker.rate(),
+      tracker.global_rate(),
+      epoch=epoch,
+      summary_writer=summary_writer)
 
-    optim = optim.Adam(model.parameters(), lr=1e-3)
-    optim_c = optim.Adam(classifier.parameters(), lr=1e-3)
+def train(dataloader, model_params):
 
-    for epoch in range(1, n_epoch+1):
-        if verbose:
-            print(f'epoch: {epoch}')
+    torch.manual_seed(42)
 
+    @timeout_decorator.timeout(10)
+    def get_xla_device():
+        return xm.xla_device()
+
+    try:
+        device = get_xla_device()
+    except:
+        print('timed out in loading xla device.')
+        print(f'check TPU_IP {TPU_IP} is appropriate or not.')
+        exit(1)
+    if FLAGS.verbose:
+        print(f'device: {device}')
+
+    model = getattr(net.models, FLAGS.model)(**model_params).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.lr)
+
+    def train_loop_fn(loader, epoch):
+        tracker = xm.RateTracker()
         model.train()
-        for b, (x, _, _) in enumerate(loader):
-            if verbose:
-                print(f'batch: {b}')
-            x = x.to(device)
-            params = model(x)
-            loss, _, _, _ = criterion.cvae_loss(params, features_beta)
-            optim.zero_grad()
+        for step, (data, target) in enumerate(loader):
+            params = model(data, target, return_params=True)
+            loss = model.criterion(**params)
+            optimizer.zero_grad()
             loss.backward()
-            xm.optimizer_step(optim)
+            xm.optimizer_step(optimizer)
+            tracker.add(FLAGS.batch_size)
+            if step % FLAGS.log_steps == 0:
+                xm.add_step_closure(
+                    train_logger, args=(device, step, loss, tracker, epoch))
 
-    #     features, trues, idxs = compute_features(loader, model)
-    #
-    #     # assign cluster labels to pseudo_loader
-    #     pseudos = functional.run_kmeans(features, y_dim)
-    #     for i, p in zip(idxs, pseudos):
-    #         pseudo_dict[i] = int(p)
-    #
-    #     clustering_weight = []
-    #     for i in range(y_dim):
-    #         w = np.count_nonzero(pseudos == i)
-    #         clustering_weight.append(w)
-    #     clustering_weight = 1. / torch.Tensor(clustering_weight).to(device)
-    #
-    #     model.train()
-    #     for b, (x, t, p, idx) in enumerate(train_loader):
-    #         if verbose:
-    #             print(f'batch: {b}')
-    #         x = x.to(device)
-    #         y_logits, y = model.clustering(x)
-    #         loss = criterion.cross_entropy(y_logits, p.to(device),
-    #                                        clustering_weight, clustering_beta)
-    #         optim_c.zero_grad()
-    #         loss.backward()
-    #         xm.optimizer_step(optim)
-    #
-    #     nmi = metrics.nmi(trues, pseudos)
-    #
-    # return nmi
+    parallel_loader = pl.MpDeviceLoader(dataloader, device)
 
-def compute_features(loader, model):
-    features = torch.Tensor([]).to(device)
-    labels = np.array([])
-    idxs = np.array([], dtype=np.int32)
-    model.eval()
-    with torch.no_grad():
-        for b, (x, l, idx) in enumerate(loader):
-            x = x.to(device)
-            z = model.features(x)
-            features = torch.cat([features, z], 0)
-            labels = np.append(labels, np.ravel(l))
-            idxs = np.append(idxs, np.ravel(idx).astype(np.int32))
-        features = features.squeeze(1).cpu().numpy()
-    return features, labels, idxs
+    for epoch in range(1, FLAGS.num_epochs + 1):
+        train_loop_fn(parallel_loader, epoch)
+
 
 if __name__ == '__main__':
-    # trial_size = 3
-    # study = optuna.create_study(direction='maximize')
-    # study.optimize(objective, n_trials=trial_size)
-    # print(study.best_params)
 
-    # suggest parameters
+    model_params = MODEL_PARAMS
 
-    kwargs = {
-        'features_beta': (1., 1., 1.),
-        'clustering_beta': 1.,
-        'z_dim': 512,
-        'y_dim': 20,
-        'channels': (64, 128, 192, 64),
-        'kernels': (3, 3, 3, 3),
-        'bottle_channel': 32,
-        'act_func': 'ReLU'
-    }
+    data_transform = transforms.Compose([
+        transforms.CenterCrop(model_params.x_dim),
+        transforms.Grayscale(),
+        transforms.ToTensor()
+    ])
 
-    main(**kwargs)
+    dataset = getattr(datasets, FLAGS.dataset)(tranform=data_transform)
+
+    loader = DataLoader(dataset,
+                        batch_size=FLAGS.batch_size,
+                        num_workers=FLAGS.num_workers,
+                        shuffle=True,
+                        drop_last=True)
+
+    train(loader, model_params)
