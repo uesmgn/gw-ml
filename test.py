@@ -124,7 +124,9 @@ if __name__ == '__main__':
         transforms.ToTensor()
     ])
 
-    dataset = getattr(datasets, FLAGS.dataset)(tranform=data_transform)
+    dataset = getattr(datasets, FLAGS.dataset)(root=BASEDIR,
+                                               tranform=data_transform,
+                                               download=True)
 
     loader = DataLoader(dataset,
                         batch_size=FLAGS.batch_size,
