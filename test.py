@@ -22,9 +22,9 @@ except:
     print('The environment variable $TPU_IP does not exist')
     exit(1)
 os.environ['XRT_TPU_CONFIG'] = f'tpu_worker;0;{TPU_IP}:8470'
-os.environ['XLA_USE_BF16'] = 1
+os.environ['XLA_USE_BF16'] = '1'
 
-BASEDIR = os.path.dirname(os.path.abspath(__file__))
+ROOTDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 MODELS = [
     'cvae'
@@ -91,7 +91,7 @@ def train(dataloader, model_params):
     if FLAGS.verbose:
         print(f'device: {device}')
 
-    model = getattr(net.models, FLAGS.model)(**model_params).to(device)
+    model = getattr(net.models, FLAGS.model)(model_params).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.lr)
 
     def train_loop_fn(loader, epoch):
@@ -124,7 +124,7 @@ if __name__ == '__main__':
         transforms.ToTensor()
     ])
 
-    dataset = getattr(datasets, FLAGS.dataset)(root=BASEDIR,
+    dataset = getattr(datasets, FLAGS.dataset)(root=ROOTDIR,
                                                tranform=data_transform,
                                                download=True)
 

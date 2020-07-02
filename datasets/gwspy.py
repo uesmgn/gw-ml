@@ -89,10 +89,10 @@ class GravitySpy(torch.utils.data.Dataset):
         for i, subdir in enumerate(tqdm(subdirs)):
             files = glob.glob(os.path.join(path, subdir, '*_1.0.png'))[:10]
             target  = torch.tensor(i).long()
-            
+
             for file in files:
                 img = np.array(PIL.Image.open(file))
-                img_tensor = torch.from_numpy(img).astype(torch.uint8)
+                img_tensor = torch.from_numpy(img).to(torch.uint8)
                 img_tensor_stack.append(img_tensor)
                 target_stack.append(target)
         img_tensor_stack = torch.stack(img_tensor_stack)
