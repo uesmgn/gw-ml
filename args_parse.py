@@ -21,6 +21,7 @@ def parse_common_options(x_dim=None,
     parser.add_argument('--log_steps', type=int, default=log_steps)
     parser.add_argument('--lr', type=float, default=lr)
     parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('-f', '--fake_data', action='store_true')
     if model:
         parser.add_argument('--model', **model)
     if dataset:

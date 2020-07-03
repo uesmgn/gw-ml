@@ -12,6 +12,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.test.test_utils as test_utils
+import torch_xla.distributed.xla_multiprocessing as xmp
 
 import datasets
 import net
@@ -108,30 +109,52 @@ def train(dataloader, model_params):
                 xm.add_step_closure(
                     train_logger, args=(device, step, loss, tracker, epoch))
 
-    parallel_loader = pl.MpDeviceLoader(dataloader, device)
+    parallel_loader = pl.ParallelLoader(loader, [device])
 
     for epoch in range(1, FLAGS.num_epochs + 1):
         train_loop_fn(parallel_loader, epoch)
+        xm.master_print('Finished training epoch {}'.format(epoch))
 
 
-if __name__ == '__main__':
+def _mp_fn(index):
 
     model_params = MODEL_PARAMS
 
-    data_transform = transforms.Compose([
-        transforms.CenterCrop(model_params.x_dim),
-        transforms.Grayscale(),
-        transforms.ToTensor()
-    ])
+    if FLAGS.fake_data:
+        fake_dataset_len = int(FLAGS.batch_size * xm.xrt_world_size() * 100)
+        loader = xu.SampleGenerator(
+                    data=(torch.zeros(FLAGS.batch_size, 1, model_params.x_dim, model_params.x_dim),
+                          torch.zeros(FLAGS.batch_size, dtype=torch.uint8)),
+                    sample_count=fake_dataset_len // FLAGS.batch_size // xm.xrt_world_size())
+    else:
+        data_transform = transforms.Compose([
+            transforms.CenterCrop(model_params.x_dim),
+            transforms.Grayscale(),
+            transforms.ToTensor()
+        ])
+        dataset = getattr(datasets, FLAGS.dataset)(root=ROOTDIR,
+                                                   tranform=data_transform,
+                                                   download=True)
+        sampler = None
+        if xm.xrt_world_size() > 1:
+            sampler = torch.utils.data.distributed.DistributedSampler(
+                dataset,
+                num_replicas=xm.xrt_world_size(),
+                rank=xm.get_ordinal(),
+                shuffle=True)
 
-    dataset = getattr(datasets, FLAGS.dataset)(root=ROOTDIR,
-                                               tranform=data_transform,
-                                               download=True)
-
-    loader = DataLoader(dataset,
-                        batch_size=FLAGS.batch_size,
-                        num_workers=FLAGS.num_workers,
-                        shuffle=True,
-                        drop_last=True)
+        loader = DataLoader(dataset,
+                            batch_size=FLAGS.batch_size,
+                            sampler=sampler,
+                            num_workers=FLAGS.num_workers,
+                            shuffle=False if sampler else True,
+                            drop_last=True)
 
     train(loader, model_params)
+
+if __name__ == '__main__':
+    xrt_world_size = xm.xrt_world_size()
+    print(xrt_world_size)
+    ordinal = xm.get_ordinal()
+    print(ordinal)
+    # xmp.spawn(_mp_fn, nprocs=FLAGS.num_cores)
