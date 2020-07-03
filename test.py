@@ -23,12 +23,12 @@ except:
     print('The environment variable $TPU_IP does not exist')
     exit(1)
 os.environ['XRT_TPU_CONFIG'] = f'tpu_worker;0;{TPU_IP}:8470'
-os.environ['XLA_USE_BF16'] = '1'
+# os.environ['XLA_USE_BF16'] = '1'
 
 ROOTDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 MODELS = [
-    'cvae'
+    'cvae', 'vae_439'
 ]
 
 DATASETS = [
@@ -44,7 +44,7 @@ FLAGS = args_parse.parse_common_options(
     lr=1e-3,
     model={
         'choices': MODELS,
-        'default': 'cvae',
+        'default': 'vae_439',
     },
     dataset={
         'choices': DATASETS,
@@ -54,7 +54,7 @@ FLAGS = args_parse.parse_common_options(
 
 MODEL_PARAMS = attrdict(
     x_channel = 1,
-    x_dim = (486, 486),
+    x_dim = (439, 439),
     z_dim = 512,
     y_dim = 20,
     bottle_channel = 32,
@@ -75,7 +75,7 @@ def train_logger(device, step, loss, tracker, epoch=None, summary_writer=None):
       epoch=epoch,
       summary_writer=summary_writer)
 
-def train(dataloader, model_params):
+def train(loader, model_params):
 
     torch.manual_seed(42)
 
@@ -112,7 +112,7 @@ def train(dataloader, model_params):
     parallel_loader = pl.ParallelLoader(loader, [device])
 
     for epoch in range(1, FLAGS.num_epochs + 1):
-        train_loop_fn(parallel_loader, epoch)
+        train_loop_fn(parallel_loader.per_device_loader(device), epoch)
         xm.master_print('Finished training epoch {}'.format(epoch))
 
 
@@ -123,8 +123,8 @@ def _mp_fn(index):
     if FLAGS.fake_data:
         fake_dataset_len = int(FLAGS.batch_size * xm.xrt_world_size() * 100)
         loader = xu.SampleGenerator(
-                    data=(torch.zeros(FLAGS.batch_size, 1, model_params.x_dim, model_params.x_dim),
-                          torch.zeros(FLAGS.batch_size, dtype=torch.uint8)),
+                    data=(torch.zeros(FLAGS.batch_size, 1, *model_params.x_dim),
+                          torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
                     sample_count=fake_dataset_len // FLAGS.batch_size // xm.xrt_world_size())
     else:
         data_transform = transforms.Compose([
@@ -133,7 +133,7 @@ def _mp_fn(index):
             transforms.ToTensor()
         ])
         dataset = getattr(datasets, FLAGS.dataset)(root=ROOTDIR,
-                                                   tranform=data_transform,
+                                                   transform=data_transform,
                                                    download=True)
         sampler = None
         if xm.xrt_world_size() > 1:
@@ -153,8 +153,4 @@ def _mp_fn(index):
     train(loader, model_params)
 
 if __name__ == '__main__':
-    xrt_world_size = xm.xrt_world_size()
-    print(xrt_world_size)
-    ordinal = xm.get_ordinal()
-    print(ordinal)
-    # xmp.spawn(_mp_fn, nprocs=FLAGS.num_cores)
+    xmp.spawn(_mp_fn, nprocs=FLAGS.num_cores)
