@@ -25,7 +25,7 @@ except:
 os.environ['XRT_TPU_CONFIG'] = f'tpu_worker;0;{TPU_IP}:8470'
 # os.environ['XLA_USE_BF16'] = '1'
 
-ROOTDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 MODELS = [
     'cvae', 'vae_439'
@@ -79,7 +79,7 @@ def train(loader, model_params):
 
     torch.manual_seed(42)
 
-    @timeout_decorator.timeout(10)
+    @timeout_decorator.timeout(30)
     def get_xla_device():
         return xm.xla_device()
 
@@ -120,8 +120,10 @@ def _mp_fn(index):
 
     model_params = MODEL_PARAMS
 
+    torch.set_default_tensor_type('torch.FloatTensor')
+
     if FLAGS.fake_data:
-        fake_dataset_len = int(FLAGS.batch_size * xm.xrt_world_size() * 100)
+        fake_dataset_len = 120000
         loader = xu.SampleGenerator(
                     data=(torch.zeros(FLAGS.batch_size, 1, *model_params.x_dim),
                           torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
@@ -132,7 +134,7 @@ def _mp_fn(index):
             transforms.Grayscale(),
             transforms.ToTensor()
         ])
-        dataset = getattr(datasets, FLAGS.dataset)(root=ROOTDIR,
+        dataset = getattr(datasets, FLAGS.dataset)(root=ROOT,
                                                    transform=data_transform,
                                                    download=True)
         sampler = None

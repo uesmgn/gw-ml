@@ -20,8 +20,8 @@ import numpy as np
 
 from gwspy.dataset import Dataset
 from net.models import *
-from net import criterion
-from net.helper import get_middle_dim
+from net.criterion import criterion
+from net.utils import get_middle_dim
 
 from utils.clustering import decomposition, metrics, functional
 from utils.plotlib import plot as plt
