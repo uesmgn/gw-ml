@@ -4,8 +4,7 @@ import os
 
 
 def parse_common_options(x_dim=None,
-                         num_cores=None,
-                         batch_size=128,
+                         batch_size=64,
                          num_epochs=100,
                          num_workers=4,
                          log_steps=10,
@@ -14,7 +13,6 @@ def parse_common_options(x_dim=None,
                          dataset=None):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-x', '--x_dim', type=int, default=x_dim)
-    parser.add_argument('-n', '--num_cores', type=int, default=num_cores)
     parser.add_argument('-b', '--batch_size', type=int, default=batch_size)
     parser.add_argument('-e', '--num_epochs', type=int, default=num_epochs)
     parser.add_argument('-w', '--num_workers', type=int, default=num_workers)
