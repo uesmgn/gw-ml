@@ -15,11 +15,12 @@ class GravitySpy(torch.utils.data.Dataset):
 
     resouce = 'https://zenodo.org/record/1476551/files/trainingsetv1d1.tar.gz'
 
-    def __init__(self, root, transform=None, target_transform=None, download=False,
+    def __init__(self, root, transform=None, target_transform=None, setup_transform=None, download=False,
                  force_extract=False, force_process=False):
         self.root = root
         self.transform = transform
         self.target_transform = target_transform
+        self.setup_transform = setup_transform
 
         if download:
             self.download(force_extract, force_process)
@@ -91,8 +92,8 @@ class GravitySpy(torch.utils.data.Dataset):
             target  = torch.tensor(i).long()
 
             for file in files:
-                img = np.array(PIL.Image.open(file))
-                img_tensor = torch.from_numpy(img).to(torch.uint8)
+                img = PIL.Image.open(file)
+                img_tensor = self.setup_transform(img) 
                 img_tensor_stack.append(img_tensor)
                 target_stack.append(target)
         img_tensor_stack = torch.stack(img_tensor_stack)
