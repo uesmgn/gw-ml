@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 
-def bar(input, out, reverse=True, **kwargs):
+def bar(input, out=None, reverse=True, **kwargs):
     input = check_array(input)
     counter = np.array([[label, np.count_nonzero(
         np.array(input) == label)] for label in list(set(input))])
@@ -31,11 +31,14 @@ def bar(input, out, reverse=True, **kwargs):
     plt.setp(xticklabels, rotation=45, ha="right",
              rotation_mode="anchor")
     plt.tight_layout()
-    plt.savefig(out)
-    plt.close()
+    if out is None:
+        plt.show()
+    else:
+        plt.savefig(out)
+        plt.close()
 
 
-def plot(data, out, **kwargs):
+def plot(data, out=None, **kwargs):
     data = check_array(data)
     if data.ndim is 1:
         yy = data.astype(np.float)
@@ -57,11 +60,14 @@ def plot(data, out, **kwargs):
         ax.xaxis.set_major_locator(ticker.MaxNLocator(5, integer=True))
         ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
         plt.tight_layout()
-        plt.savefig(out)
-        plt.close()
+        if out is None:
+            plt.show()
+        else:
+            plt.savefig(out)
+            plt.close()
 
 
-def scatter(xx, yy, labels, out, **kwargs):
+def scatter(xx, yy, labels, out=None, **kwargs):
     xx, yy, labels = check_array(
         xx, yy, labels, check_size=True, dtype=[np.float, np.float, np.str])
     labels_unique = check_array(labels, unique=True, sort=True, dtype=np.str)
@@ -80,11 +86,14 @@ def scatter(xx, yy, labels, out, **kwargs):
     plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left',
                borderaxespad=0, fontsize=8)
     plt.tight_layout()
-    plt.savefig(out)
-    plt.close()
+    if out is None:
+        plt.show()
+    else:
+        plt.savefig(out)
+        plt.close()
 
 
-def plot_confusion_matrix(cm, xlabels, ylabels, out, **kwargs):
+def plot_confusion_matrix(cm, xlabels, ylabels, out=None, **kwargs):
     cmap = plt.get_cmap('Blues')
     _init_plot(**kwargs)
     plt.imshow(cm.T, interpolation='nearest',
@@ -103,8 +112,11 @@ def plot_confusion_matrix(cm, xlabels, ylabels, out, **kwargs):
         ax.text(i, j, num, fontsize=10, color=color, ha='center', va='center')
     _setup_plot(**kwargs)
     plt.tight_layout()
-    plt.savefig(out)
-    plt.close()
+    if out is None:
+        plt.show()
+    else:
+        plt.savefig(out)
+        plt.close()
 
 
 def _init_plot(**kwargs):
