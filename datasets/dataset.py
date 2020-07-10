@@ -86,16 +86,29 @@ class GravitySpy(torch.utils.data.Dataset):
         subdirs = sorted([os.path.basename(p) for p in glob.glob(f'{path}/*')])
         img_tensor_stack = []
         target_stack = []
+        print(subdirs)
 
         for i, subdir in enumerate(tqdm(subdirs)):
             files = glob.glob(os.path.join(path, subdir, '*_1.0.png'))
             target  = torch.tensor(i).long()
 
-            for file in files:
-                img = PIL.Image.open(file)
-                img_tensor = self.setup_transform(img) 
+            for f in files:
+                img = PIL.Image.open(f)
+                img_tensor = self.setup_transform(img)
                 img_tensor_stack.append(img_tensor)
                 target_stack.append(target)
         img_tensor_stack = torch.stack(img_tensor_stack)
         target_stack = torch.stack(target_stack)
         return (img_tensor_stack, target_stack)
+
+    def get_by_keys(self, keys):
+        data_stack = []
+        target_stack = []
+        for data, target in zip(self.data, self.targets):
+            if int(target) in keys:
+                data_stack.append(data)
+                target_stack.append(target)
+        data_stack = torch.stack(data_stack)
+        target_stack = torch.stack(target_stack)
+        self.data, self.targets = data_stack, target_stack
+                
