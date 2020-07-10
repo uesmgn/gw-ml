@@ -8,6 +8,7 @@ import torchvision.datasets.utils as utils
 import torchvision.transforms as transforms
 import torch
 import codecs
+import json
 from tqdm import tqdm
 
 
@@ -59,6 +60,10 @@ class GravitySpy(torch.utils.data.Dataset):
     def dataset_file(self):
         return os.path.join(self.processed_folder, 'dataset.pt')
 
+    @property
+    def target_file(self):
+        return os.path.join(self.processed_folder, 'target.json')
+
     def download(self, force_extract=False, force_process=False):
         """Download the GravitySpy data if it doesn't exist."""
 
@@ -77,20 +82,23 @@ class GravitySpy(torch.utils.data.Dataset):
         # process and save as torch files
         if force_process or not os.path.exists(self.dataset_file):
             print('Processing...')
-            dataset = self.read_image_folder(self.extract_folder)
+            dataset, target_dir = self.read_image_folder(self.extract_folder)
             with open(self.dataset_file, 'wb') as f:
                 torch.save(dataset, f)
+            with open(self.target_file, 'w') as f:
+                json.dump(target_dir, f, indent=4)
             print('Done!')
 
     def read_image_folder(self, path):
         subdirs = sorted([os.path.basename(p) for p in glob.glob(f'{path}/*')])
         img_tensor_stack = []
         target_stack = []
-        print(subdirs)
+        target_dir = {}
 
         for i, subdir in enumerate(tqdm(subdirs)):
             files = glob.glob(os.path.join(path, subdir, '*_1.0.png'))
             target  = torch.tensor(i).long()
+            target_dir[i] = subdir
 
             for f in files:
                 img = PIL.Image.open(f)
@@ -99,7 +107,7 @@ class GravitySpy(torch.utils.data.Dataset):
                 target_stack.append(target)
         img_tensor_stack = torch.stack(img_tensor_stack)
         target_stack = torch.stack(target_stack)
-        return (img_tensor_stack, target_stack)
+        return (img_tensor_stack, target_stack), target_dir
 
     def get_by_keys(self, keys):
         data_stack = []
@@ -111,4 +119,3 @@ class GravitySpy(torch.utils.data.Dataset):
         data_stack = torch.stack(data_stack)
         target_stack = torch.stack(target_stack)
         self.data, self.targets = data_stack, target_stack
-                
