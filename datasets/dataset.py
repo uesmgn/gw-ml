@@ -67,6 +67,9 @@ class GravitySpy(torch.utils.data.Dataset):
     def download(self, force_extract=False, force_process=False):
         """Download the GravitySpy data if it doesn't exist."""
 
+        if os.path.exists(self.dataset_file):
+            return
+
         os.makedirs(self.raw_folder, exist_ok=True)
         os.makedirs(self.processed_folder, exist_ok=True)
 

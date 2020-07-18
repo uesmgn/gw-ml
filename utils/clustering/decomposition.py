@@ -5,7 +5,8 @@ import torch
 
 
 __all__ = [
-    'TSNE', 'PCA'
+    'TSNE',
+    'PCA'
 ]
 
 
