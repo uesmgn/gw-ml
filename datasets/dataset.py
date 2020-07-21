@@ -10,7 +10,7 @@ import torch
 import codecs
 import json
 from tqdm import tqdm
-
+import copy
 
 class GravitySpy(torch.utils.data.Dataset):
 
@@ -122,3 +122,15 @@ class GravitySpy(torch.utils.data.Dataset):
         data_stack = torch.stack(data_stack)
         target_stack = torch.stack(target_stack)
         self.data, self.targets = data_stack, target_stack
+
+    def split_dataset(self, alpha=0.8):
+        N_train = int(self.__len__() * alpha)
+        train_data, train_target = self.data[:N_train], self.targets[:N_train]
+        train_set = copy.deepcopy(self)
+        train_set.data, train_set.target = train_data, train_target
+
+        test_data, test_target = self.data[N_train:], self.targets[N_train:]
+        test_set = copy.deepcopy(self)
+        test_set.data, test_set.target = test_data, test_target
+
+        return train_set, test_set
