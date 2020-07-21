@@ -123,14 +123,19 @@ class GravitySpy(torch.utils.data.Dataset):
         target_stack = torch.stack(target_stack)
         self.data, self.targets = data_stack, target_stack
 
-    def split_dataset(self, alpha=0.8):
+    def split_dataset(self, alpha=0.8, shuffle=True):
         N_train = int(self.__len__() * alpha)
-        train_data, train_target = self.data[:N_train], self.targets[:N_train]
-        train_set = copy.deepcopy(self)
-        train_set.data, train_set.target = train_data, train_target
+        if shuffle:
+            idx = torch.randperm(self.__len__())
+            data = self.data[idx]
+            targets = self.targets[idx]
 
-        test_data, test_target = self.data[N_train:], self.targets[N_train:]
+        train_data, train_targets = data[:N_train], targets[:N_train]
+        train_set = copy.deepcopy(self)
+        train_set.data, train_set.targets = train_data, train_targets
+
+        test_data, test_targets = data[N_train:], targets[N_train:]
         test_set = copy.deepcopy(self)
-        test_set.data, test_set.target = test_data, test_target
+        test_set.data, test_set.targets = test_data, test_targets
 
         return train_set, test_set
