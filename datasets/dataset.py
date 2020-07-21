@@ -125,10 +125,9 @@ class GravitySpy(torch.utils.data.Dataset):
 
     def split_dataset(self, alpha=0.8, shuffle=True):
         N_train = int(self.__len__() * alpha)
-        if shuffle:
-            idx = torch.randperm(self.__len__())
-            data = self.data[idx]
-            targets = self.targets[idx]
+        idx = torch.randperm(self.__len__()) if shuffle else torch.arange(self.__len__())
+        data = self.data[idx]
+        targets = self.targets[idx]
 
         train_data, train_targets = data[:N_train], targets[:N_train]
         train_set = copy.deepcopy(self)
@@ -139,3 +138,21 @@ class GravitySpy(torch.utils.data.Dataset):
         test_set.data, test_set.targets = test_data, test_targets
 
         return train_set, test_set
+
+    def uniform_label_sampler(self, labels, num_per_class=30, shuffle=True):
+        idx = torch.randperm(self.__len__()) if shuffle else torch.arange(self.__len__())
+        targets = self.targets[idx]
+
+        uni_idx = np.empty(0)
+        for i in labels:
+            uni_idx = np.append(uni_idx, torch.nonzero(targets==i)[:,0].numpy()[:num_per_class])
+
+        rem_idx = np.array(set(idx.numpy()) - set(uni_idx))
+
+        uni_set = copy.deepcopy(self)
+        uni_set.data, uni_set.targets = self.data[uni_idx], self.targets[uni_idx]
+
+        rem_set = copy.deepcopy(self)
+        rem_set.data, rem_set.targets = self.data[rem_idx], self.targets[rem_idx]
+
+        return uni_set, rem_set
