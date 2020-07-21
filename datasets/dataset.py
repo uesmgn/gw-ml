@@ -141,21 +141,20 @@ class GravitySpy(torch.utils.data.Dataset):
 
     def uniform_label_sampler(self, labels, num_per_class=30, shuffle=True):
         idx = torch.randperm(self.__len__()) if shuffle else torch.arange(self.__len__())
+        data = self.data[idx]
         targets = self.targets[idx]
-        print(targets)
 
         uni_idx = np.empty(0)
         for i in labels:
             match = torch.nonzero(targets==i)[:,0].numpy()[:num_per_class]
-            print(match)
             uni_idx = np.append(uni_idx, match)
 
         rem_idx = np.array(list(set(idx.numpy()) - set(uni_idx))).astype(np.integer)
 
         uni_set = copy.deepcopy(self)
-        uni_set.data, uni_set.targets = self.data[uni_idx], self.targets[uni_idx]
+        uni_set.data, uni_set.targets = data[uni_idx], targets[uni_idx]
 
         rem_set = copy.deepcopy(self)
-        rem_set.data, rem_set.targets = self.data[rem_idx], self.targets[rem_idx]
+        rem_set.data, rem_set.targets = data[rem_idx], targets[rem_idx]
 
         return uni_set, rem_set
