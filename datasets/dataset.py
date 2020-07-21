@@ -146,6 +146,7 @@ class GravitySpy(torch.utils.data.Dataset):
         uni_idx = np.empty(0)
         for i in labels:
             uni_idx = np.append(uni_idx, torch.nonzero(targets==i)[:,0].numpy()[:num_per_class])
+            print(uni_idx)
 
         rem_idx = np.array(list(set(idx.numpy()) - set(uni_idx))).astype(np.integer)
 
