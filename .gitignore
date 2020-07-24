@@ -130,3 +130,4 @@ dataset/
 result*
 *.png
 .idea
+mnist/
