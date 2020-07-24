@@ -118,6 +118,17 @@ def plot_confusion_matrix(cm, xlabels, ylabels, out=None, **kwargs):
         plt.savefig(out)
         plt.close()
 
+def imshow(data, out=None, **kwargs):
+    _init_plot(**kwargs)
+    plt.imshow(data)
+    _setup_plot(**kwargs)
+    plt.tight_layout()
+    if out is None:
+        plt.show()
+    else:
+        plt.savefig(out)
+        plt.close()
+
 
 def _init_plot(**kwargs):
     for k, v in kwargs.items():
