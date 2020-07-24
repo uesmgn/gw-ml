@@ -58,10 +58,10 @@ class BasicResBlock(nn.Module):
 
         if transpose:
             self.features = nn.Sequential(
-                convt3x3(in_planes, in_planes),
-                nn.BatchNorm2d(in_planes),
-                nn.ReLU(inplace=True),
                 convt3x3(in_planes, out_planes, stride=stride),
+                nn.BatchNorm2d(out_planes),
+                nn.ReLU(inplace=True),
+                convt3x3(out_planes, out_planes),
                 nn.BatchNorm2d(out_planes)
             )
             self.connection = None
