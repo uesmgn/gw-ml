@@ -68,11 +68,11 @@ class ResVAE_M1(nn.Module):
             Gaussian(256, z_dim)
         )
         self.decoder = nn.Sequential(
-            nn.Linear(z_dim, 512),
-            nn.BatchNorm1d(512),
+            nn.Linear(z_dim, 8 * hidden_dim * hidden_dim),
+            nn.BatchNorm1d(8 * hidden_dim * hidden_dim),
             nn.ReLU(inplace=True),
-            Reshape((512, 1, 1)),
-            nn.Upsample(scale_factor=hidden_dim),
+            Reshape((8, hidden_dim, hidden_dim)),
+            resnet.block(8, 512, stride=2),
             resnet.block(512, 256, stride=2),
             resnet.block(256, 128, stride=2),
             resnet.block(128, 64, stride=2),
