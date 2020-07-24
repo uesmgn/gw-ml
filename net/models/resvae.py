@@ -62,10 +62,7 @@ class ResVAE_M1(nn.Module):
             *list(resnet.children())[:-1],  # remove final layer
             nn.BatchNorm1d(512 * resnet.block.expansion),
             nn.ReLU(inplace=True),
-            nn.Linear(512 * resnet.block.expansion, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(inplace=True),
-            Gaussian(256, z_dim)
+            Gaussian(512 * resnet.block.expansion, z_dim)
         )
         self.decoder = nn.Sequential(
             nn.Linear(z_dim, 8 * hidden_dim * hidden_dim),
@@ -73,10 +70,18 @@ class ResVAE_M1(nn.Module):
             nn.ReLU(inplace=True),
             Reshape((8, hidden_dim, hidden_dim)),
             resnet.block(8, 512, stride=2),
-            resnet.block(512, 256, stride=2),
-            resnet.block(256, 128, stride=2),
-            resnet.block(128, 64, stride=2),
-            resnet.block(64, 1, stride=2, activation='sigmoid')
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 1, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(1),
+            nn.Sigmoid()
         )
 
         for m in self.modules():
