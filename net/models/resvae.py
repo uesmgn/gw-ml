@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import copy
 
+from .resnet import *
 from .. import layers, criterion
 
 
@@ -26,52 +27,9 @@ class Encoder(nn.Module):
         return z, z_mean, z_var
 
 
-class BasicResTransposeBlock(nn.Module):
-
-    expansion = 1
-
-    def __init__(self):
-        super().__init__()
-        self.block = None
-        self.connection = None
-
-    def compile(self, in_planes, out_planes, **kwargs):
-        stride = kwargs.get('stride') or 1
-        connection = kwargs.get('connection') or None
-        activation = kwargs.get('activation') or nn.ReLU(inplace=True)
-        kernel_size = stride + 2
-
-        self.block = nn.Sequential(
-            nn.ConvTranspose2d(in_planes, out_planes, kernel_size=kernel_size,
-                               stride=stride, padding=1, bias=False),
-            nn.BatchNorm2d(out_planes),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(out_planes, out_planes,
-                               kernel_size=1, stride=1, bias=False),
-            nn.BatchNorm2d(out_planes)
-        )
-        self.connection = None
-        if stride != 1 or in_planes != out_planes:
-            self.connection = nn.Sequential(
-                nn.ConvTranspose2d(in_planes, out_planes, kernel_size=1, stride=stride,
-                                   bias=False, output_padding=stride - 1),
-                nn.BatchNorm2d(out_planes)
-            )
-        self.activation = activation
-
-        return self
-
-    def forward(self, x):
-        identity = x
-        if self.connection is not None:
-            identity = self.connection(x)
-        x = self.block(x) + identity
-        return self.activation(x)
-
-
 class Decoder(nn.Module):
-    def __init__(self, in_dim, out_planes=1, block=BasicResTransposeBlock(), num_blocks=(2, 2, 2, 2),
-                 scale_factor=8, activation=nn.Sigmoid(), test=1):
+    def __init__(self, in_dim, out_planes=1, block=TransposeResBlock(), num_blocks=(2, 2, 2, 2),
+                 filter_size=6, activation=nn.Sigmoid(), test=1):
         super().__init__()
 
         assert len(num_blocks) == 4, 'num_blocks must be array have length of 4'
@@ -79,41 +37,14 @@ class Decoder(nn.Module):
         self.next_planes = 512
         assert hasattr(block, 'compile')
 
-        if test == 1:
-            self.fc = nn.Sequential(
-                nn.Linear(in_dim, 512),
-                nn.BatchNorm1d(512),
-                nn.ReLU(inplace=True),
-                layers.Reshape((512, 1, 1)),
-                nn.ConvTranspose2d(512, 512, kernel_size=scale_factor, bias=False),
-                nn.BatchNorm2d(512),
-                nn.ReLU(inplace=True)
-            )
-        elif test == 2:
-            self.fc = nn.Sequential(
-                nn.Linear(in_dim, 512),
-                nn.BatchNorm1d(512),
-                nn.ReLU(inplace=True),
-                layers.Reshape((512, 1)),
-                nn.ConvTranspose1d(512, 512 * scale_factor * scale_factor,
-                                   kernel_size=3, stride=1, padding=1, bias=False),
-                nn.BatchNorm1d(512 * scale_factor * scale_factor),
-                nn.ReLU(inplace=True),
-                layers.Reshape((512, scale_factor, scale_factor)),
-            )
-        # self.fc = nn.Sequential(
-        #     nn.Linear(in_dim, 512),
-        #     nn.BatchNorm1d(512),
-        #     nn.ReLU(inplace=True),
-        #     layers.Reshape((512, 1)),
-        #     nn.ConvTranspose1d(512, 512 * scale_factor * scale_factor, kernel_size=3, stride=1, padding=1, bias=False),
-        #     nn.BatchNorm1d(512 * scale_factor * scale_factor),
-        #     nn.ReLU(inplace=True),
-        #     layers.Reshape((512, scale_factor, scale_factor)),
-        # )
+        self.fc = nn.Sequential(
+            nn.Linear(in_dim, 512 * filter_size * filter_size),
+            nn.ReLU(inplace=True),
+            layers.Reshape((512, filter_size, filter_size))
+        )
         self.convt1_x = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            self._make_layer(512, block, num_blocks[0], stride=2)
+            self._make_layer(512, block, num_blocks[0], stride=2),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         )
         self.convt2_x = nn.Sequential(
             self._make_layer(256, block, num_blocks[1], stride=2)
@@ -169,7 +100,7 @@ class Decoder(nn.Module):
 
 
 class ResVAE_M1(nn.Module):
-    def __init__(self, resnet, device='cpu', z_dim=64, scale_factor=6,
+    def __init__(self, resnet, device='cpu', z_dim=64, filter_size=6,
                  activation=nn.Sigmoid(), verbose=False):
         super().__init__()
 
@@ -178,7 +109,7 @@ class ResVAE_M1(nn.Module):
         self.in_planes = resnet.in_planes
         self.encoder = Encoder(resnet, z_dim)
         self.decoder = Decoder(z_dim, out_planes=self.in_planes,
-                               scale_factor=scale_factor, activation=activation)
+                               filter_size=filter_size, activation=activation)
 
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
@@ -225,7 +156,7 @@ class ResVAE_M1(nn.Module):
 
 class ResVAE_M2(nn.Module):
     def __init__(self, resnet, device='cpu', x_dim=256, z_dim=64, y_dim=10,
-                 scale_factor=6, activation=nn.Sigmoid(), verbose=False):
+                 filter_size=6, activation=nn.Sigmoid(), verbose=False):
         super().__init__()
 
         self.device = device
@@ -253,7 +184,7 @@ class ResVAE_M2(nn.Module):
             layers.Gaussian(512, z_dim)
         )
         self.decoder = Decoder(z_dim + y_dim, out_planes=self.in_planes,
-                               scale_factor=scale_factor, activation=activation)
+                               filter_size=filter_size, activation=activation)
 
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):

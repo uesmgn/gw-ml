@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import copy
 
 __all__ = ['Block', 'BasicResBlock', 'BNResBlock',
-           'BasicResTransposeBlock', 'ResNet']
+           'TransposeResBlock', 'ResNet']
 
 
 def _conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -24,6 +24,7 @@ class Block(nn.Module):
         super().__init__()
         self.block = None
         self.connection = None
+        self.activation = nn.ReLU(inplace=True)
 
     def compile(self, in_planes, out_planes, **kwargs):
         stride = kwargs.get('stride') or 1
@@ -45,7 +46,7 @@ class Block(nn.Module):
         if self.connection is not None:
             identity = self.connection(x)
         x = self.block(x) + identity
-        return F.relu(x, inplace=True)
+        return self.activation(x)
 
 
 class BasicResBlock(Block):
@@ -74,13 +75,6 @@ class BasicResBlock(Block):
         self.activation = activation
 
         return self
-
-    def forward(self, x):
-        identity = x
-        if self.connection is not None:
-            identity = self.connection(x)
-        x = self.block(x) + identity
-        return self.activation(x)
 
 
 class BNResBlock(Block):
@@ -117,12 +111,32 @@ class BNResBlock(Block):
 
         return self
 
-    def forward(self, x):
-        identity = x
-        if self.connection is not None:
-            identity = self.connection(x)
-        x = self.block(x) + identity
-        return self.activation(x)
+
+class TransposeResBlock(Block):
+
+    def compile(self, in_planes, out_planes, **kwargs):
+        connection = kwargs.get('connection') or None
+        activation = kwargs.get('activation') or nn.ReLU(inplace=True)
+
+        self.block = nn.Sequential(
+            _conv1x1(in_planes, in_planes),
+            nn.BatchNorm2d(in_planes),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(in_planes, out_planes, kernel_size=4,
+                               stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(out_planes),
+            nn.ReLU(inplace=True),
+            _conv1x1(out_planes, out_planes),
+            nn.BatchNorm2d(out_planes),
+        )
+        self.connection = nn.Sequential(
+            nn.ConvTranspose2d(in_planes, out_planes, kernel_size=1, stride=2,
+                               output_padding=1, bias=False),
+            nn.BatchNorm2d(out_planes)
+        )
+        self.activation = activation
+
+        return self
 
 
 class ResNet(nn.Module):
