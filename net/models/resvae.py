@@ -116,7 +116,6 @@ class Decoder(nn.Module):
             self._make_layer(512, block, num_blocks[0], stride=2)
         )
         self.convt2_x = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
             self._make_layer(256, block, num_blocks[1], stride=2)
         )
         self.convt3_x = nn.Sequential(
