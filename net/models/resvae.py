@@ -83,12 +83,21 @@ class Decoder(nn.Module):
             nn.Linear(in_dim, 512),
             nn.BatchNorm1d(512),
             nn.ReLU(inplace=True),
-            layers.Reshape((512, 1)),
-            nn.ConvTranspose1d(512, 512 * scale_factor * scale_factor, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.BatchNorm1d(512 * scale_factor * scale_factor),
-            nn.ReLU(inplace=True),
-            layers.Reshape((512, scale_factor, scale_factor)),
+            layers.Reshape((512, 1, 1)),
+            nn.ConvTranspose2d(512, 512, kernel_size=scale_factor, bias=False),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True)
         )
+        # self.fc = nn.Sequential(
+        #     nn.Linear(in_dim, 512),
+        #     nn.BatchNorm1d(512),
+        #     nn.ReLU(inplace=True),
+        #     layers.Reshape((512, 1)),
+        #     nn.ConvTranspose1d(512, 512 * scale_factor * scale_factor, kernel_size=3, stride=1, padding=1, bias=False),
+        #     nn.BatchNorm1d(512 * scale_factor * scale_factor),
+        #     nn.ReLU(inplace=True),
+        #     layers.Reshape((512, scale_factor, scale_factor)),
+        # )
         self.convt1_x = nn.Sequential(
             nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
             self._make_layer(512, block, num_blocks[0], stride=2)
