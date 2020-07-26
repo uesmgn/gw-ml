@@ -3,86 +3,89 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from .. import criterion
+from .. import layers, criterion
 
 
-def _reparameterize(mean, var):
-    if torch.is_tensor(var):
-        std = torch.pow(var, 0.5)
-    else:
-        std = np.sqrt(var)
-    eps = torch.randn_like(mean)
-    x = mean + eps * std
-    return x
-
-
-class Reshape(nn.Module):
-    def __init__(self, outer_shape):
+class Encoder(nn.Module):
+    def __init__(self, resnet, z_dim=64):
         super().__init__()
-        self.outer_shape = outer_shape
+
+        self.z_dim = z_dim
+        exp = resnet.expansion
+        self.encoder = nn.Sequential(
+            *list(resnet.children())[:-1],  # remove final layer
+            nn.BatchNorm1d(512 * exp),
+            nn.ReLU(inplace=True)
+        )
+        self.gaussian = layers.Gaussian(512 * exp, z_dim)
 
     def forward(self, x):
-        return x.view(x.size(0), *self.outer_shape)
+        x = self.encoder(x)
+        z, z_mean, z_var = self.gaussian(x)
+        return z, z_mean, z_var
 
+class TransposeBlock(nn.Module):
 
-class Gaussian(nn.Module):
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_planes, out_planes, **kwargs):
         super().__init__()
-        self.features = nn.Linear(in_dim, out_dim * 2)
+        scale_factor = kwargs.get('scale_factor') or 2
+        activation = kwargs.get('activation') or nn.ReLU(inplace=True)
+        kernel_size = scale_factor + 2
 
-    def forward(self, x, eps=1e-10):
-        x = self.features(x)
-        mean, logit = torch.split(x, x.shape[1] // 2, 1)
-        var = F.softplus(logit) + eps
-        if self.training:
-            x = _reparameterize(mean, var)
-        else:
-            x = mean
-        return x, mean, var
-
-
-class Clustering(nn.Module):
-    def __init__(self, dim):
-        super().__init__()
-        self.logits = nn.Linear(dim, dim)
+        self.block = nn.Sequential(
+            nn.ConvTranspose2d(in_planes, out_planes, kernel_size=kernel_size,
+                               stride=scale_factor, padding=1, bias=False),
+            nn.BatchNorm2d(out_planes),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(out_planes, out_planes, kernel_size=1, stride=1, bias=False),
+            nn.BatchNorm2d(out_planes)
+        )
+        self.connection = nn.Sequential(
+            nn.Upsample(scale_factor=scale_factor),
+            nn.ConvTranspose2d(in_planes, out_planes, kernel_size=1, stride=1, bias=False),
+            nn.BatchNorm2d(out_planes)
+        )
+        self.activation = activation
 
     def forward(self, x):
-        logits = self.logits(x)
-        y = F.softmax(logits, -1)
-        return logits, y
+        identity = x
+        if self.connection is not None:
+            identity = self.connection(x)
+        x = self.block(x) + identity
+        return self.activation(x)
+
+
+class Decoder(nn.Module):
+    def __init__(self, in_dim, out_planes=1, planes=(512, 256, 128, 64, 64),
+                 scale_factor=8, activation=nn.Sigmoid()):
+        super().__init__()
+
+        self.decoder = nn.Sequential(
+            nn.Linear(in_dim, planes[0]),
+            nn.BatchNorm1d(planes[0]),
+            nn.ReLU(inplace=True),
+            layers.Reshape((planes[0], 1, 1)),
+            nn.Upsample(scale_factor=scale_factor),
+            *[TransposeBlock(planes[i], planes[i+1]) for i in range(len(planes)-1)],
+            TransposeBlock(planes[-1], out_planes, activation=activation),
+        )
+
+    def forward(self, x):
+        x = self.decoder(x)
+        return x
 
 
 class ResVAE_M1(nn.Module):
-    def __init__(self, resnet, device, z_dim=64, hidden_dim=6, verbose=False):
+    def __init__(self, resnet, device='cpu', z_dim=64, planes=(512, 256, 128, 64, 64),
+                 scale_factor=8, activation=nn.Sigmoid(), verbose=False):
         super().__init__()
 
         self.device = device
         self.z_dim = z_dim
-        self.encoder = nn.Sequential(
-            *list(resnet.children())[:-1],  # remove final layer
-            nn.BatchNorm1d(512 * resnet.block.expansion),
-            nn.ReLU(inplace=True),
-            Gaussian(512 * resnet.block.expansion, z_dim)
-        )
-        self.decoder = nn.Sequential(
-            nn.Linear(z_dim, 8 * hidden_dim * hidden_dim),
-            nn.BatchNorm1d(8 * hidden_dim * hidden_dim),
-            nn.ReLU(inplace=True),
-            Reshape((8, hidden_dim, hidden_dim)),
-            resnet.block(8, 512, stride=2),
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(64, 1, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(1),
-            nn.Sigmoid()
-        )
+        self.in_planes = resnet.in_planes
+        self.encoder = Encoder(resnet, z_dim)
+        self.decoder = Decoder(z_dim, out_planes=self.in_planes, planes=planes,
+                               scale_factor=scale_factor, activation=activation)
 
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
@@ -127,46 +130,37 @@ class ResVAE_M1(nn.Module):
 
 
 class ResVAE_M2(nn.Module):
-    def __init__(self, resnet, device, z_dim=64, y_dim=10, hidden_dim=6, verbose=False):
+    def __init__(self, resnet, device='cpu', x_dim=256, z_dim=64, y_dim=10,
+                 planes=(512, 256, 128, 64, 64), scale_factor=8,
+                 activation=nn.Sigmoid(), verbose=False):
         super().__init__()
 
         self.device = device
         self.z_dim = z_dim
         self.y_dim = y_dim
+        self.in_planes = resnet.in_planes
+        encoder = Encoder(resnet, z_dim)
+        exp = resnet.expansion
         self.encoder = nn.Sequential(
-            *list(resnet.children())[:-1],  # remove final layer
-            nn.BatchNorm1d(512 * resnet.block.expansion),
-            nn.ReLU(inplace=True),
-            nn.Linear(512 * resnet.block.expansion, 256),
-            nn.BatchNorm1d(256),
+            *list(encoder.children())[:-1],  # remove final layer
+            nn.Linear(512 * exp, x_dim),
+            nn.BatchNorm1d(x_dim),
             nn.ReLU(inplace=True)
         )
         self.y_inference = nn.Sequential(
-            nn.Linear(256, 64),
-            nn.BatchNorm1d(64),
-            nn.ReLU(inplace=True),
-            nn.Linear(64, y_dim),
-            nn.BatchNorm1d(y_dim),
-            nn.ReLU(inplace=True),
-            Clustering(y_dim)
-        )
-        self.z_inference = nn.Sequential(
-            nn.Linear(256 + y_dim, 64),
-            nn.BatchNorm1d(64),
-            nn.ReLU(inplace=True),
-            Gaussian(64, z_dim)
-        )
-        self.decoder = nn.Sequential(
-            nn.Linear(z_dim + y_dim, 512),
+            nn.Linear(x_dim, 512),
             nn.BatchNorm1d(512),
             nn.ReLU(inplace=True),
-            Reshape((512, 1, 1)),
-            nn.Upsample(scale_factor=hidden_dim),
-            resnet.block(512, 256, stride=2),
-            resnet.block(256, 128, stride=2),
-            resnet.block(128, 64, stride=2),
-            resnet.block(64, 1, stride=2, activation='sigmoid')
+            layers.Clustering(512, y_dim)
         )
+        self.z_inference = nn.Sequential(
+            nn.Linear(x_dim + y_dim, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(inplace=True),
+            layers.Gaussian(512, z_dim)
+        )
+        self.decoder = Decoder(z_dim + y_dim, out_planes=self.in_planes, planes=planes,
+                               scale_factor=scale_factor, activation=activation)
 
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
@@ -186,23 +180,15 @@ class ResVAE_M2(nn.Module):
         return params['x_reconst']
 
     def criterion(self, ux, lx, target, alpha=1.):
-        loss = self._forward_func(ux, lx, target, alpha)
-        return loss
-
-    def _forward_func(self, ux, lx=None, target=None, alpha=1.):
         ux = ux.to(self.device)
-        if lx is not None and target is not None:
-            lx = lx.to(self.device)
-            target = target.to(self.device)
+        lx = lx.to(self.device)
+        target = target.to(self.device)
+        labeled_loss = self._labeled_loss(lx, target, alpha=alpha)
+        unlabeled_loss = self._unlabeled_loss(ux)
+        return labeled_loss + unlabeled_loss
 
-            labeled_loss = self._labeled_loss(lx, target, alpha=alpha)
-            unlabeled_loss = self._unlabeled_loss(ux)
-            return labeled_loss + unlabeled_loss
-        else:
-            params = self._predict(ux)
-            return params
-
-    def _predict(self, x):
+    def _forward_func(self, x, alpha=1.):
+        x = x.to(self.device)
         x_ = self.encoder(x)
         _, qy = self.y_inference(x_)
         _, y_pred = torch.max(qy, -1)

@@ -1,164 +1,133 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import copy
 
-__all__ = ['BasicResBlock', 'BottleNeckResBlock', 'ResNet']
-
-
-def get_activation(activation, inplace=True):
-    if activation in ('sigmoid', 'Sigmoid'):
-        return nn.Sigmoid()
-    return nn.ReLU(inplace=inplace)
+__all__ = ['Block', 'BasicResBlock', 'BNResBlock', 'ResNet']
 
 
-def get_global_pool(gp, output_size=(1, 1)):
-    if gp in ('max', 'Max'):
-        return nn.AdaptiveMaxPool2d(output_size)
-    return nn.AdaptiveAvgPool2d(output_size)
+class Block(nn.Module):
 
-
-def get_global_pool(gp, output_size=(1, 1)):
-    if gp in ('max', 'Max'):
-        return nn.AdaptiveMaxPool2d(output_size)
-    return nn.AdaptiveAvgPool2d(output_size)
-
-
-def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=dilation, groups=groups, bias=False, dilation=dilation)
-
-
-def convt3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
-    return nn.ConvTranspose2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                              padding=dilation, groups=groups, bias=False, dilation=dilation)
-
-
-def conv1x1(in_planes, out_planes, stride=1):
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
-
-
-def convt1x1(in_planes, out_planes, stride=1):
-    return nn.ConvTranspose2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
-
-
-class BasicResBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_planes, out_planes, stride=1, connection=None,
-                 groups=1, base_width=64, dilation=1, activation='relu'):
+    def __init__(self):
         super().__init__()
+        self.block = None
+        self.connection = None
 
-        if groups != 1 or base_width != 64:
-            raise ValueError(
-                'BasicBlock only supports groups=1 and base_width=64')
-        if dilation > 1:
-            raise NotImplementedError(
-                "Dilation > 1 not supported in BasicBlock")
-
-        transpose = in_planes > out_planes
-
-        if transpose:
-            self.features = nn.Sequential(
-                convt3x3(in_planes, out_planes, stride=stride),
-                nn.BatchNorm2d(out_planes),
-                nn.ReLU(inplace=True),
-                convt3x3(out_planes, out_planes),
-                nn.BatchNorm2d(out_planes)
-            )
-            self.connection = None
-            if stride != 1 or in_planes != out_planes * self.expansion:
-                self.connection = nn.Sequential(
-                    convt1x1(in_planes, out_planes *
-                             self.expansion, stride=stride),
-                    nn.BatchNorm2d(out_planes * self.expansion)
-                )
-        else:
-            self.features = nn.Sequential(
-                conv3x3(in_planes, out_planes, stride=stride),
-                nn.BatchNorm2d(out_planes),
-                nn.ReLU(inplace=True),
-                conv3x3(out_planes, out_planes),
-                nn.BatchNorm2d(out_planes)
-            )
-            self.connection = None
-            if stride != 1 or in_planes != out_planes * self.expansion:
-                self.connection = nn.Sequential(
-                    conv1x1(in_planes, out_planes *
-                            self.expansion, stride=stride),
-                    nn.BatchNorm2d(out_planes * self.expansion)
-                )
-
-        self.activation = get_activation(activation)
-
-    def forward(self, x):
-        identity = x
-        features = self.features(x)
-        if self.connection is not None:
-            identity = self.connection(x)
-        features += identity
-        return self.activation(features)
-
-
-class BottleNeckResBlock(nn.Module):
-    expansion = 4
-
-    def __init__(self, in_planes, out_planes, stride=1, connection=None,
-                 groups=1, base_width=64, dilation=1, activation='relu'):
-        super().__init__()
-
-        width = int(out_planes * (base_width / 64.)) * groups
-
-        self.features = nn.Sequential(
-            conv1x1(in_planes, width),
-            nn.BatchNorm2d(width),
-            nn.ReLU(inplace=True),
-            conv3x3(width, width, stride, groups, dilation),
-            nn.BatchNorm2d(width),
-            nn.ReLU(inplace=True),
-            conv1x1(width, out_planes * self.expansion),
-            nn.BatchNorm2d(out_planes * self.expansion)
+    def compile(self, in_planes, out_planes, **kwargs):
+        stride = kwargs.get('stride') or 1
+        self.block = nn.Sequential(
+            self._conv3x3(in_planes, out_planes * self.expansion, stride=stride),
+            nn.BatchNorm2d(out_planes * self.expansion),
         )
-
         self.connection = None
         if stride != 1 or in_planes != out_planes * self.expansion:
             self.connection = nn.Sequential(
-                conv1x1(in_planes, out_planes * self.expansion, stride=stride),
+                self._conv1x1(in_planes, out_planes * self.expansion, stride=stride),
                 nn.BatchNorm2d(out_planes * self.expansion)
             )
-
-        self.activation = get_activation(activation)
+        return self
 
     def forward(self, x):
         identity = x
-        features = self.features(x)
         if self.connection is not None:
             identity = self.connection(x)
-        features += identity
-        return self.activation(features)
+        x = self.block(x) + identity
+        return F.relu(x, inplace=True)
 
+    def _conv3x3(self, in_planes, out_planes, stride=1, groups=1, dilation=1):
+        return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                         padding=dilation, groups=groups, bias=False, dilation=dilation)
+
+    def _conv1x1(self, in_planes, out_planes, stride=1):
+        return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
+class BasicResBlock(Block):
+
+    expansion = 1
+
+    def compile(self, in_planes, out_planes, **kwargs):
+        stride = kwargs.get('stride') or 1
+        connection = kwargs.get('connection') or None
+        activation = kwargs.get('activation') or nn.ReLU(inplace=True)
+
+        self.block = nn.Sequential(
+            self._conv3x3(in_planes, out_planes, stride=stride),
+            nn.BatchNorm2d(out_planes),
+            nn.ReLU(inplace=True),
+            self._conv3x3(out_planes, out_planes * self.expansion),
+            nn.BatchNorm2d(out_planes * self.expansion)
+        )
+        self.connection = None
+        if stride != 1 or in_planes != out_planes * self.expansion:
+            self.connection = nn.Sequential(
+                self._conv1x1(in_planes, out_planes * self.expansion, stride=stride),
+                nn.BatchNorm2d(out_planes * self.expansion)
+            )
+        self.activation = activation
+
+        return self
+
+    def forward(self, x):
+        identity = x
+        if self.connection is not None:
+            identity = self.connection(x)
+        x = self.block(x) + identity
+        return self.activation(x)
+
+class BNResBlock(Block):
+
+    expansion = 4
+
+    def compile(self, in_planes, out_planes, **kwargs):
+        stride = kwargs.get('stride') or 1
+        connection = kwargs.get('connection') or None
+        activation = kwargs.get('activation') or nn.ReLU(inplace=True)
+        groups = kwargs.get('groups') or 1
+        base_width = kwargs.get('base_width') or 64
+
+        width = int(out_planes * (base_width / 64.)) * groups
+
+        self.block = nn.Sequential(
+            self._conv1x1(in_planes, width),
+            nn.BatchNorm2d(width),
+            nn.ReLU(inplace=True),
+            self._conv3x3(width, width, stride=stride, groups=groups),
+            nn.BatchNorm2d(width),
+            nn.ReLU(inplace=True),
+            self._conv1x1(width, out_planes * self.expansion),
+            nn.BatchNorm2d(out_planes * self.expansion)
+        )
+        self.connection = None
+        if stride != 1 or in_planes != out_planes * self.expansion:
+            self.connection = nn.Sequential(
+                self._conv1x1(in_planes, out_planes * self.expansion, stride=stride),
+                nn.BatchNorm2d(out_planes * self.expansion)
+            )
+        self.activation = activation
+
+        return self
+
+    def forward(self, x):
+        identity = x
+        if self.connection is not None:
+            identity = self.connection(x)
+        x = self.block(x) + identity
+        return self.activation(x)
 
 class ResNet(nn.Module):
 
-    def __init__(self, in_planes=1, block='basic', num_blocks=(2, 2, 2, 2),
-                 num_classes=1000, groups=1, width_per_group=64, dilate=None, gp='avg'):
+    def __init__(self, in_planes=1, block=BasicResBlock(), num_blocks=(2, 2, 2, 2),
+                 num_classes=1000, gp='avg'):
         super().__init__()
 
         assert len(num_blocks) == 4, 'num_blocks must be array have length of 4'
 
+        self.in_planes = in_planes
         self.next_planes = 64
-        self.dilation = 1
-        self.groups = groups
-        self.base_width = width_per_group
-        self.block = self._get_block(block)
-
-        if dilate is None:
-            dilate = (False, False, False)
-        elif isinstance(dilate, (int, bool)):
-            dilate = (dilate, dilate, dilate)
-        elif isinstance(dilate, (list, tuple)):
-            if len(dilate) != 3:
-                raise ValueError('dilates must have length of 3')
-        else:
-            raise ValueError('dilate must be int(s) or bool(s)')
+        assert hasattr(block, 'compile')
+        self.expansion = block.expansion
 
         self.conv1_x = nn.Sequential(
             nn.Conv2d(in_planes, self.next_planes, kernel_size=7,
@@ -169,30 +138,27 @@ class ResNet(nn.Module):
 
         self.conv2_x = nn.Sequential(
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
-            self._make_layer(64, self.block, num_blocks[0])
+            self._make_layer(64, block, num_blocks[0])
         )
 
         self.conv3_x = nn.Sequential(
-            self._make_layer(
-                128, self.block, num_blocks[1], stride=2, dilate=dilate[0])
+            self._make_layer(128, block, num_blocks[1], stride=2)
         )
 
         self.conv4_x = nn.Sequential(
-            self._make_layer(
-                256, self.block, num_blocks[2], stride=2, dilate=dilate[1])
+            self._make_layer(256, block, num_blocks[2], stride=2)
         )
 
         self.conv5_x = nn.Sequential(
-            self._make_layer(
-                512, self.block, num_blocks[3], stride=2, dilate=dilate[2])
+            self._make_layer(512, block, num_blocks[3], stride=2)
         )
 
         self.pool = nn.Sequential(
-            get_global_pool(gp),
+            self._global_pool(gp),
             nn.Flatten()
         )
 
-        self.fc = nn.Linear(512 * self.block.expansion, num_classes)
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -202,30 +168,30 @@ class ResNet(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-    def _get_block(self, block):
-        assert block in (
-            'basic', 'bottle_neck'), 'block only supports ("basic", "bottle_neck")'
-        if block is 'bottle_neck':
-            return BottleNeckResBlock
-        return BasicResBlock
-
-    def _make_layer(self, out_planes, block, num_block, stride=1, dilate=False):
+    def _make_layer(self, out_planes, block, num_block, stride=1):
         assert num_block > 0
-        previous_dilation = self.dilation
-        if dilate:
-            self.dilation *= stride
-            stride = 1
 
         layers = []
-        layers.append(block(self.next_planes, out_planes, stride=stride, groups=self.groups,
-                            base_width=self.base_width, dilation=previous_dilation))
+        layers.append(self._block(block, in_planes=self.next_planes, out_planes=out_planes, stride=stride))
         self.next_planes = out_planes * block.expansion
 
         for _ in range(1, num_block):
-            layers.append(block(self.next_planes, out_planes, groups=self.groups,
-                                base_width=self.base_width, dilation=self.dilation))
+            layers.append(self._block(block, in_planes=self.next_planes, out_planes=out_planes))
 
         return nn.Sequential(*layers)
+
+    def _global_pool(self, gp='avg', output_size=(1,1)):
+        if gp is 'avg':
+            return nn.AdaptiveAvgPool2d(output_size)
+        elif gp is 'max':
+            return nn.AdaptiveMaxPool2d(output_size)
+        else:
+            raise ValueError('Global Pooling gp only supports ("avg", "max")')
+
+    def _block(self, block, **kwargs):
+        block = copy.deepcopy(block)
+        block.compile(**kwargs)
+        return block
 
     def forward(self, x):
         x = self.conv1_x(x)
