@@ -28,21 +28,21 @@ class TransposeBlock(nn.Module):
 
     def __init__(self, in_planes, out_planes, **kwargs):
         super().__init__()
-        scale_factor = kwargs.get('scale_factor') or 2
+        stride = kwargs.get('stride') or 2
         activation = kwargs.get('activation') or nn.ReLU(inplace=True)
-        kernel_size = scale_factor + 2
+        kernel_size = stride + 2
 
         self.block = nn.Sequential(
             nn.ConvTranspose2d(in_planes, out_planes, kernel_size=kernel_size,
-                               stride=scale_factor, padding=1, bias=False),
+                               stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(out_planes),
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(out_planes, out_planes, kernel_size=1, stride=1, bias=False),
             nn.BatchNorm2d(out_planes)
         )
         self.connection = nn.Sequential(
-            nn.Upsample(scale_factor=scale_factor),
-            nn.ConvTranspose2d(in_planes, out_planes, kernel_size=1, stride=1, bias=False),
+            nn.ConvTranspose2d(in_planes, out_planes, kernel_size=1, stride=stride,
+                               bias=False, output_padding=stride-1),
             nn.BatchNorm2d(out_planes)
         )
         self.activation = activation
