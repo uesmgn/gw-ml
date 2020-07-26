@@ -75,7 +75,7 @@ test_loader = _data_loader(test_set)
 grid_loader = _data_loader(grid_set, batch_size=len(grid_set), shuffle=False)
 
 resnet = models.resnet.ResNet(num_blocks=(2,2,2,2))
-model = models.resvae.ResVAE_M1(resnet, device=device, scale_factor=6, verbose=True)
+model = models.resvae.ResVAE_M1(resnet, device=device, filter_size=6, verbose=True)
 optim = torch.optim.Adam(m1.parameters(), lr=FLAGS.lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.5)
 
