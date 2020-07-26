@@ -28,7 +28,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, in_dim, out_planes=1, block=TransposeResBlock(), num_blocks=(2, 2, 2, 2),
+    def __init__(self, in_dim, out_planes=1, block=TransposeResBlock(), num_blocks=(1, 1, 1, 1),
                  filter_size=6, activation=nn.Sigmoid(), test=1):
         super().__init__()
 
