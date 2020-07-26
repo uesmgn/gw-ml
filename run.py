@@ -4,6 +4,7 @@ from torchvision import transforms
 from torch.utils import data
 from collections import  defaultdict
 import numpy as np
+from attrdict import AttrDict as attrdict
 
 import net.models as models
 import datasets
