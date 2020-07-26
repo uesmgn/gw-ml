@@ -3,7 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 import copy
 
-__all__ = ['Block', 'BasicResBlock', 'BNResBlock', 'ResNet']
+__all__ = ['Block', 'BasicResBlock', 'BNResBlock',
+           'BasicResTransposeBlock', 'ResNet']
+
+
+def _conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=dilation, groups=groups, bias=False, dilation=dilation)
+
+
+def _conv1x1(in_planes, out_planes, stride=1):
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 
 class Block(nn.Module):
@@ -18,13 +28,14 @@ class Block(nn.Module):
     def compile(self, in_planes, out_planes, **kwargs):
         stride = kwargs.get('stride') or 1
         self.block = nn.Sequential(
-            self._conv3x3(in_planes, out_planes * self.expansion, stride=stride),
+            _conv3x3(in_planes, out_planes * self.expansion, stride=stride),
             nn.BatchNorm2d(out_planes * self.expansion),
         )
         self.connection = None
         if stride != 1 or in_planes != out_planes * self.expansion:
             self.connection = nn.Sequential(
-                self._conv1x1(in_planes, out_planes * self.expansion, stride=stride),
+                _conv1x1(in_planes, out_planes *
+                         self.expansion, stride=stride),
                 nn.BatchNorm2d(out_planes * self.expansion)
             )
         return self
@@ -36,12 +47,6 @@ class Block(nn.Module):
         x = self.block(x) + identity
         return F.relu(x, inplace=True)
 
-    def _conv3x3(self, in_planes, out_planes, stride=1, groups=1, dilation=1):
-        return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                         padding=dilation, groups=groups, bias=False, dilation=dilation)
-
-    def _conv1x1(self, in_planes, out_planes, stride=1):
-        return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 class BasicResBlock(Block):
 
@@ -53,16 +58,17 @@ class BasicResBlock(Block):
         activation = kwargs.get('activation') or nn.ReLU(inplace=True)
 
         self.block = nn.Sequential(
-            self._conv3x3(in_planes, out_planes, stride=stride),
+            _conv3x3(in_planes, out_planes, stride=stride),
             nn.BatchNorm2d(out_planes),
             nn.ReLU(inplace=True),
-            self._conv3x3(out_planes, out_planes * self.expansion),
+            _conv3x3(out_planes, out_planes * self.expansion),
             nn.BatchNorm2d(out_planes * self.expansion)
         )
         self.connection = None
         if stride != 1 or in_planes != out_planes * self.expansion:
             self.connection = nn.Sequential(
-                self._conv1x1(in_planes, out_planes * self.expansion, stride=stride),
+                _conv1x1(in_planes, out_planes *
+                         self.expansion, stride=stride),
                 nn.BatchNorm2d(out_planes * self.expansion)
             )
         self.activation = activation
@@ -75,6 +81,7 @@ class BasicResBlock(Block):
             identity = self.connection(x)
         x = self.block(x) + identity
         return self.activation(x)
+
 
 class BNResBlock(Block):
 
@@ -90,19 +97,20 @@ class BNResBlock(Block):
         width = int(out_planes * (base_width / 64.)) * groups
 
         self.block = nn.Sequential(
-            self._conv1x1(in_planes, width),
+            _conv1x1(in_planes, width),
             nn.BatchNorm2d(width),
             nn.ReLU(inplace=True),
-            self._conv3x3(width, width, stride=stride, groups=groups),
+            _conv3x3(width, width, stride=stride, groups=groups),
             nn.BatchNorm2d(width),
             nn.ReLU(inplace=True),
-            self._conv1x1(width, out_planes * self.expansion),
+            _conv1x1(width, out_planes * self.expansion),
             nn.BatchNorm2d(out_planes * self.expansion)
         )
         self.connection = None
         if stride != 1 or in_planes != out_planes * self.expansion:
             self.connection = nn.Sequential(
-                self._conv1x1(in_planes, out_planes * self.expansion, stride=stride),
+                _conv1x1(in_planes, out_planes *
+                         self.expansion, stride=stride),
                 nn.BatchNorm2d(out_planes * self.expansion)
             )
         self.activation = activation
@@ -115,6 +123,7 @@ class BNResBlock(Block):
             identity = self.connection(x)
         x = self.block(x) + identity
         return self.activation(x)
+
 
 class ResNet(nn.Module):
 
@@ -172,15 +181,17 @@ class ResNet(nn.Module):
         assert num_block > 0
 
         layers = []
-        layers.append(self._block(block, in_planes=self.next_planes, out_planes=out_planes, stride=stride))
+        layers.append(self._block(block, in_planes=self.next_planes,
+                                  out_planes=out_planes, stride=stride))
         self.next_planes = out_planes * block.expansion
 
         for _ in range(1, num_block):
-            layers.append(self._block(block, in_planes=self.next_planes, out_planes=out_planes))
+            layers.append(self._block(
+                block, in_planes=self.next_planes, out_planes=out_planes))
 
         return nn.Sequential(*layers)
 
-    def _global_pool(self, gp='avg', output_size=(1,1)):
+    def _global_pool(self, gp='avg', output_size=(1, 1)):
         if gp is 'avg':
             return nn.AdaptiveAvgPool2d(output_size)
         elif gp is 'max':

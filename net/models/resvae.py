@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import copy
 
 from .. import layers, criterion
 
@@ -24,11 +25,19 @@ class Encoder(nn.Module):
         z, z_mean, z_var = self.gaussian(x)
         return z, z_mean, z_var
 
-class TransposeBlock(nn.Module):
 
-    def __init__(self, in_planes, out_planes, **kwargs):
+class BasicResTransposeBlock(nn.Module):
+
+    expansion = 1
+
+    def __init__(self):
         super().__init__()
-        stride = kwargs.get('stride') or 2
+        self.block = None
+        self.connection = None
+
+    def compile(self, in_planes, out_planes, **kwargs):
+        stride = kwargs.get('stride') or 1
+        connection = kwargs.get('connection') or None
         activation = kwargs.get('activation') or nn.ReLU(inplace=True)
         kernel_size = stride + 2
 
@@ -37,15 +46,20 @@ class TransposeBlock(nn.Module):
                                stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(out_planes),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(out_planes, out_planes, kernel_size=1, stride=1, bias=False),
+            nn.ConvTranspose2d(out_planes, out_planes,
+                               kernel_size=1, stride=1, bias=False),
             nn.BatchNorm2d(out_planes)
         )
-        self.connection = nn.Sequential(
-            nn.ConvTranspose2d(in_planes, out_planes, kernel_size=1, stride=stride,
-                               bias=False, output_padding=stride-1),
-            nn.BatchNorm2d(out_planes)
-        )
+        self.connection = None
+        if stride != 1 or in_planes != out_planes:
+            self.connection = nn.Sequential(
+                nn.ConvTranspose2d(in_planes, out_planes, kernel_size=1, stride=stride,
+                                   bias=False, output_padding=stride - 1),
+                nn.BatchNorm2d(out_planes)
+            )
         self.activation = activation
+
+        return self
 
     def forward(self, x):
         identity = x
@@ -56,34 +70,88 @@ class TransposeBlock(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, in_dim, out_planes=1, planes=(512, 256, 128, 64, 64),
+    def __init__(self, in_dim, out_planes=1, block=BasicResTransposeBlock(), num_blocks=(2, 2, 2, 2),
                  scale_factor=8, activation=nn.Sigmoid()):
         super().__init__()
 
-        self.decoder = nn.Sequential(
-            nn.Linear(in_dim, planes[0] * scale_factor * scale_factor),
-            nn.BatchNorm1d(planes[0] * scale_factor * scale_factor),
+        assert len(num_blocks) == 4, 'num_blocks must be array have length of 4'
+
+        self.next_planes = 512
+        assert hasattr(block, 'compile')
+
+        self.fc = nn.Sequential(
+            nn.Linear(in_dim, 512),
+            nn.BatchNorm1d(512),
             nn.ReLU(inplace=True),
-            layers.Reshape((planes[0], scale_factor, scale_factor)),
-            *[TransposeBlock(planes[i], planes[i+1]) for i in range(len(planes)-1)],
-            TransposeBlock(planes[-1], out_planes, activation=activation),
+            layers.Reshape((512, 1, 1)),
+            nn.ConvTranspose2d(512, 512, kernel_size=scale_factor),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
+            self._make_layer(512, block, num_blocks[0], stride=2)
         )
+        self.convt1_x = nn.Sequential(
+            self._make_layer(256, block, num_blocks[1], stride=2)
+        )
+        self.convt2_x = nn.Sequential(
+            self._make_layer(128, block, num_blocks[2], stride=2)
+        )
+        self.convt3_x = nn.Sequential(
+            self._make_layer(64, block, num_blocks[3], stride=2)
+        )
+        self.convt4_x = nn.Sequential(
+            nn.ConvTranspose2d(64, out_planes, kernel_size=1, bias=False),
+            nn.BatchNorm2d(1)
+        )
+        self.activation = activation
+
+        for m in self.modules():
+            if isinstance(m, nn.ConvTranspose2d):
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+    def _make_layer(self, out_planes, block, num_block, stride=1):
+        assert num_block > 0
+
+        layers = []
+        layers.append(self._block(block, in_planes=self.next_planes,
+                                  out_planes=out_planes, stride=stride))
+        self.next_planes = out_planes * block.expansion
+
+        for _ in range(1, num_block):
+            layers.append(self._block(
+                block, in_planes=self.next_planes, out_planes=out_planes))
+
+        return nn.Sequential(*layers)
+
+    def _block(self, block, **kwargs):
+        block = copy.deepcopy(block)
+        block.compile(**kwargs)
+        return block
 
     def forward(self, x):
-        x = self.decoder(x)
+        x = self.fc(x)
+        x = self.convt1_x(x)
+        x = self.convt2_x(x)
+        x = self.convt3_x(x)
+        x = self.convt4_x(x)
+        x = self.activation(x)
         return x
 
 
 class ResVAE_M1(nn.Module):
-    def __init__(self, resnet, device='cpu', z_dim=64, planes=(512, 256, 128, 64, 64),
-                 scale_factor=8, activation=nn.Sigmoid(), verbose=False):
+    def __init__(self, resnet, device='cpu', z_dim=64, scale_factor=6,
+                 activation=nn.Sigmoid(), verbose=False):
         super().__init__()
 
         self.device = device
         self.z_dim = z_dim
         self.in_planes = resnet.in_planes
         self.encoder = Encoder(resnet, z_dim)
-        self.decoder = Decoder(z_dim, out_planes=self.in_planes, planes=planes,
+        self.decoder = Decoder(z_dim, out_planes=self.in_planes,
                                scale_factor=scale_factor, activation=activation)
 
         for m in self.modules():
@@ -121,7 +189,8 @@ class ResVAE_M1(nn.Module):
 
         if x_reconst.shape != x.shape:
             if self.verbose:
-                print(f'output tensor shape {x_reconst.shape} is resized into tensor shape {x.shape}')
+                print(
+                    f'output tensor shape {x_reconst.shape} is resized into tensor shape {x.shape}')
             x_reconst = F.interpolate(
                 x_reconst, size=x.shape[2:], mode='bilinear', align_corners=True)
 
@@ -130,8 +199,7 @@ class ResVAE_M1(nn.Module):
 
 class ResVAE_M2(nn.Module):
     def __init__(self, resnet, device='cpu', x_dim=256, z_dim=64, y_dim=10,
-                 planes=(512, 256, 128, 64, 64), scale_factor=8,
-                 activation=nn.Sigmoid(), verbose=False):
+                 scale_factor=6, activation=nn.Sigmoid(), verbose=False):
         super().__init__()
 
         self.device = device
@@ -158,7 +226,7 @@ class ResVAE_M2(nn.Module):
             nn.ReLU(inplace=True),
             layers.Gaussian(512, z_dim)
         )
-        self.decoder = Decoder(z_dim + y_dim, out_planes=self.in_planes, planes=planes,
+        self.decoder = Decoder(z_dim + y_dim, out_planes=self.in_planes,
                                scale_factor=scale_factor, activation=activation)
 
         for m in self.modules():
@@ -198,7 +266,8 @@ class ResVAE_M2(nn.Module):
 
         if x_reconst.shape != x.shape:
             if self.verbose:
-                print(f'output tensor shape {x_reconst.shape} is resized into tensor shape {x.shape}')
+                print(
+                    f'output tensor shape {x_reconst.shape} is resized into tensor shape {x.shape}')
             x_reconst = F.interpolate(
                 x_reconst, size=x.shape[2:], mode='bilinear', align_corners=True)
 
@@ -215,7 +284,8 @@ class ResVAE_M2(nn.Module):
 
         if x_reconst.shape != x.shape:
             if self.verbose:
-                print(f'output tensor shape {x_reconst.shape} is resized into tensor shape {x.shape}')
+                print(
+                    f'output tensor shape {x_reconst.shape} is resized into tensor shape {x.shape}')
             x_reconst = F.interpolate(
                 x_reconst, size=x.shape[2:], mode='bilinear', align_corners=True)
 
