@@ -71,7 +71,7 @@ class BasicResTransposeBlock(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self, in_dim, out_planes=1, block=BasicResTransposeBlock(), num_blocks=(2, 2, 2, 2),
-                 scale_factor=8, activation=nn.Sigmoid()):
+                 scale_factor=8, activation=nn.Sigmoid(), test=1):
         super().__init__()
 
         assert len(num_blocks) == 4, 'num_blocks must be array have length of 4'
@@ -79,15 +79,28 @@ class Decoder(nn.Module):
         self.next_planes = 512
         assert hasattr(block, 'compile')
 
-        self.fc = nn.Sequential(
-            nn.Linear(in_dim, 512),
-            nn.BatchNorm1d(512),
-            nn.ReLU(inplace=True),
-            layers.Reshape((512, 1, 1)),
-            nn.ConvTranspose2d(512, 512, kernel_size=scale_factor, bias=False),
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True)
-        )
+        if test == 1:
+            self.fc = nn.Sequential(
+                nn.Linear(in_dim, 512),
+                nn.BatchNorm1d(512),
+                nn.ReLU(inplace=True),
+                layers.Reshape((512, 1, 1)),
+                nn.ConvTranspose2d(512, 512, kernel_size=scale_factor, bias=False),
+                nn.BatchNorm2d(512),
+                nn.ReLU(inplace=True)
+            )
+        elif test == 2:
+            self.fc = nn.Sequential(
+                nn.Linear(in_dim, 512),
+                nn.BatchNorm1d(512),
+                nn.ReLU(inplace=True),
+                layers.Reshape((512, 1)),
+                nn.ConvTranspose1d(512, 512 * scale_factor * scale_factor,
+                                   kernel_size=3, stride=1, padding=1, bias=False),
+                nn.BatchNorm1d(512 * scale_factor * scale_factor),
+                nn.ReLU(inplace=True),
+                layers.Reshape((512, scale_factor, scale_factor)),
+            )
         # self.fc = nn.Sequential(
         #     nn.Linear(in_dim, 512),
         #     nn.BatchNorm1d(512),
@@ -103,6 +116,7 @@ class Decoder(nn.Module):
             self._make_layer(512, block, num_blocks[0], stride=2)
         )
         self.convt2_x = nn.Sequential(
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
             self._make_layer(256, block, num_blocks[1], stride=2)
         )
         self.convt3_x = nn.Sequential(
