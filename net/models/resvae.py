@@ -65,7 +65,7 @@ class Decoder(nn.Module):
             nn.BatchNorm1d(planes[0]),
             nn.ReLU(inplace=True),
             layers.Reshape((planes[0], 1, 1)),
-            nn.Upsample(scale_factor=scale_factor),
+            nn.Upsample(scale_factor=scale_factor, mode='bilinear', align_corners=True),
             *[TransposeBlock(planes[i], planes[i+1]) for i in range(len(planes)-1)],
             TransposeBlock(planes[-1], out_planes, activation=activation),
         )
