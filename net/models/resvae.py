@@ -61,11 +61,10 @@ class Decoder(nn.Module):
         super().__init__()
 
         self.decoder = nn.Sequential(
-            nn.Linear(in_dim, planes[0]),
-            nn.BatchNorm1d(planes[0]),
+            nn.Linear(in_dim, planes[0] * scale_factor * scale_factor),
+            nn.BatchNorm1d(planes[0] * scale_factor * scale_factor),
             nn.ReLU(inplace=True),
-            layers.Reshape((planes[0], 1, 1)),
-            nn.Upsample(scale_factor=scale_factor, mode='bilinear', align_corners=True),
+            layers.Reshape((planes[0], scale_factor, scale_factor)),
             *[TransposeBlock(planes[i], planes[i+1]) for i in range(len(planes)-1)],
             TransposeBlock(planes[-1], out_planes, activation=activation),
         )
