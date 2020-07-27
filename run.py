@@ -1,6 +1,7 @@
 import os
 import time
 import torch
+import torch.nn as nn
 from torchvision import transforms
 from torch.utils import data
 from collections import  defaultdict
@@ -104,7 +105,7 @@ for epoch in range(1, FLAGS.num_epochs):
     model.train()
     for step, ((ux, _), (lx, target)) in enumerate(zip(unlabeled_loader, labeled_loader)):
         target_index = torch.cat([(target_labels == t).nonzero().view(-1) for t in target.to(torch.long)])
-        step_loss = model(ux, lx, target_index, alpha=alpha)
+        step_loss = model(ux, lx, target_index, alpha)
         optim.zero_grad()
         step_loss.backward()
         optim.step()
