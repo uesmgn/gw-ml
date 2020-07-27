@@ -212,7 +212,7 @@ class ResVAE_M2(nn.Module):
         x_ = self.encoder(x)
         _, qy = self.y_inference(x_)
         _, y_pred = torch.max(qy, -1)
-        y = F.one_hot(y_pred, num_classes=self.y_dim).to(x.device, dtype=torch.float)
+        y = F.one_hot(y_pred, num_classes=self.y_dim).to(x.device, dtype=x.dtype)
         z, z_mean, z_var = self.z_inference(torch.cat((x_, y), -1))
         x_reconst = self.decoder(torch.cat((z, y), -1))
 
@@ -229,7 +229,7 @@ class ResVAE_M2(nn.Module):
 
     def _labeled_loss(self, x, target, alpha=1.):
         x_ = self.encoder(x)
-        y = F.one_hot(target, num_classes=self.y_dim).to(x.device, dtype=torch.float)
+        y = F.one_hot(target, num_classes=self.y_dim).to(x.device, dtype=x.dtype)
         z, z_mean, z_var = self.z_inference(torch.cat((x_, y), -1))
         x_reconst = self.decoder(torch.cat((z, y), -1))
 
@@ -258,7 +258,7 @@ class ResVAE_M2(nn.Module):
 
         for i in range(self.y_dim):
             qy_i = qy[:, i]
-            y = F.one_hot(torch.tensor(i), num_classes=self.y_dim).repeat(x.shape[0], 1).to(x.device, dtype=torch.float)
+            y = F.one_hot(torch.tensor(i), num_classes=self.y_dim).repeat(x.shape[0], 1).to(x.device, dtype=x.dtype)
             z, z_mean, z_var = self.z_inference(torch.cat((x_, y), -1))
             x_reconst = self.decoder(torch.cat((z, y), -1))
 
