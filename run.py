@@ -107,7 +107,7 @@ for epoch in range(1, FLAGS.num_epochs):
             ux, lx = ux.half(), lx.half()
         ux = ux.to(device)
         target_index = torch.cat([(target_labels == t).nonzero().view(-1) for t in target.to(torch.long)])
-        step_loss = model(ux, lx=lx, target=target_index, alpha=alpha)
+        step_loss = model(ux, lx=lx, target=target_index, alpha=alpha).sum()
         optim.zero_grad()
         step_loss.backward()
         optim.step()
@@ -132,6 +132,9 @@ for epoch in range(1, FLAGS.num_epochs):
         model.eval()
         with torch.no_grad():
             for step, (x, target) in enumerate(test_loader):
+                if FLAGS.use_fp16:
+                    x = x.half()
+                x = x.to(device)
                 target_idx = torch.cat([(target_labels == t).nonzero().view(-1) for t in target.to(torch.long)]).to(device)
                 out_params = model(x, return_params=True)
                 features = torch.cat((features, out_params['z']), 0)
