@@ -194,6 +194,8 @@ class ResVAE_M2(nn.Module):
 
     def forward(self, ux, lx=None, target=None, alpha=1., return_params=False):
         if lx is not None and target is not None:
+            lx = lx.to(ux.device)
+            target = target.to(ux.device)
             return self.criterion(ux, lx, target, alpha)
         else:
             params = self._forward_func(ux)

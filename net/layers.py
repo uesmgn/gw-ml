@@ -55,7 +55,6 @@ class Clustering(nn.Module):
         y = F.softmax(logits, -1)
         return logits, y
 
-
 def get_activation(key='relu'):
     if key in ('Tanh', 'tanh'):
         return nn.Tanh()

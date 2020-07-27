@@ -1,7 +1,8 @@
 import torch.nn as nn
 
 __all__ = [
-    'network_to_half'
+    'network_to_half',
+    'network_to_half_with_fp16'
 ]
 
 class tofp16(nn.Module):
@@ -20,4 +21,7 @@ def BN_convert_float(module):
 
 
 def network_to_half(net):
+    return BN_convert_float(net.half())
+
+def network_to_half_with_fp16(net):
     return nn.Sequential(tofp16(), BN_convert_float(net.half()))
