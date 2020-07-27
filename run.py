@@ -83,9 +83,6 @@ test_loader = _data_loader(test_set)
 grid_loader = _data_loader(grid_set, batch_size=len(grid_set), shuffle=False)
 
 resnet = models.resnet.ResNet(num_blocks=(1,1,1,1))
-if FLAGS.use_fp16:
-    resnet = ut.network_to_half_with_fp16(resnet)
-
 model = models.resvae.ResVAE_M2(resnet, x_dim=FLAGS.x_dim, z_dim=FLAGS.z_dim, y_dim=len(target_labels),
                                 filter_size=FLAGS.filter_size, verbose=True)
 
@@ -96,7 +93,6 @@ if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
     torch.backends.cudnn.benchmark = True
 model = model.to(device)
-print(model)
 optim = torch.optim.Adam(model.parameters(), lr=FLAGS.lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.5)
 
@@ -107,6 +103,8 @@ for epoch in range(1, FLAGS.num_epochs):
     loss = defaultdict(lambda: 0)
     model.train()
     for step, ((ux, _), (lx, target)) in enumerate(zip(unlabeled_loader, labeled_loader)):
+        if FLAGS.use_fp16:
+            ux, lx = ux.half(), lx.half()
         ux = ux.to(device)
         target_index = torch.cat([(target_labels == t).nonzero().view(-1) for t in target.to(torch.long)])
         step_loss = model(ux, lx=lx, target=target_index, alpha=alpha)
