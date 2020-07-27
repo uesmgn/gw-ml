@@ -91,8 +91,8 @@ if FLAGS.use_fp16:
     model = ut.network_to_half(model)
 if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
-    torch.backends.cudnn.benchmark = True
-model.to(device)
+    # torch.backends.cudnn.benchmark = True
+model = model.to(device)
 
 optim = torch.optim.Adam(model.parameters(), lr=FLAGS.lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.5)
