@@ -9,7 +9,8 @@ from attrdict import AttrDict as attrdict
 
 import net.models as models
 import datasets
-import utils.plotlib.plot as plot
+from utils.clustering import decomposition, metrics, functional
+from utils.plotlib import plot
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -62,6 +63,8 @@ print(f'labeled_set length: {len(labeled_set)}')
 print(f'unlabeled_batch: {FLAGS.batch_size}')
 print(f'labeled_batch: {labeled_batch}')
 
+alpha = len(dataset) * 0.1
+
 def _data_loader(dataset, batch_size=FLAGS.batch_size, num_workers=FLAGS.num_workers, shuffle=True, drop_last=True):
     return data.DataLoader(dataset,
                            batch_size=batch_size,
@@ -76,7 +79,9 @@ test_loader = _data_loader(test_set)
 grid_loader = _data_loader(grid_set, batch_size=len(grid_set), shuffle=False)
 
 resnet = models.resnet.ResNet(num_blocks=(2,2,2,2))
-model = models.resvae.ResVAE_M1(resnet, device=device, filter_size=6, verbose=True)
+model = models.resvae.ResVAE_M2(resnet, device=device,
+                                x_dim=256, z_dim=256, y_dim=len(target_labels),
+                                filter_size=6, verbose=True)
 optim = torch.optim.Adam(model.parameters(), lr=FLAGS.lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.5)
 
@@ -86,13 +91,13 @@ outdir = f'result_{int(time.time())}'
 for epoch in range(1, FLAGS.num_epochs):
     loss = defaultdict(lambda: 0)
     model.train()
-    for step, (x, target) in enumerate(data_loader):
+    for step, ((ux, _), (lx, target)) in enumerate(zip(unlabeled_loader, labeled_loader)):
         target_index = torch.cat([(target_labels == t).nonzero().view(-1) for t in target.to(torch.long)])
-        step_loss = model.criterion(x)
+        step_loss = model.criterion(ux, lx, target, alpha=alpha)
         optim.zero_grad()
         step_loss.backward()
         optim.step()
-        loss['m1loss'] += step_loss.item()
+        loss['m2_loss'] += step_loss.item()
     scheduler.step()
     print(f'epoch: {epoch} -', ', '.join([f'{k}: {v:.3f}' for k, v in loss.items()]))
 
@@ -100,9 +105,51 @@ for epoch in range(1, FLAGS.num_epochs):
         stats[k].append(v)
 
     if epoch % FLAGS.eval_step == 0:
+
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
+        features = torch.Tensor().to(device)
+        target_stack = np.array([]).astype(np.integer)
+        pred_index_stack = np.array([]).astype(np.integer)
+        acc = 0
+        N = 0
+
+        model.eval()
+        with torch.no_grad():
+            for step, (x, target) in enumerate(test_loader):
+                target_idx = torch.cat([(target_labels == t).nonzero().view(-1) for t in target.to(torch.long)]).to(device)
+                out_params = model(x, return_params=True)
+                features = torch.cat((features, out_params['z']), 0)
+                target_stack = np.append(target_stack, list(target.numpy()))
+                y_pred = out_params['y_pred']
+                acc += torch.nonzero(target_idx==y_pred).size(0)
+                N += y_pred.size(0)
+                pred_index_stack = np.append(pred_index_stack, list(y_pred.cpu().numpy()))
+        pred_stack = target_labels.repeat(pred_index_stack.size, 1).gather(1, torch.Tensor(pred_index_stack).to(torch.long).unsqueeze(1)).view(-1).numpy()
+        features = features.cpu().numpy()
+        acc = acc / N * 100
+        print(f'acc = {acc:.3f} at epoch {epoch}')
+        stats['test_acc'].append(test_acc)
+
+        if features.shape[1] > 2:
+            features = decomposition.TSNE().fit_transform(features)
+        if features.shape[1] != 2:
+            raise ValueError('features can not visualize')
+
+        plot.scatter(features[:, 0], features[:, 1], target_stack,
+                     out=f'{outdir}/latent_true_{epoch}.png',
+                     title=f'latent features at epoch {epoch} - true label')
+        plot.scatter(features[:, 0], features[:, 1], pred_stack,
+                     out=f'{outdir}/latent_pred_{epoch}.png',
+                     title=f'latent features at epoch {epoch} - pred label')
+        cm, cm_xlabels, cm_ylabels = metrics.confusion_matrix(
+                    pred_stack, target_stack, target_labels.numpy(), target_labels.numpy(), return_labels=True)
+        cm_figsize = (len(cm_xlabels) / 1.2, len(cm_ylabels) / 1.5)
+        plot.plot_confusion_matrix(cm, cm_xlabels, cm_ylabels,
+                                   out=f'{outdir}/cm_{epoch}.png',
+                                   xlabel='predicted', ylabel='true',
+                                   figsize=cm_figsize)
         for k, v in stats.items():
             data = np.stack((list(range(1, len(v)+1)), v), 1)
             plot.plot(data, out=f'{outdir}/{k}_{epoch}.png', title=f'{k}', xmin=1, xmax=len(v), xlabel='epoch', ylabel=k)
