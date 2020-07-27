@@ -13,22 +13,23 @@ from tqdm import tqdm
 
 class SampleGenerator(object):
 
-    def __init__(self, data, sample_count):
-        self._data = data
-        self._sample_count = sample_count
-        self._count = 0
 
-    def __iter__(self):
-        return SampleGenerator(self._data, self._sample_count)
+  def __init__(self, data, sample_count):
+    self._data = data
+    self._sample_count = sample_count
+    self._count = 0
 
-    def __len__(self):
-        return self._sample_count
+  def __iter__(self):
+    return SampleGenerator(self._data, self._sample_count)
 
-    def __next__(self):
-        return self.next()
+  def __len__(self):
+    return self._sample_count
 
-    def next(self):
-        if self._count >= self._sample_count:
-            raise StopIteration
-        self._count += 1
-        return self._data
+  def __next__(self):
+    return self.next()
+
+  def next(self):
+    if self._count >= self._sample_count:
+      raise StopIteration
+    self._count += 1
+    return self._data

@@ -1,7 +1,6 @@
 import torch.optim as optim
 from nn.functions import get_activation
 
-
 def get_activation(trial):
     activation_names = ['Tanh', 'ReLU', 'ELU']
     activation_name = trial.suggest_categorical('activation', activation_names)

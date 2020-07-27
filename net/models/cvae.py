@@ -74,7 +74,7 @@ class CVAE(nn.Module):
 
     def forward(self, x, target, return_params=False):
         f = self.encoder(x)
-        y_logits, y = self.classifier(f)
+          = self.classifier(f)
         xy = torch.cat((f, y), -1)
         z, z_mean, z_var = self.z(xy.detach())
         _, z_prior_mean, z_prior_var = self.z_prior(y)

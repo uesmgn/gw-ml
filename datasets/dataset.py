@@ -31,6 +31,11 @@ class GravitySpy(torch.utils.data.Dataset):
                                ' You can use download=True to download it')
 
         self.data, self.targets = torch.load(self.dataset_file)
+        self.targets_dict = {}
+        with open(self.target_file) as f:
+            dict = json.load(f)
+            for k, v in dict.items():
+                self.targets_dict[int(k)] = v
 
     def __len__(self):
         return len(self.data)
@@ -115,13 +120,16 @@ class GravitySpy(torch.utils.data.Dataset):
     def get_by_keys(self, keys):
         data_stack = []
         target_stack = []
+        targets_dict = {}
         for data, target in zip(self.data, self.targets):
             if int(target) in keys:
                 data_stack.append(data)
                 target_stack.append(target)
+                targets_dict[int(target)] = self.targets_dict[int(target)]
         data_stack = torch.stack(data_stack)
         target_stack = torch.stack(target_stack)
         self.data, self.targets = data_stack, target_stack
+        self.targets_dict = targets_dict
 
     def split_dataset(self, alpha=0.8, shuffle=True):
         N_train = int(self.__len__() * alpha)

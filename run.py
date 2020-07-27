@@ -9,6 +9,7 @@ from attrdict import AttrDict as attrdict
 
 import net.models as models
 import datasets
+import utils as ut
 from utils.clustering import decomposition, metrics, functional
 from utils.plotlib import plot
 
@@ -47,8 +48,9 @@ dataset = getattr(datasets, FLAGS.dataset)(root=ROOT, transform=data_transform,
                                            setup_transform=setup_transform,
                                            download=True)
 
-target_labels = torch.Tensor([0, 5, 6, 10, 15, 16, 17, 19, 21]).to(torch.long)
+target_labels = torch.Tensor([0, 1, 3, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 19, 21]).to(torch.long)
 dataset.get_by_keys(target_labels)
+targets_dict = dataset.targets_dict
 train_set, test_set = dataset.split_dataset()
 labeled_set, unlabeled_set = train_set.uniform_label_sampler(target_labels, num_per_class=50)
 grid_set, _ = dataset.uniform_label_sampler(target_labels, num_per_class=1)
@@ -71,6 +73,8 @@ def _data_loader(dataset, batch_size=FLAGS.batch_size, num_workers=FLAGS.num_wor
                            num_workers=num_workers,
                            shuffle=shuffle,
                            drop_last=drop_last)
+def _to_acronym(arr, dict):
+    return np.array([f'{l}-{ut.acronym(dict[l])}' for l in arr])
 
 data_loader = _data_loader(dataset)
 unlabeled_loader = _data_loader(unlabeled_set)
@@ -80,7 +84,7 @@ grid_loader = _data_loader(grid_set, batch_size=len(grid_set), shuffle=False)
 
 resnet = models.resnet.ResNet(num_blocks=(2,2,2,2))
 model = models.resvae.ResVAE_M2(resnet, device=device,
-                                x_dim=256, z_dim=256, y_dim=len(target_labels),
+                                x_dim=64, z_dim=64, y_dim=len(target_labels),
                                 filter_size=6, verbose=True)
 optim = torch.optim.Adam(model.parameters(), lr=FLAGS.lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.5)
@@ -137,16 +141,21 @@ for epoch in range(1, FLAGS.num_epochs):
         if features.shape[1] != 2:
             raise ValueError('features can not visualize')
 
-        plot.scatter(features[:, 0], features[:, 1], target_stack,
+        target_acronym = _to_acronym(target_stack, targets_dict)
+        pred_acronym = _to_acronym(pred_stack, targets_dict)
+
+        plot.scatter(features[:, 0], features[:, 1], target_acronym,
                      out=f'{outdir}/latent_true_{epoch}.png',
                      title=f'latent features at epoch {epoch} - true label')
-        plot.scatter(features[:, 0], features[:, 1], pred_stack,
+        plot.scatter(features[:, 0], features[:, 1], pred_acronym,
                      out=f'{outdir}/latent_pred_{epoch}.png',
                      title=f'latent features at epoch {epoch} - pred label')
         cm, cm_xlabels, cm_ylabels = metrics.confusion_matrix(
                     pred_stack, target_stack, target_labels.numpy(), target_labels.numpy(), return_labels=True)
         cm_figsize = (len(cm_xlabels) / 1.2, len(cm_ylabels) / 1.5)
-        plot.plot_confusion_matrix(cm, cm_xlabels, cm_ylabels,
+        cm_xlabels_acronym = _to_acronym(cm_xlabels, targets_dict)
+        cm_ylabels_acronym = _to_acronym(cm_ylabels, targets_dict)
+        plot.plot_confusion_matrix(cm, cm_xlabels_acronym, cm_ylabels_acronym,
                                    out=f'{outdir}/cm_{epoch}.png',
                                    xlabel='predicted', ylabel='true',
                                    figsize=cm_figsize)
