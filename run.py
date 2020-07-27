@@ -16,7 +16,6 @@ from utils.plotlib import plot
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 FLAGS = attrdict(
-    x_dim=486,
     batch_size=32,
     num_epochs=5000,
     num_workers=4,
@@ -24,23 +23,23 @@ FLAGS = attrdict(
     eval_step=20,
     save_step=100,
     lr=1e-3,
-    dataset='gravityspy'
+    dataset='gravityspy',
+    use_fp16=True,
+    x_size=96,
+    x_dim=64,
+    z_dim=64,
+    filter_size=3
 )
 
-device = torch.device('cpu')
-if torch.cuda.is_available():
-    device = torch.device('cuda')
-    torch.backends.cudnn.benchmark=True
-
 setup_transform = transforms.Compose([
-                transforms.CenterCrop(FLAGS.x_dim),
+                transforms.CenterCrop(486),
                 transforms.Grayscale(),
                 transforms.ToTensor()
             ])
 
 data_transform = transforms.Compose([
                 transforms.Grayscale(),
-                transforms.Resize(192),
+                transforms.Resize(FLAGS.x_size),
                 transforms.ToTensor()
             ])
 
@@ -82,10 +81,18 @@ labeled_loader = _data_loader(labeled_set, batch_size=labeled_batch)
 test_loader = _data_loader(test_set)
 grid_loader = _data_loader(grid_set, batch_size=len(grid_set), shuffle=False)
 
-resnet = models.resnet.ResNet(num_blocks=(2,2,2,2))
-model = models.resvae.ResVAE_M2(resnet, device=device,
-                                x_dim=64, z_dim=64, y_dim=len(target_labels),
-                                filter_size=6, verbose=True)
+resnet = models.resnet.ResNet(num_blocks=(1,1,1,1))
+model = models.resvae.ResVAE_M2(resnet, x_dim=FLAGS.x_dim, z_dim=FLAGS.z_dim, y_dim=len(target_labels),
+                                filter_size=FLAGS.filter_size, verbose=True)
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+if FLAGS.use_fp16:
+    model = ut.network_to_half(model)
+if torch.cuda.device_count() > 1:
+    model = nn.DataParallel(model)
+    torch.backends.cudnn.benchmark = True
+model.to(device)
+
 optim = torch.optim.Adam(model.parameters(), lr=FLAGS.lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.5)
 
@@ -97,7 +104,7 @@ for epoch in range(1, FLAGS.num_epochs):
     model.train()
     for step, ((ux, _), (lx, target)) in enumerate(zip(unlabeled_loader, labeled_loader)):
         target_index = torch.cat([(target_labels == t).nonzero().view(-1) for t in target.to(torch.long)])
-        step_loss = model.criterion(ux, lx, target_index, alpha=alpha)
+        step_loss = model(ux, lx, target_index, alpha=alpha)
         optim.zero_grad()
         step_loss.backward()
         optim.step()

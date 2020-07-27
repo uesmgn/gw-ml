@@ -100,11 +100,10 @@ class Decoder(nn.Module):
 
 
 class ResVAE_M1(nn.Module):
-    def __init__(self, resnet, device='cpu', z_dim=64, filter_size=6,
+    def __init__(self, resnet, z_dim=64, filter_size=6,
                  activation=nn.Sigmoid(), verbose=False):
         super().__init__()
 
-        self.device = device
         self.z_dim = z_dim
         self.in_planes = resnet.in_planes
         self.encoder = Encoder(resnet, z_dim)
@@ -120,7 +119,6 @@ class ResVAE_M1(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
         self.verbose = verbose
-        self = self.to(device)
 
     def forward(self, x, return_params=False):
         x, x_reconst, z, z_mean, z_var = self._forward_func(x)
@@ -140,7 +138,6 @@ class ResVAE_M1(nn.Module):
         return loss
 
     def _forward_func(self, x):
-        x = x.to(self.device)
         z, z_mean, z_var = self.encoder(x)
         x_reconst = self.decoder(z)
 
@@ -155,11 +152,10 @@ class ResVAE_M1(nn.Module):
 
 
 class ResVAE_M2(nn.Module):
-    def __init__(self, resnet, device='cpu', x_dim=256, z_dim=64, y_dim=10,
+    def __init__(self, resnet, x_dim=256, z_dim=64, y_dim=10,
                  filter_size=6, activation=nn.Sigmoid(), verbose=False):
         super().__init__()
 
-        self.device = device
         self.z_dim = z_dim
         self.y_dim = y_dim
         self.in_planes = resnet.in_planes
@@ -195,29 +191,26 @@ class ResVAE_M2(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
         self.verbose = verbose
-        self = self.to(device)
 
-    def forward(self, x, return_params=False):
-        params = self._forward_func(x)
-        if return_params:
-            return params
-        return params['x_reconst']
+    def forward(self, ux, lx=None, target=None, alpha=1., return_params=False):
+        if lx is not None and target is not None:
+            return self.criterion(ux, lx, target, alpha)
+        else:
+            params = self._forward_func(ux)
+            if return_params:
+                return params
+            return params['x_reconst']
 
     def criterion(self, ux, lx, target, alpha=1.):
-        ux = ux.to(self.device)
-        lx = lx.to(self.device)
-        target = target.to(self.device)
         labeled_loss = self._labeled_loss(lx, target, alpha=alpha)
         unlabeled_loss = self._unlabeled_loss(ux)
         return labeled_loss + unlabeled_loss
 
     def _forward_func(self, x, alpha=1.):
-        x = x.to(self.device)
         x_ = self.encoder(x)
         _, qy = self.y_inference(x_)
         _, y_pred = torch.max(qy, -1)
-        y = F.one_hot(y_pred, num_classes=self.y_dim).to(
-            self.device, dtype=torch.float32)
+        y = F.one_hot(y_pred, num_classes=self.y_dim).to(x.device, dtype=torch.float)
         z, z_mean, z_var = self.z_inference(torch.cat((x_, y), -1))
         x_reconst = self.decoder(torch.cat((z, y), -1))
 
@@ -234,8 +227,7 @@ class ResVAE_M2(nn.Module):
 
     def _labeled_loss(self, x, target, alpha=1.):
         x_ = self.encoder(x)
-        y = F.one_hot(target, num_classes=self.y_dim).to(
-            self.device, dtype=torch.float32)
+        y = F.one_hot(target, num_classes=self.y_dim).to(x.device, dtype=torch.float)
         z, z_mean, z_var = self.z_inference(torch.cat((x_, y), -1))
         x_reconst = self.decoder(torch.cat((z, y), -1))
 
@@ -264,8 +256,7 @@ class ResVAE_M2(nn.Module):
 
         for i in range(self.y_dim):
             qy_i = qy[:, i]
-            y = F.one_hot(torch.tensor(i), num_classes=self.y_dim).repeat(
-                x.shape[0], 1).to(self.device, dtype=torch.float32)
+            y = F.one_hot(torch.tensor(i), num_classes=self.y_dim).repeat(x.shape[0], 1).to(x.device, dtype=torch.float)
             z, z_mean, z_var = self.z_inference(torch.cat((x_, y), -1))
             x_reconst = self.decoder(torch.cat((z, y), -1))
 
