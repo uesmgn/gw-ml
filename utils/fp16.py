@@ -1,8 +1,7 @@
 import torch.nn as nn
 
 __all__ = [
-    'network_to_half',
-    'network_to_half_with_fp16'
+    'network_to_half'
 ]
 
 class tofp16(nn.Module):
