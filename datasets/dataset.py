@@ -37,7 +37,7 @@ class GravitySpy(torch.utils.data.Dataset):
             for k, v in dict.items():
                 self.targets_dict[int(k)] = v
         if keys is not None:
-            self = self.get_by_keys(keys)
+            self = self.get_by_keys
 
     def __len__(self):
         return len(self.data)
@@ -73,9 +73,6 @@ class GravitySpy(torch.utils.data.Dataset):
 
     def download(self, force_extract=False, force_process=False):
         """Download the GravitySpy data if it doesn't exist."""
-
-        if os.path.exists(self.dataset_file):
-            return
 
         os.makedirs(self.raw_folder, exist_ok=True)
         os.makedirs(self.processed_folder, exist_ok=True)
