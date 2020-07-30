@@ -16,8 +16,8 @@ class GravitySpy(torch.utils.data.Dataset):
 
     resouce = 'https://zenodo.org/record/1476551/files/trainingsetv1d1.tar.gz'
 
-    def __init__(self, root, transform=None, target_transform=None, setup_transform=None, download=False,
-                 force_extract=False, force_process=False):
+    def __init__(self, root, keys=None, transform=None, target_transform=None, setup_transform=None,
+                 download=False, force_extract=False, force_process=False):
         self.root = root
         self.transform = transform
         self.target_transform = target_transform
@@ -36,6 +36,8 @@ class GravitySpy(torch.utils.data.Dataset):
             dict = json.load(f)
             for k, v in dict.items():
                 self.targets_dict[int(k)] = v
+        if keys is not None:
+            self = self.get_by_keys(keys)
 
     def __len__(self):
         return len(self.data)
@@ -129,8 +131,10 @@ class GravitySpy(torch.utils.data.Dataset):
                 targets_dict[i] = self.targets_dict[int(target)]
         data_stack = torch.stack(data_stack)
         target_stack = torch.Tensor(target_stack).to(torch.long)
-        self.data, self.targets = data_stack, target_stack
-        self.targets_dict = targets_dict
+        dataset = copy.deepcopy(self)
+        dataset.data, dataset.targets = data_stack, target_stack
+        dataset.targets_dict = targets_dict
+        return dataset
 
     def split_dataset(self, alpha=0.8, shuffle=True):
         N_train = int(self.__len__() * alpha)

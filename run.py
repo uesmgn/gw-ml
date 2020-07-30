@@ -29,9 +29,10 @@ FLAGS = attrdict(
     log_step=10,
     eval_step=5,
     save_step=100,
-    lr=1e-2,
-    momentum=0.5,
+    lr=3e-4,
+    momentum=0.9,
     weight_decay=1e-4,
+    targets=(0, 1, 3, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 19, 21),
     opt_level='O1',
     dataset='gravityspy',
     local_rank=0,
@@ -57,22 +58,12 @@ def _to_values(arr, dic):
     ret = [dic[x] for x in arr]
     return ret
 
+cuda = torch.cuda.is_available()
+assert cuda, 'This program only support running on GPU.'
 device = torch.device('cuda:0')
-torch.backends.cudnn.benchmark = True
-
-FLAGS.distributed = False
-if 'WORLD_SIZE' in os.environ:
-    FLAGS.distributed = int(os.environ['WORLD_SIZE']) > 1
-
 torch.cuda.set_device(FLAGS.local_rank)
-
-if FLAGS.distributed:
-    torch.distributed.init_process_group(backend='nccl',
-                                         init_method='env://')
-    world_size = torch.distributed.get_world_size()
-    print(f'world size: {world_size}')
-
-assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
+torch.backends.cudnn.benchmark = True
+assert torch.backends.cudnn.enabled, "amp requires cudnn backend to be enabled."
 
 setup_transform = transforms.Compose([
                 transforms.CenterCrop(486),
@@ -90,9 +81,10 @@ dataset = getattr(datasets, FLAGS.dataset)(root=ROOT, transform=data_transform,
                                            setup_transform=setup_transform,
                                            download=True)
 
-target_labels = torch.Tensor([0, 1, 3, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 19, 21]).to(torch.long)
-dataset.get_by_keys(target_labels)
-targets_dict = {k: f'{k}-{ut.acronym(v)}' for k, v in dataset.targets_dict.items()}
+targets = torch.Tensor(FLAGS.targets).to(torch.long)
+dataset = dataset.get_by_keys(target_labels)
+targets_dict = {k: ut.acronym(v) for k, v in dataset.targets_dict.items()}
+
 train_set, test_set = dataset.split_dataset()
 labeled_set, unlabeled_set = train_set.uniform_label_sampler(target_labels, num_per_class=10)
 grid_set, _ = dataset.uniform_label_sampler(target_labels, num_per_class=1)
@@ -137,7 +129,7 @@ outdir = f'result_{int(time.time())}'
 for epoch in range(1, FLAGS.num_epochs):
     loss = defaultdict(lambda: 0)
     model.train()
-    
+
     for step, ((ux, _), (lx, target)) in enumerate(zip(unlabeled_loader, cycle(labeled_loader))):
         target = F.one_hot(target, num_classes=len(target_labels))
         ux, lx, target = ux.to(device), lx.to(device), target.to(device)
