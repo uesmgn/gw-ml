@@ -1,5 +1,6 @@
 import os
 import glob
+import torchvision.transforms as transforms
 import PIL
 import pandas as pd
 import numpy  as  np
@@ -69,10 +70,10 @@ class GravitySpy(torch.utils.data.Dataset):
         return os.path.join(self.processed_folder, 'dataset.pt')
 
     @property
-    def target_file(self):
-        return os.path.join(self.processed_folder, 'target.json')
+    def meta_file(self):
+        return os.path.join(self.processed_folder, 'dataset_meta.json')
 
-    def download(self, force_extract=False, force_process=False):
+    def download(self, force_extract=False, force_process=False, filter_str='*'):
         """Download the GravitySpy data if it doesn't exist."""
 
         os.makedirs(self.raw_folder, exist_ok=True)
@@ -90,32 +91,38 @@ class GravitySpy(torch.utils.data.Dataset):
         # process and save as torch files
         if force_process or not os.path.exists(self.dataset_file):
             print('Processing...')
-            dataset, target_dir = self.read_image_folder(self.extract_folder)
-            with open(self.dataset_file, 'wb') as f:
+            images, targets, meta = self.load_image_folder(self.extract_folder, filter_str)
+            with open(self.dataset_file, 'w') as f:
+                dataset = (images, targets)
                 torch.save(dataset, f)
-            with open(self.target_file, 'w') as f:
-                json.dump(target_dir, f, indent=4)
+            with open(self.meta_file, 'w') as f:
+                json.dump(meta, f, indent=4)
             print('Done!')
 
-    def read_image_folder(self, path):
+    def load_image_folder(self, path, filter_str='*'):
+        import uuid
+
         subdirs = sorted([os.path.basename(p) for p in glob.glob(f'{path}/*')])
-        img_tensor_stack = []
-        target_stack = []
-        target_dir = {}
+        images = []
+        targets = []
+        meta = {}
+        index = 0
 
         for i, subdir in enumerate(tqdm(subdirs)):
-            files = glob.glob(os.path.join(path, subdir, '*_2.0.png'))
+            files = glob.glob(os.path.join(path, subdir, filter_str))
             target  = torch.tensor(i).long()
-            target_dir[i] = subdir
 
             for f in files:
-                img = PIL.Image.open(f)
-                img_tensor = self.setup_transform(img)
-                img_tensor_stack.append(img_tensor)
-                target_stack.append(target)
-        img_tensor_stack = torch.stack(img_tensor_stack)
-        target_stack = torch.stack(target_stack)
-        return (img_tensor_stack, target_stack), target_dir
+                image = PIL.Image.open(f)
+                image = trainsforms.functional.pil_to_tensor(image)
+                images.append(image)
+                targets.append(target)
+                id = uuid.uuid4().hex
+                meta[id] = {'file': f, 'index': index, 'target': i}
+
+        images = torch.stack(images)
+        targets = torch.stack(targets)
+        return images, targets, meta
 
     def split_dataset(self, alpha=0.8, shuffle=True):
         N_train = int(self.__len__() * alpha)
