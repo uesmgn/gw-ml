@@ -16,7 +16,8 @@ class GravitySpy(torch.utils.data.Dataset):
 
     resouce = 'https://zenodo.org/record/1476551/files/trainingsetv1d1.tar.gz'
 
-    def __init__(self, root, keys=None, transform=None, target_transform=None, setup_transform=None,
+    def __init__(self, root, labels=None, num_per_label=None,
+                 transform=None, target_transform=None, setup_transform=None,
                  download=False, force_extract=False, force_process=False):
         self.root = root
         self.transform = transform
@@ -31,13 +32,13 @@ class GravitySpy(torch.utils.data.Dataset):
                                ' You can use download=True to download it')
 
         self.data, self.targets = torch.load(self.dataset_file)
-        self.targets_dict = {}
-        with open(self.target_file) as f:
-            dict = json.load(f)
-            for k, v in dict.items():
-                self.targets_dict[int(k)] = v
-        if keys is not None:
-            self = self.get_by_keys
+
+        if labels is not None:
+            targets = self.targets.numpy()
+            (idx,) = np.hstack([np.where(targets==label) for label in labels])
+            np.random.shuffle(idx)
+            idx = np.hstack([list(filter(lambda i: targets[i] == label, idx))[:num_per_label] for label in labels])
+            self.data, self.targets = self.data[idx], self.targets[idx]
 
     def __len__(self):
         return len(self.data)
@@ -116,55 +117,32 @@ class GravitySpy(torch.utils.data.Dataset):
         target_stack = torch.stack(target_stack)
         return (img_tensor_stack, target_stack), target_dir
 
-    def get_by_keys(self, keys):
-        data_stack = []
-        target_stack = []
-        targets_dict = {}
-        for data, target in zip(self.data, self.targets):
-            if int(target) in keys:
-                i = list(keys).index(int(target))
-                data_stack.append(data)
-                target_stack.append(i)
-                targets_dict[i] = self.targets_dict[int(target)]
-        data_stack = torch.stack(data_stack)
-        target_stack = torch.Tensor(target_stack).to(torch.long)
-        dataset = copy.deepcopy(self)
-        dataset.data, dataset.targets = data_stack, target_stack
-        dataset.targets_dict = targets_dict
-        return dataset
-
     def split_dataset(self, alpha=0.8, shuffle=True):
         N_train = int(self.__len__() * alpha)
-        idx = torch.randperm(self.__len__()) if shuffle else torch.arange(self.__len__())
-        data = self.data[idx]
-        targets = self.targets[idx]
+        idx = np.arange(self.__len__())
+        if shuffle:
+            np.random.shuffle(idx)
+        train_idx, test_idx = idx[:N_train], idx[N_train:]
 
-        train_data, train_targets = data[:N_train], targets[:N_train]
         train_set = copy.deepcopy(self)
-        train_set.data, train_set.targets = train_data, train_targets
+        train_set.data, train_set.targets = self.data[train_idx], self.targets[train_idx]
 
-        test_data, test_targets = data[N_train:], targets[N_train:]
         test_set = copy.deepcopy(self)
-        test_set.data, test_set.targets = test_data, test_targets
+        test_set.data, test_set.targets = self.data[test_idx], self.targets[test_idx]
 
         return train_set, test_set
 
-    def uniform_label_sampler(self, labels, num_per_class=30, shuffle=True):
-        idx = torch.randperm(self.__len__()) if shuffle else torch.arange(self.__len__())
-        data = self.data[idx]
-        targets = self.targets[idx]
-
-        uni_idx = np.empty(0)
-        for i in labels:
-            match = torch.nonzero(targets==i)[:,0].numpy()[:num_per_class]
-            uni_idx = np.append(uni_idx, match)
-
-        rem_idx = np.array(list(set(idx.numpy()) - set(uni_idx))).astype(np.integer)
+    def uniform_label_sampler(self, labels, num_per_label=50):
+        targets = self.targets.numpy()
+        (idx,) = np.hstack([np.where(targets==label) for label in labels])
+        np.random.shuffle(idx)
+        uni_idx = np.hstack([list(filter(lambda i: targets[i] == label, idx))[:num_per_label] for label in labels])
+        rem_idx = np.array(list(set(idx) - set(uni_idx))).astype(np.integer)
 
         uni_set = copy.deepcopy(self)
-        uni_set.data, uni_set.targets = data[uni_idx], targets[uni_idx]
+        uni_set.data, uni_set.targets = self.data[uni_idx], self.targets[uni_idx]
 
         rem_set = copy.deepcopy(self)
-        rem_set.data, rem_set.targets = data[rem_idx], targets[rem_idx]
+        rem_set.data, rem_set.targets = self.data[rem_idx], self.targets[rem_idx]
 
         return uni_set, rem_set
