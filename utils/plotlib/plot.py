@@ -67,19 +67,20 @@ def plot(data, out=None, **kwargs):
             plt.close()
 
 
-def scatter(xx, yy, labels, out=None, **kwargs):
+def scatter(xx, yy, labels, labels_unique=None, out=None, **kwargs):
     xx, yy, labels = check_array(
         xx, yy, labels, check_size=True, dtype=[np.float, np.float, np.str])
-    labels_unique = check_array(labels, unique=True, sort=True, dtype=np.str)
+    labels_unique = labels_unique or check_array(labels, unique=True, sort=True, dtype=np.str)
     cmap = plt.get_cmap("tab20")
     colors = [mcolors.rgb2hex(cmap(i)) for i in range(20)]
     colors = np.tile(colors, 3)
     _init_plot(**kwargs)
     for i, label in enumerate(labels_unique):
+        if label not in labels:
+            continue
         idx = np.where(labels==label)
         x = xx[idx]
         y = yy[idx]
-        label = acronym(label)
         color = colors[i]
         plt.scatter(x, y, c=color, s=8.0, label=label)
     _setup_plot(**kwargs)

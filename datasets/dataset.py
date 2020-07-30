@@ -104,7 +104,7 @@ class GravitySpy(torch.utils.data.Dataset):
         target_dir = {}
 
         for i, subdir in enumerate(tqdm(subdirs)):
-            files = glob.glob(os.path.join(path, subdir, '*_1.0.png'))
+            files = glob.glob(os.path.join(path, subdir, '*_2.0.png'))
             target  = torch.tensor(i).long()
             target_dir[i] = subdir
 
@@ -123,11 +123,12 @@ class GravitySpy(torch.utils.data.Dataset):
         targets_dict = {}
         for data, target in zip(self.data, self.targets):
             if int(target) in keys:
+                i = list(keys).index(int(target))
                 data_stack.append(data)
-                target_stack.append(target)
-                targets_dict[int(target)] = self.targets_dict[int(target)]
+                target_stack.append(i)
+                targets_dict[i] = self.targets_dict[int(target)]
         data_stack = torch.stack(data_stack)
-        target_stack = torch.stack(target_stack)
+        target_stack = torch.Tensor(target_stack).to(torch.long)
         self.data, self.targets = data_stack, target_stack
         self.targets_dict = targets_dict
 

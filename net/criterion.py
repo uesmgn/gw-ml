@@ -5,7 +5,7 @@ import  numpy as np
 eps = 1e-10
 
 def bce_loss(inputs, targets):
-    loss = F.binary_cross_entropy(inputs, targets, reduction='none').view(inputs.shape[0], -1)
+    loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none').view(inputs.shape[0], -1)
     return loss
 
 def log_norm_kl(mean, var, mean_=None, var_=None):

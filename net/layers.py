@@ -25,11 +25,11 @@ class Gaussian(nn.Module):
         super().__init__()
         self.features = nn.Linear(in_dim, out_dim * 2)
 
-    def forward(self, x, reparameterize=True, eps=1e-10):
+    def forward(self, x, eps=1e-8):
         x = self.features(x)
         mean, logit = torch.split(x, x.shape[1] // 2, 1)
         var = F.softplus(logit) + eps
-        if reparameterize:
+        if self.training:
             x = self._reparameterize(mean, var)
         else:
             x = mean

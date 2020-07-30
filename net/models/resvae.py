@@ -9,17 +9,18 @@ from .. import layers, criterion
 
 
 class Encoder(nn.Module):
-    def __init__(self, resnet, z_dim=64):
+    def __init__(self, in_planes=1, out_dim=2, block=BasicResBlock(),
+                 planes=(64, 128, 256, 512), num_blocks=(2, 2, 2, 2)):
         super().__init__()
 
-        self.z_dim = z_dim
-        exp = resnet.expansion
+        resnet = ResNet(in_planes=in_planes, block=block, planes=planes, num_blocks=num_blocks)
+        self.num_final_fc = resnet.num_final_fc
         self.encoder = nn.Sequential(
             *list(resnet.children())[:-1],  # remove final layer
-            nn.BatchNorm1d(512 * exp),
+            nn.BatchNorm1d(self.num_final_fc),
             nn.ReLU(inplace=True)
         )
-        self.gaussian = layers.Gaussian(512 * exp, z_dim)
+        self.gaussian = layers.Gaussian(self.num_final_fc, out_dim)
 
     def forward(self, x):
         x = self.encoder(x)
@@ -28,38 +29,37 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, in_dim, out_planes=1, block=TransposeResBlock(), num_blocks=(1, 1, 1, 1),
-                 filter_size=6, activation=nn.Sigmoid(), test=1):
+    def __init__(self, in_dim=2, out_planes=1, block=TransposeResBlock(), 
+                 planes=(512, 256, 128, 64), num_blocks=(2, 2, 2, 2),
+                 filter_size=8, activation=nn.Sigmoid()):
         super().__init__()
 
         assert len(num_blocks) == 4, 'num_blocks must be array have length of 4'
-
-        self.next_planes = 512
+        assert len(planes) == 4, 'planes must be array have length of 4'
+        self.next_planes = planes[0]
         assert hasattr(block, 'compile')
 
         self.fc = nn.Sequential(
-            nn.Linear(in_dim, 512 * filter_size * filter_size),
+            nn.Linear(in_dim, planes[0] * filter_size * filter_size),
             nn.ReLU(inplace=True),
-            layers.Reshape((512, filter_size, filter_size))
+            layers.Reshape((planes[0], filter_size, filter_size))
         )
         self.convt1_x = nn.Sequential(
-            self._make_layer(512, block, num_blocks[0], stride=2),
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+            self._make_layer(planes[1], block, num_blocks[0], stride=2),
         )
         self.convt2_x = nn.Sequential(
-            self._make_layer(256, block, num_blocks[1], stride=2)
+            self._make_layer(planes[2], block, num_blocks[1], stride=2)
         )
         self.convt3_x = nn.Sequential(
-            self._make_layer(128, block, num_blocks[2], stride=2)
+            self._make_layer(planes[3], block, num_blocks[2], stride=2)
         )
         self.convt4_x = nn.Sequential(
-            self._make_layer(64, block, num_blocks[3], stride=2)
+            self._make_layer(planes[3], block, num_blocks[3], stride=2),
         )
         self.convt5_x = nn.Sequential(
-            nn.ConvTranspose2d(64, out_planes, kernel_size=1, bias=False),
-            nn.BatchNorm2d(1)
+            self._block(block, in_planes=planes[3] * block.expansion,
+                        out_planes=out_planes, stride=2, activation=activation)
         )
-        self.activation = activation
 
         for m in self.modules():
             if isinstance(m, nn.ConvTranspose2d):
@@ -95,7 +95,6 @@ class Decoder(nn.Module):
         x = self.convt3_x(x)
         x = self.convt4_x(x)
         x = self.convt5_x(x)
-        x = self.activation(x)
         return x
 
 
@@ -152,18 +151,20 @@ class ResVAE_M1(nn.Module):
 
 
 class ResVAE_M2(nn.Module):
-    def __init__(self, resnet, x_dim=256, z_dim=64, y_dim=10,
-                 filter_size=6, activation=nn.Sigmoid(), verbose=False):
+    def __init__(self, b1=BasicResBlock(), b2=TransposeResBlock(), 
+                 x_dim=256, z_dim=64, y_dim=10,
+                 num_blocks=(2, 2, 2, 2), planes=(64, 128, 256, 512), 
+                 filter_size=8, activation=nn.Sigmoid(), verbose=False):
         super().__init__()
 
         self.z_dim = z_dim
         self.y_dim = y_dim
-        self.in_planes = resnet.in_planes
-        encoder = Encoder(resnet, z_dim)
-        exp = resnet.expansion
+        self.in_planes = 1
+        encoder = Encoder(in_planes=self.in_planes, block=b1, planes=planes, num_blocks=num_blocks)
+        num_final_fc= encoder.num_final_fc
         self.encoder = nn.Sequential(
-            *list(encoder.children())[:-1],  # remove final layer
-            nn.Linear(512 * exp, x_dim),
+            *list(encoder.children())[:-1],  # remove final gaussian layer
+            nn.Linear(num_final_fc, x_dim),
             nn.BatchNorm1d(x_dim),
             nn.ReLU(inplace=True)
         )
@@ -179,7 +180,8 @@ class ResVAE_M2(nn.Module):
             nn.ReLU(inplace=True),
             layers.Gaussian(512, z_dim)
         )
-        self.decoder = Decoder(z_dim + y_dim, out_planes=self.in_planes,
+        self.decoder = Decoder(in_dim=z_dim + y_dim, out_planes=self.in_planes,
+                               block=b2, planes=planes[::-1], num_blocks=num_blocks[::-1],
                                filter_size=filter_size, activation=activation)
 
         for m in self.modules():
@@ -194,8 +196,6 @@ class ResVAE_M2(nn.Module):
 
     def forward(self, ux, lx=None, target=None, alpha=1., return_params=False):
         if lx is not None and target is not None:
-            lx = lx.to(ux.device)
-            target = target.to(ux.device)
             return self.criterion(ux, lx, target, alpha)
         else:
             params = self._forward_func(ux)
@@ -206,8 +206,8 @@ class ResVAE_M2(nn.Module):
     def criterion(self, ux, lx, target, alpha=1.):
         labeled_loss = self._labeled_loss(lx, target, alpha=alpha)
         unlabeled_loss = self._unlabeled_loss(ux)
-        return labeled_loss + unlabeled_loss
-
+        return labeled_loss, unlabeled_loss
+        
     def _forward_func(self, x, alpha=1.):
         x_ = self.encoder(x)
         _, qy = self.y_inference(x_)
@@ -227,11 +227,11 @@ class ResVAE_M2(nn.Module):
             qy=qy, y_pred=y_pred, z=z, z_mean=z_mean, x_reconst=x_reconst
         )
 
-    def _labeled_loss(self, x, target, alpha=1.):
+    def _labeled_loss(self, x, y, alpha=1.):
         x_ = self.encoder(x)
-        y = F.one_hot(target, num_classes=self.y_dim).to(x_.device, dtype=x_.dtype)
-        z, z_mean, z_var = self.z_inference(torch.cat((x_, y), -1))
-        x_reconst = self.decoder(torch.cat((z, y), -1))
+        y_ = y.to(x_.dtype)
+        z, z_mean, z_var = self.z_inference(torch.cat((x_, y_), -1))
+        x_reconst = self.decoder(torch.cat((z, y_), -1))
 
         if x_reconst.shape != x.shape:
             if self.verbose:
@@ -246,31 +246,33 @@ class ResVAE_M2(nn.Module):
 
         y_logits, _ = self.y_inference(x_)
 
+        target = torch.argmax(y, dim=1)
         sup_loss = alpha * \
             criterion.softmax_cross_entropy(y_logits, target).sum(-1)
-
-        return (log_p_x + log_p_y + log_p_z + sup_loss).mean()
+    
+        labeled_loss = log_p_x + log_p_y + log_p_z + sup_loss
+        return labeled_loss
 
     def _unlabeled_loss(self, x):
         unlabeled_loss = 0
         x_ = self.encoder(x)  # (batch_size, 512 * block.expansion)
         _, qy = self.y_inference(x_)
-
+        y = F.one_hot(torch.arange(self.y_dim), num_classes=self.y_dim).to(x_.device, dtype=x_.dtype)
         for i in range(self.y_dim):
             qy_i = qy[:, i]
-            y = F.one_hot(torch.tensor(i), num_classes=self.y_dim).repeat(x.shape[0], 1).to(x_.device, dtype=x_.dtype)
-            z, z_mean, z_var = self.z_inference(torch.cat((x_, y), -1))
-            x_reconst = self.decoder(torch.cat((z, y), -1))
+            y_ = y[:, i].repeat(x_.shape[0], 1)
+            z, z_mean, z_var = self.z_inference(torch.cat((x_, y_), -1))
+            x_reconst = self.decoder(torch.cat((z, y_), -1))
 
             if x_reconst.shape != x.shape:
                 x_reconst = F.interpolate(
                     x_reconst, size=x.shape[2:], mode='bilinear', align_corners=True)
-
+            
             log_p_x = criterion.bce_loss(x_reconst, x).sum(-1)
             log_p_y = -np.log(1 / self.y_dim)
             log_p_z = criterion.log_norm_kl(z_mean, z_var).sum(-1)
-            log_q_y = torch.log(qy_i + 1e-10)
+            log_q_y = torch.log(qy_i + 1e-8)
 
             unlabeled_loss += (log_p_x + log_p_y + log_p_z + log_q_y) * qy_i
-
-        return unlabeled_loss.mean()  # batch mean
+        
+        return unlabeled_loss

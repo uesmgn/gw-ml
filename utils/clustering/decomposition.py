@@ -1,12 +1,12 @@
 from sklearn.manifold import TSNE as NormalTSNE
 # from MulticoreTSNE import MulticoreTSNE
-import faiss
+# import faiss
 import torch
 
 
 __all__ = [
-    'TSNE',
-    'PCA'
+    'TSNE'
+    #'PCA'
 ]
 
 
@@ -23,11 +23,11 @@ class TSNE:
         data = self.tsne.fit_transform(data)
         return data
 
-class PCA:
-    def __init__(self, n_components=2):
-        self.n_components = n_components
-
-    def fit_transform(self, data):
-        mat = faiss.PCAMatrix(data.shape[-1], self.n_components)
-        mat.train(data)
-        return mat.apply_py(data)
+#class PCA:
+#    def __init__(self, n_components=2):
+#        self.n_components = n_components
+#
+#    def fit_transform(self, data):
+#        mat = faiss.PCAMatrix(data.shape[-1], self.n_components)
+#        mat.train(data)
+#        return mat.apply_py(data)
