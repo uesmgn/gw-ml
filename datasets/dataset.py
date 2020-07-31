@@ -111,11 +111,10 @@ class GravitySpy(torch.utils.data.Dataset):
         for i, subdir in enumerate(tqdm(subdirs)):
             files = glob.glob(os.path.join(path, subdir, filter_str))
             target  = torch.tensor(i).long()
-            print(files)
 
             for f in files:
                 image = PIL.Image.open(f)
-                image = trainsforms.functional.pil_to_tensor(image)
+                image = transforms.functional.to_tensor(image)
                 images.append(image)
                 targets.append(target)
                 id = uuid.uuid4().hex
