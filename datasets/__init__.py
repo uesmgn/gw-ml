@@ -1,5 +1,7 @@
-from .dataset import GravitySpy as gravityspy
+from .dataset import GravitySpy
+from .hdf5dataset import HDF5Dataset
 
 __all__ = [
-    'gravityspy',
+    'GravitySpy',
+    'HDF5Dataset'
 ]
