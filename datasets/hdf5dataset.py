@@ -5,11 +5,12 @@ import copy
 import numpy as np
 
 class HDF5Dataset(data.Dataset):
-    def __init__(self, root, transform=None, target_transform=None):
+    def __init__(self, root, transform=None, target_transform=None, validation=None):
         super().__init__()
         self.data_cache = []
         self.transform = transform
         self.target_transform = target_transform
+        self.validation = validation
 
         root = pathlib.Path(root)
         assert root.is_file()
@@ -41,7 +42,11 @@ class HDF5Dataset(data.Dataset):
                 self._init_data_cache(it)
         else:
             # if item is dataset
-            self.data_cache.append(item.ref)
+            if self.validation is not None:
+                if self.validation(item)
+                    self.data_cache.append(item.ref)
+            else:
+                self.data_cache.append(item.ref)
 
     def split_dataset(self, alpha=0.8, shuffle=True):
         N_train = int(self.__len__() * alpha)
