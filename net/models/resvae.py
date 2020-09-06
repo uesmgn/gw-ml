@@ -98,7 +98,7 @@ class Decoder(nn.Module):
         return x
 
 
-class ResVAE_M1(nn.Module):
+class M1(nn.Module):
     def __init__(self, resnet, z_dim=64, filter_size=6,
                  activation=nn.Sigmoid(), verbose=False):
         super().__init__()

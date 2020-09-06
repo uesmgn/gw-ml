@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from hashids import Hashids
-from skimage import io, img_as_ubyte
+from skimage import io, transform, img_as_ubyte
 from skimage.color import rgb2gray
 from tqdm import tqdm
 
@@ -78,15 +78,16 @@ for target in tqdm(targets):
 
 df = pd.DataFrame(meta)
 
-def file2img(file):
+def file2img(file, shape=(160, 160)):
     # imread and remove alpha channel
-    img_rgb = io.imread(file)[..., :3]
+    img = io.imread(file)[..., :3]
     # grayscale
-    img_gray = rgb2gray(img_rgb)
+    img = rgb2gray(img)
+    img = transform.resize(img, shape, anti_aliasing=True)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        img_gray = img_as_ubyte(img_gray)
-    return img_gray
+        img = img_as_ubyte(img)
+    return img
 
 
 dataset_hdf = os.path.abspath(args.path_to_hdf)
@@ -105,18 +106,19 @@ df = df.reindex(columns=['unique_id', 'file_path', 'target_name', 'target_index'
 with h5py.File(dataset_hdf, mode='w') as fp:
     for (target_name, target_index), tf in df.groupby(['target_name', 'target_index']):
         tp = fp.create_group(target_name)
-        print(f'Stroing {target}...')
+        print(f'Stroing {target_name}...')
         for bundle, bf in tqdm(tf.groupby('bundle_id')):
             images = []
             bf = bf.sort_values('span')
             for index, row in bf.iterrows():
-                images.append(file2img(row['file_path']))
+                image = file2img(row['file_path'])
+                images.append(image)
             images = np.stack(images)
             ds = tp.create_dataset(bundle,
                                    data=images,
                                    shape=images.shape,
                                    dtype='uint8',
-                                   compression="gzip")
+                                   compression="lzf")
             ds.attrs['target_name'] = target_name
             ds.attrs['target_index'] = target_index
         fp.flush()
