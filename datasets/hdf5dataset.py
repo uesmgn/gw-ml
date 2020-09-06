@@ -24,11 +24,11 @@ class HDF5Dataset(data.Dataset):
             item = fp[ref]
             target = dict(item.attrs)
             img = item[:]
-        if callable(self.target_transform):
-            target = self.target_transform(target)
-        if callable(self.transform):
+        if self.transform is not None:
             img = self.transform(img)
-        return target, img
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+        return img, target
 
     def __len__(self):
         return len(self.data_cache)
