@@ -43,7 +43,7 @@ class HDF5Dataset(data.Dataset):
         else:
             # if item is dataset
             if self.validation is not None:
-                if self.validation(item)
+                if self.validation(item):
                     self.data_cache.append(item.ref)
             else:
                 self.data_cache.append(item.ref)
