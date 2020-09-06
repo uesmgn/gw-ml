@@ -9,6 +9,92 @@ from .. import layers, criterion
 
 
 class Encoder(nn.Module):
+
+    def __init__(self, in_planes=1, out_dim=2, block=ResBlock(),
+                 num_blocks=(2, 2, 2, 2), planes=(64, 128, 256, 512)):
+        super().__init__()
+
+        self.conv1_x = nn.Sequential(
+            nn.Conv2d(in_planes, planes[0], kernel_size=7,
+                      stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(planes[0]),
+            nn.ReLU(inplace=True)
+        )
+
+        self.conv2_x = nn.Sequential(
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            self._make_layer(planes[0], block, num_blocks[0])
+        )
+
+        self.conv3_x = nn.Sequential(
+            self._make_layer(planes[1], block, num_blocks[1], stride=2)
+        )
+
+        self.conv4_x = nn.Sequential(
+            self._make_layer(planes[2], block, num_blocks[2], stride=2)
+        )
+
+        self.conv5_x = nn.Sequential(
+            self._make_layer(planes[3], block, num_blocks[3], stride=2)
+        )
+
+        self.pool = nn.Sequential(
+            self._global_pool(gp, gp_output_size),
+            nn.Flatten()
+        )
+
+        self.num_final_fc = planes[3] * block.expansion * np.prod(gp_output_size)
+
+        self.fc = nn.Linear(self.num_final_fc, num_classes)
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+    def _make_layer(self, out_planes, block, num_block, stride=1):
+        assert num_block > 0
+
+        layers = []
+        layers.append(self._block(block, in_planes=self.next_planes,
+                                  out_planes=out_planes, stride=stride))
+        self.next_planes = out_planes * block.expansion
+
+        for _ in range(1, num_block):
+            layers.append(self._block(
+                block, in_planes=self.next_planes, out_planes=out_planes))
+
+        return nn.Sequential(*layers)
+
+    def _global_pool(self, gp='avg', output_size=(1, 1)):
+        if gp is 'avg':
+            return nn.AdaptiveAvgPool2d(output_size)
+        elif gp is 'max':
+            return nn.AdaptiveMaxPool2d(output_size)
+        else:
+            raise ValueError('Global Pooling gp only supports ("avg", "max")')
+
+    def _block(self, block, **kwargs):
+        block = copy.deepcopy(block)
+        block.compile(**kwargs)
+        return block
+
+    def forward(self, x):
+        x = self.conv1_x(x)
+        x = self.conv2_x(x)
+        x = self.conv3_x(x)
+        x = self.conv4_x(x)
+        x = self.conv5_x(x)
+        x = self.pool(x)
+        x = self.fc(x)
+        return x
+
+
+
+class Encoder(nn.Module):
     def __init__(self, in_planes=1, out_dim=2, block=BasicResBlock(),
                  planes=(64, 128, 256, 512), num_blocks=(2, 2, 2, 2)):
         super().__init__()
