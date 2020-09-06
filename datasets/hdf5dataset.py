@@ -2,6 +2,7 @@ import h5py
 import pathlib
 from torch.utils import data
 import copy
+import numpy as np
 
 class HDF5Dataset(data.Dataset):
     def __init__(self, root, transform=None, target_transform=None):
