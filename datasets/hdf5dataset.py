@@ -50,11 +50,11 @@ class HDF5Dataset(data.Dataset):
             np.random.shuffle(idx)
         train_idx, test_idx = idx[:N_train], idx[N_train:]
 
-        train_set = copy.deepcopy(self)
+        train_set = copy.copy(self)
         train_ref = [self.data_cache[i] for i in train_idx]
         train_set.data_cache = train_ref
 
-        test_set = copy.deepcopy(self)
+        test_set = copy.copy(self)
         test_ref = [self.data_cache[i] for i in test_idx]
         test_set.data_cache = test_ref
 
