@@ -50,9 +50,11 @@ class HDF5Dataset(data.Dataset):
         train_idx, test_idx = idx[:N_train], idx[N_train:]
 
         train_set = copy.deepcopy(self)
-        train_ref = train_set.data_cache[train_idx]
+        train_ref = [self.data_cache[i] for i in train_idx]
+        train_set.data_cache = train_ref
 
         test_set = copy.deepcopy(self)
-        test_ref = test_set.data_cache[test_idx]
+        test_ref = [self.data_cache[i] for i in test_idx]
+        test_set.data_cache = test_ref
 
         return train_set, test_set
