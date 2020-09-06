@@ -3,8 +3,9 @@ import argparse
 import torch
 from attrdict import AttrDict
 from tqdm import tqdm
+from torchvision import transforms
 
-import datasets
+from . import datasets
 
 
 FLAGS = AttrDict(
@@ -37,6 +38,11 @@ parser.add_argument('path_to_hdf', type=is_file,
 args = parser.parse_args()
 
 root = args.path_to_hdf
+
+data_transform = None
+target_transform = transforms.Compose([
+                transforms.Lambda(lambda x: x['target_index'])
+            ])
 
 dataset = getattr(datasets, FLAGS.dataset_name)(root, data_transform,
                                                 target_transform)
