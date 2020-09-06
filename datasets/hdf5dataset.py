@@ -1,7 +1,7 @@
 import h5py
 import pathlib
 from torch.utils import data
-
+import copy
 
 class HDF5Dataset(data.Dataset):
     def __init__(self, root, transform=None, target_transform=None):
@@ -41,3 +41,18 @@ class HDF5Dataset(data.Dataset):
         else:
             # if item is dataset
             self.data_cache.append(item.ref)
+
+    def split_dataset(self, alpha=0.8, shuffle=True):
+        N_train = int(self.__len__() * alpha)
+        idx = np.arange(self.__len__())
+        if shuffle:
+            np.random.shuffle(idx)
+        train_idx, test_idx = idx[:N_train], idx[N_train:]
+
+        train_set = copy.deepcopy(self)
+        train_ref = train_set.data_cache[train_idx]
+
+        test_set = copy.deepcopy(self)
+        test_ref = test_set.data_cache[test_idx]
+
+        return train_set, test_set
