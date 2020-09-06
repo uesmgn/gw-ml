@@ -1,5 +1,23 @@
 import os
 import argparse
+import torch
+from attrdict import AttrDict
+from tqdm import tqdm
+
+import datasets
+
+
+FLAGS = AttrDict(
+    batch_size=128,
+    num_workers=1,
+    dataset_name='HDF5Dataset',
+    x_shape=(160, 160)
+)
+
+cuda = torch.cuda.is_available()
+device = torch.device('cuda:0') if cuda else torch.device('cpu')
+if cuda:
+    torch.backends.cudnn.benchmark = True
 
 
 def is_file(path):
@@ -11,6 +29,7 @@ def is_file(path):
     else:
         raise argparse.ArgumentTypeError(f"{path} must is not exists.")
 
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument('path_to_hdf', type=is_file,
@@ -18,36 +37,20 @@ parser.add_argument('path_to_hdf', type=is_file,
 args = parser.parse_args()
 
 root = args.path_to_hdf
-#
-# FLAGS = attrdict(
-#     batch_size=128,
-#     num_epochs=5000,
-#     num_workers=1,
-#     log_step=10,
-#     eval_step=5,
-#     save_step=100,
-#     lr=3e-4,
-#     momentum=0.9,
-#     weight_decay=1e-4,
-#     targets=(0, 1, 3, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 19, 21),
-#     opt_level='O1',
-#     dataset='HDF5Dataset',
-#     local_rank=0,
-#     x_size=160,
-#     x_dim=256,
-#     z_dim=256,
-#     filter_size=5,
-#     gp_output_size=(1, 1),
-#     num_blocks=(1, 1, 1, 1),
-#     planes=(32, 64, 96, 128),
-# )
-#
+
+dataset = getattr(datasets, FLAGS.dataset_name)(root, data_transform,
+                                                target_transform)
+
+data_loader = torch.utils.data.DataLoader(dataset, batch_size=FLAGS.batch_size,
+                                          num_workers=FLAGS.num_workers,
+                                          shuffle=True, drop_last=True)
+
+for step, (x, target) in tqdm(enumerate(data_loader)):
+    pass
+
+
 # def _data_loader(dataset, batch_size=FLAGS.batch_size, num_workers=FLAGS.num_workers, shuffle=True, drop_last=True):
-#     return data.DataLoader(dataset,
-#                            batch_size=batch_size,
-#                            num_workers=num_workers,
-#                            shuffle=shuffle,
-#                            drop_last=drop_last)
+#     return
 # def _to_acronym(arr, dict):
 #     return np.array([f'{l}-{ut.acronym(dict[l])}' for l in arr])
 #
